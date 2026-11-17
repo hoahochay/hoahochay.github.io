@@ -1,16 +1,22 @@
 /**
  * Thí nghiệm mẫu: chuỗi thao tác + lời thuyết minh, phát lại tự động cho học sinh xem.
- * Ống nghiệm đánh số 0–3, cốc là 4.
+ * Ống nghiệm đánh số 0–3, cốc là 4, bình nón là 5; xi lanh đo khí là SYRINGE.
  */
 import { Mixture } from '../src';
 import type { ToolKind } from './probes';
 
-export const TUBE1 = 0, TUBE2 = 1, TUBE3 = 2, TUBE4 = 3, BEAKER = 4;
+export const TUBE1 = 0, TUBE2 = 1, TUBE3 = 2, TUBE4 = 3, BEAKER = 4, FLASK = 5;
+/** Đích của bước `connect`: xi lanh đo khí (không phải dụng cụ chứa) */
+export const SYRINGE = -1;
 
 /** Trạng thái phòng thí nghiệm mà điều kiện `until` có thể đọc */
 export interface LabState {
   mix(vessel: number): Mixture;
   tempC(vessel: number): number;
+  /** Số đọc trên xi lanh đo khí, mL */
+  syringeML(): number;
+  /** Số đọc trên cân điện tử (đã trừ bì), g */
+  balanceG(): number;
 }
 
 export type Step =
@@ -22,6 +28,8 @@ export type Step =
   | { kind: 'probe'; tool: ToolKind; vessel: number; text?: string }
   | { kind: 'connect'; src: number; dst: number | null; text?: string }
   | { kind: 'invert'; vessel: number; text?: string }
+  | { kind: 'weigh'; vessel: number | null; text?: string }
+  | { kind: 'tare'; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
 
 /** 12 chủ đề theo danh mục docs/thi-nghiem-rsc.md */
@@ -68,6 +76,8 @@ const stir = (vessel: number, text?: string): Step => ({ kind: 'stir', vessel, t
 const connect = (src: number, dst: number | null, text?: string): Step => ({ kind: 'connect', src, dst, text });
 const invert = (vessel: number, text?: string): Step => ({ kind: 'invert', vessel, text });
 const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 'probe', tool, vessel, text });
+const weigh = (vessel: number | null, text?: string): Step => ({ kind: 'weigh', vessel, text });
+const tare = (text?: string): Step => ({ kind: 'tare', text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
 export const RECIPES: Recipe[] = [
@@ -548,6 +558,71 @@ export const RECIPES: Recipe[] = [
       phenomena: ['Mg: sủi bọt rất mạnh, ống nóng lên', 'Zn: sủi bọt khá mạnh', 'Fe: sủi bọt chậm', 'Cu: không có hiện tượng'],
       equations: ['Mg + 2HCl → MgCl₂ + H₂↑', 'Zn + 2HCl → ZnCl₂ + H₂↑', 'Fe + 2HCl → FeCl₂ + H₂↑', 'Cu + HCl: không phản ứng'],
       explain: 'Dãy hoạt động hóa học: K, Na, Mg, Al, Zn, Fe, Pb, (H), Cu, Ag, Au. Kim loại đứng trước H tác dụng với acid (HCl, H₂SO₄ loãng) giải phóng H₂; kim loại càng đứng trước thì phản ứng càng mạnh.',
+    },
+  },
+  {
+    id: 'mg-rate',
+    title: 'Đo tốc độ phản ứng bằng xi lanh đo khí',
+    topic: 'rates', level: 'intermediate',
+    concepts: ['tốc độ phản ứng', 'đồ thị thể tích – thời gian', 'đo thể tích khí'],
+    source: { title: 'The rate of reaction of magnesium with hydrochloric acid', url: 'https://edu.rsc.org/experiments/the-rate-of-reaction-of-magnesium-with-hydrochloric-acid/1916.article' },
+    summary: 'Thả 3 cm dải magnesium vào 50 mL hydrochloric acid 1 M, đo thể tích khí hydrogen mỗi 10 giây và vẽ đồ thị.',
+    steps: [
+      focus(FLASK),
+      say('Dụng cụ gồm bình nón 100 mL có nút cao su, ống dẫn khí và xi lanh đo khí 100 mL kẹp phía sau.'),
+      add('hcl', 50, FLASK, 'Đong 50 mL hydrochloric acid 1 M cho vào bình nón. Lượng acid này dư khoảng 6 lần so với magnesium.'),
+      add('mg_strip', 0.04, FLASK, 'Thả một dải magnesium dài 3 cm (khoảng 0,04 g) vào bình…'),
+      connect(FLASK, SYRINGE, '…đậy nút ngay và bắt đầu tính giờ. Khí sinh ra đẩy pít-tông lùi dần.'),
+      focus(),
+      wait(20, { text: 'Lúc đầu pít-tông lùi nhanh: tốc độ phản ứng lớn nhất. Đồ thị và bảng số đo ở góc phải.' }),
+      wait(240, { speed: 2, text: 'Dải Mg nhỏ dần nên khí thoát ra chậm lại, đồ thị thoải dần.', until: (l) => l.mix(FLASK).get('Mg') < 1e-5 }),
+      wait(20, { speed: 2, text: 'Magnesium đã tan hết: thể tích khí không tăng nữa, đồ thị nằm ngang.' }),
+      say('Đọc số trên xi lanh: khoảng 40 mL khí. Mở "Bảng số đo" để xem thể tích sau mỗi 10 giây.'),
+    ],
+    result: {
+      phenomena: [
+        'Dải magnesium sủi bọt mạnh và tan dần',
+        'Pít-tông lùi nhanh lúc đầu, chậm dần rồi dừng ở khoảng 40 mL',
+        'Bình hơi ấm lên, chỉ khoảng 3 °C',
+      ],
+      equations: ['Mg + 2HCl → MgCl₂ + H₂↑'],
+      explain: 'Độ dốc của đồ thị thể tích – thời gian chính là tốc độ phản ứng: dốc nhất lúc đầu, giảm dần và bằng 0 khi phản ứng kết thúc. Acid dư nhiều nên tốc độ giảm chủ yếu vì dải Mg nhỏ lại (diện tích bề mặt giảm). 0,04 g Mg (khoảng 1,6 mmol) sinh ra 1,6 mmol H₂, tức khoảng 40 mL ở nhiệt độ phòng. Khí đi sang xi lanh lúc đầu là không khí trong bình, nhưng thể tích của nó đúng bằng thể tích H₂ vừa sinh ra. Phản ứng tỏa nhiệt làm bình ấm lên một chút và phản ứng nhanh hơn một chút; muốn so sánh công bằng cần giữ nhiệt độ không đổi.',
+    },
+  },
+  {
+    id: 'mass-change',
+    title: 'Khối lượng có thay đổi trong phản ứng hóa học?',
+    topic: 'quantitative', level: 'basic',
+    concepts: ['bảo toàn khối lượng', 'hệ hở', 'cân điện tử'],
+    source: { title: 'Mass changes in chemical reactions', url: 'https://edu.rsc.org/experiments/mass-changes-in-chemical-reactions/523.article' },
+    summary: 'Cân hai phản ứng: tạo kết tủa CaCO₃ (khối lượng giữ nguyên) và đá vôi với acid trong bình hở (khối lượng giảm vì khí bay ra).',
+    steps: [
+      focus(BEAKER),
+      add('na2co3', 10, BEAKER, 'Phản ứng 1. Cho 10 mL sodium carbonate 0,5 M vào cốc.'),
+      weigh(BEAKER, 'Đặt cốc lên cân điện tử. Số đọc gồm khối lượng cốc và dung dịch.'),
+      tare('Bấm trừ bì: cân chỉ 0,00 g. Từ giờ số đọc là phần khối lượng thêm vào hoặc mất đi.'),
+      add('cano3', 10, BEAKER, 'Rót 10 mL calcium nitrate 0,5 M vào cốc đang đặt trên cân.'),
+      wait(5, { text: 'Kết tủa trắng CaCO₃ xuất hiện ngay. Cân tăng đúng bằng khối lượng dung dịch vừa rót vào (khoảng 10,8 g).' }),
+      wait(60, { speed: 5, text: 'Theo dõi tiếp: kết tủa lắng dần nhưng số trên cân không đổi.' }),
+      say('Phản ứng 1: không có chất nào thoát ra ngoài, nên tổng khối lượng giữ nguyên.'),
+      weigh(null, 'Lấy cốc khỏi cân.'),
+      focus(FLASK),
+      add('hcl', 20, FLASK, 'Phản ứng 2. Cho 20 mL hydrochloric acid 1 M vào bình nón, không đậy nút.'),
+      weigh(FLASK, 'Đặt bình nón lên cân.'),
+      tare(),
+      add('caco3', 0.5, FLASK, 'Thả 0,5 g đá vôi (calcium carbonate) vào bình: cân chỉ khoảng +0,50 g.'),
+      focus(),
+      wait(900, { speed: 10, text: 'Bọt khí CO₂ thoát ra khỏi bình hở. Số đọc giảm dần, xem đồ thị khối lượng ở góc phải.', until: (l) => l.mix(FLASK).get('CaCO3') < 1e-6 }),
+      wait(120, { speed: 10, text: 'Đá vôi đã tan hết, khối lượng gần như không giảm nữa.' }),
+      say('Cân còn khoảng +0,30 g: khoảng 0,2 g khí CO₂ đã bay vào không khí.'),
+    ],
+    result: {
+      phenomena: [
+        'Phản ứng 1: kết tủa trắng, số đọc trên cân không đổi',
+        'Phản ứng 2: đá vôi sủi bọt khí, số đọc giảm dần khoảng 0,2 g',
+      ],
+      equations: ['Na₂CO₃ + Ca(NO₃)₂ → CaCO₃↓ + 2NaNO₃', 'CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑'],
+      explain: 'Trong phản ứng hóa học, nguyên tử chỉ sắp xếp lại chứ không tự sinh ra hay mất đi, nên tổng khối lượng được bảo toàn. Ở phản ứng 1, mọi sản phẩm (kể cả kết tủa) đều ở lại trong cốc nên khối lượng không đổi. Ở phản ứng 2, bình để hở nên khí CO₂ bay ra ngoài và cân không đo được nó: khối lượng có vẻ giảm. Theo phương trình, 0,5 g CaCO₃ sinh ra 0,22 g CO₂; một ít CO₂ còn tan lại trong dung dịch nên cân chỉ giảm khoảng 0,2 g. Nếu làm trong bình kín, số đọc sẽ không đổi.',
     },
   },
 ];

@@ -10,6 +10,10 @@ export interface LabApi {
   probe(tool: ToolKind, vessel: number): void;
   connect(src: number, dst: number | null): void;
   invert(vessel: number): void;
+  /** Đặt dụng cụ lên cân điện tử; null: lấy xuống */
+  weigh(vessel: number | null): void;
+  /** Bấm nút trừ bì của cân */
+  tare(): void;
   focus(vessels: number[] | null): void;
   resetAll(): void;
   setSpeed(s: number): void;
@@ -113,6 +117,8 @@ export class RecipePlayer {
         : `Lắp ống dẫn khí từ ${this.lab.vesselName(s.src).toLowerCase()} sang ${this.lab.vesselName(s.dst).toLowerCase()}.`);
       case 'invert': return s.text ?? `Úp ngược ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
       case 'probe': return s.text ?? `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
+      case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${this.lab.vesselName(s.vessel).toLowerCase()} lên cân điện tử.`);
+      case 'tare': return s.text ?? 'Bấm nút trừ bì: cân trở về 0,00 g.';
       case 'focus': return '';
     }
   }
@@ -167,6 +173,14 @@ export class RecipePlayer {
       case 'invert':
         this.ui.progress(null);
         this.lab.invert(s.vessel);
+        return this.untilIdle(id);
+      case 'weigh':
+        this.ui.progress(null);
+        this.lab.weigh(s.vessel);
+        return this.untilIdle(id);
+      case 'tare':
+        this.ui.progress(null);
+        this.lab.tare();
         return this.untilIdle(id);
       case 'probe':
         this.ui.progress(null);

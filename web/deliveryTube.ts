@@ -1,5 +1,6 @@
 /** Ống dẫn khí: nút cao su trên ống phát khí, ống dẫn uốn cong sang dụng cụ nhận */
 import * as THREE from 'three';
+import { SyringeView } from './syringe';
 import type { VesselView } from './VesselView';
 
 const tubeMat = new THREE.MeshPhysicalMaterial({
@@ -13,7 +14,7 @@ export class DeliveryTubeView {
   private readonly stopper: THREE.Mesh;
   private key = '';
 
-  constructor(readonly src: VesselView, readonly dst: VesselView) {
+  constructor(readonly src: VesselView, readonly dst: VesselView | SyringeView) {
     this.stopper = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.8, 1.1, 20), stopperMat);
     this.pipe = new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3(0, 1, 0)), 2, 0.13, 8), tubeMat);
     this.pipe.renderOrder = 3;
@@ -36,7 +37,20 @@ export class DeliveryTubeView {
       s.clone().add(new THREE.Vector3(0, 1.4, 0)),
       new THREE.Vector3(s.x + (d.x - s.x) * 0.15, top, s.z),
     ];
-    if (this.dst.vessel.inverted) {
+    if (this.dst instanceof SyringeView) {
+      // Xi lanh nằm ngang phía sau: ống đi lên, vòng ra sau rồi cắm ngang vào vòi
+      const top2 = Math.max(s.y + 2.2, end.y + 1.8);
+      pts.length = 0;
+      pts.push(
+        s.clone().add(new THREE.Vector3(0, -0.4, 0)),
+        s.clone().add(new THREE.Vector3(0, 1.4, 0)),
+        new THREE.Vector3(s.x, top2, s.z - 0.8),
+        new THREE.Vector3(end.x + 2.4, top2, end.z + 0.6),
+        new THREE.Vector3(end.x + 2.2, end.y, end.z),
+        end.clone().add(new THREE.Vector3(0.9, 0, 0)),
+        end.clone().add(new THREE.Vector3(-0.6, 0, 0)),
+      );
+    } else if (this.dst.vessel.inverted) {
       // Ống úp ngược: luồn ống dẫn xuống phía trước giá rồi đi lên vào miệng ống
       const zf = d.z + 2.8;
       pts.push(

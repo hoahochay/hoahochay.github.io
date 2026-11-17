@@ -20,6 +20,22 @@ export function beakerProfile(r: number, h: number): Profile {
   return { height: h, bottomZone: 0, radius: () => r };
 }
 
+/** Bình nón (Erlenmeyer): đáy rộng, thân côn, cổ hẹp */
+export function flaskProfile(rBase: number, rNeck: number, hCone: number, h: number): Profile {
+  const shoulder = 0.9;
+  return {
+    height: h,
+    bottomZone: 0,
+    radius: (y) => {
+      if (y >= hCone) return rNeck;
+      const r = rBase + (rNeck - rBase) * (y / hCone);
+      // Bo tròn vai bình để chỗ nối thân côn với cổ không gãy khúc
+      const k = Math.max(0, (y - (hCone - shoulder)) / shoulder);
+      return r + (rNeck - r) * k * k * (3 - 2 * k) * 0.4;
+    },
+  };
+}
+
 /** Bảng tra thể tích ↔ chiều cao mực chất lỏng */
 export class VolumeMap {
   private readonly ys: number[] = [];

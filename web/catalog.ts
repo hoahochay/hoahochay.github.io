@@ -2,7 +2,7 @@
 import { gramsToMol, makeSolution, RGB, solutionColor, SolidForm } from '../src';
 import type { ToolKind } from './probes';
 
-export type LabTool = ToolKind | 'delivery';
+export type LabTool = ToolKind | 'delivery' | 'syringe' | 'balance';
 
 export interface ReagentDef {
   key: string;
@@ -36,6 +36,7 @@ export const REAGENTS: ReagentDef[] = [
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
   reagent('nacl', 'NaCl', '0,1M', 'sodium chloride', { NaCl: 0.1 }),
+  reagent('cano3', 'Ca(NO₃)₂', '0,5M', 'calcium nitrate', { 'Ca(NO3)2': 0.5 }),
   // Nước vôi trong bão hòa ≈ 0,02M; dùng loại pha loãng để thấy rõ cả hai giai đoạn đục → trong
   // (mô hình dung dịch lý tưởng chưa có hệ số hoạt độ, nên đánh giá thấp độ tan của Ca(HCO₃)₂)
   reagent('limewater', 'Ca(OH)₂', 'loãng', 'nước vôi trong', { 'Ca(OH)2': 0.005 }),
@@ -156,6 +157,8 @@ export const CHEMICALS: ChemEntry[] = [
     ['splint_burn', 'burning', 'Que đóm đang cháy', 'Thử khí H₂, CO₂', 'hydrogen h2 co2 carbon dioxide chay'],
     ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí acid / base', 'quy tim nh3 ammonia co2 acid base'],
     ['delivery', 'delivery', 'Ống dẫn khí', 'Dẫn khí sang ống khác', 'ong dan khi thu khi suc khi nut cao su'],
+    ['balance', 'balance', 'Cân điện tử', 'Cân dụng cụ, chính xác 0,01 g', 'can dien tu khoi luong bao toan khoi luong tru bi dung cu do'],
+    ['syringe', 'syringe', 'Xi lanh đo khí', 'Đo thể tích khí theo thời gian', 'xi lanh gas syringe do the tich khi toc do phan ung do thi dung cu do'],
   ] as const).map(([key, tool, title, sub, kw]): ChemEntry => ({
     key, kind: 'tool', title, formula: title, sub, unit: '', defaultAmount: 1, step: 1, max: 1, tool,
     search: searchText(`${title} ${sub} ${kw} dung cu thu khi`),

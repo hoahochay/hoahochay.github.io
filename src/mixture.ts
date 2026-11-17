@@ -102,3 +102,18 @@ export class Mixture {
     return m;
   }
 }
+
+/** Khối lượng mol trung bình của không khí, g/mol */
+const M_AIR = 28.96;
+
+/**
+ * Khối lượng các chất trong dụng cụ, g, như cân đọc được.
+ * Khí trong khoảng trống phía trên chỉ tính phần nặng (nhẹ) hơn lượng không khí nó chiếm chỗ,
+ * vì cân đặt trong không khí: CO₂ đọng lại làm số đọc tăng nhẹ, H₂ làm giảm nhẹ.
+ */
+export function contentsMassG(mix: Mixture): number {
+  let g = 0;
+  for (const [id, n] of mix.moles) g += n * species(id).molarMass;
+  for (const [id, n] of mix.headspace) g += n * (species(id).molarMass - M_AIR);
+  return g;
+}

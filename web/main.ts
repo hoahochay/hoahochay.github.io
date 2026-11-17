@@ -5,7 +5,7 @@ import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB
 import { Animator, call, easeIn, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
-import { RECIPES } from './recipes';
+import { RECIPES, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
@@ -17,7 +17,11 @@ import { playPop } from './sound';
 import './style.css';
 import { renderThumbnails } from './thumbs';
 import { PeriodicTable } from './periodic/PeriodicTable';
-import { BEAKER, TUBE, VesselView } from './VesselView';
+import { BEAKER, FLASK, TUBE, VesselView } from './VesselView';
+import { SyringeView } from './syringe';
+import { MeasurePanel } from './measurePanel';
+import { BalanceView } from './balance';
+import { HelpOverlay } from './help';
 
 // ── Renderer, cảnh, camera ───────────────────────────────────────────────
 const app = document.getElementById('app')!;
@@ -79,10 +83,29 @@ for (let i = 0; i < 4; i++) {
 const beaker = new VesselView(BEAKER, 'Cốc 100 mL', 'Cốc');
 beaker.home.set(11, 0.12, 5);
 views.push(beaker);
+const flask = new VesselView(FLASK, 'Bình nón 100 mL', 'Bình');
+flask.home.set(19.5, 0.12, 5);
+views.push(flask);
 for (const v of views) {
   v.group.position.copy(v.home);
   scene.add(v.group);
 }
+
+// Xi lanh đo khí kẹp ngang trên giá, phía sau và cao hơn miệng các dụng cụ phía trước
+const syringeView = new SyringeView();
+syringeView.group.position.set(17, syringeView.heightAboveBench(), -9);
+scene.add(syringeView.group);
+
+// Cân điện tử ở góc trước bên trái bàn
+const balanceView = new BalanceView();
+balanceView.group.position.set(-11.5, 0, 11.5);
+scene.add(balanceView.group);
+/** Dụng cụ đang nằm trên đĩa cân */
+let onBalance: VesselView | null = null;
+let tareG = 0;
+/** Số đọc của cân (đã trừ bì), làm tròn 0,01 g như cân thật */
+const balanceReading = () => Math.round(((onBalance ? onBalance.vessel.massG() : 0) - tareG) * 100) / 100 + 0;
+const fmtG = (g: number) => g.toFixed(2).replace('.', ',');
 
 const lamp = new LampView();
 const LAMP_POS = new THREE.Vector3(-17, 0, 5);
@@ -372,6 +395,61 @@ function probe(kind: ToolKind, view: VesselView) {
 
 // ── Ống dẫn khí ──────────────────────────────────────────────────────────
 const tubes = new Map<VesselView, DeliveryTubeView>();
+const syringePanel = new MeasurePanel({
+  title: 'Xi lanh đo khí', quantity: 'Thể tích', symbol: 'V', unit: 'mL', decimals: 1,
+  minSpan: 10, fromZero: true, jump: 0.5, csvName: 'xi-lanh-do-khi.csv',
+  resetLabel: '↺ Đo lại từ 0', resetTitle: 'Đẩy pít-tông về vạch 0 và bắt đầu đo lại',
+  reset: () => {
+    syringeView.reset();
+    const src = [...tubes].find(([, t]) => t.dst === syringeView)?.[0];
+    syringePanel.start(simTime, 0, src ? `nối với ${src.name.toLowerCase()}` : '');
+    log('Đẩy pít-tông về vạch 0, đo lại từ đầu', 'action', syringeView.name);
+  },
+});
+
+const balancePanel = new MeasurePanel({
+  title: 'Cân điện tử', quantity: 'Khối lượng', symbol: 'm', unit: 'g', decimals: 2,
+  minSpan: 0.2, fromZero: false, jump: 0.02, csvName: 'can-dien-tu.csv',
+  resetLabel: '⚖ Trừ bì', resetTitle: 'Đưa số đọc về 0,00 g với vật đang đặt trên cân',
+  extra: { label: '⬇ Lấy xuống', title: 'Lấy dụng cụ khỏi cân', onClick: () => takeOffBalance() },
+  reset: () => tare(),
+});
+
+function balanceNote(): string {
+  return onBalance ? `đang cân ${onBalance.name.toLowerCase()}` : 'đĩa cân trống';
+}
+
+/** Đặt dụng cụ lên đĩa cân (bấm lần nữa để lấy xuống) */
+function placeOnBalance(v: VesselView, toggle = true) {
+  if (onBalance === v) return toggle ? takeOffBalance() : undefined;
+  if (heatingView === v) return log('Tắt đèn cồn và lấy dụng cụ khỏi giá đun trước khi cân.', 'warning', v.name);
+  if (v.vessel.inverted) return log('Lật ngửa ống trước khi đặt lên cân.', 'warning', v.name);
+  if (onBalance) takeOffBalance(true);
+  onBalance = v;
+  select(v);
+  animator.run(
+    moveVessel(v, () => restPose(v)),
+    call(() => {
+      balancePanel.start(simTime, balanceReading(), balanceNote());
+      log(`Đặt lên cân điện tử: ${fmtG(balanceReading())} g`, 'action', v.name);
+    }),
+  );
+}
+
+function takeOffBalance(quiet = false) {
+  const v = onBalance;
+  if (!v) return;
+  onBalance = null;
+  animator.run(moveVessel(v, () => restPose(v)));
+  balancePanel.start(simTime, balanceReading(), balanceNote());
+  if (!quiet) log('Lấy khỏi cân điện tử', 'action', v.name);
+}
+
+function tare() {
+  tareG += balanceReading();
+  balancePanel.start(simTime, 0, balanceNote());
+  log('Bấm trừ bì: cân trở về 0,00 g', 'action', balanceView.name);
+}
 /** Đang chờ người dùng bấm vào dụng cụ nhận khí */
 let connectFrom: VesselView | null = null;
 
@@ -386,10 +464,11 @@ function disconnect(v: VesselView, quiet = false) {
   }
 }
 
-function connect(src: VesselView, dst: VesselView) {
+function connect(src: VesselView, dst: VesselView | SyringeView) {
   connectFrom = null;
   hud.hint(null);
   if (src === dst) return;
+  if (dst instanceof SyringeView) return connectSyringe(src);
   if (dst.vessel.outlet || tubes.has(dst)) {
     log(`${dst.name} đang dẫn khí đi nơi khác, không nhận khí được.`, 'warning', dst.name);
     return;
@@ -404,6 +483,23 @@ function connect(src: VesselView, dst: VesselView) {
   log(`Đậy nút, lắp ống dẫn khí ${into} ${dst.name.toLowerCase()}`, 'action', src.name);
 }
 
+/** Nối dụng cụ phát khí với xi lanh đo khí; bắt đầu đo từ vạch 0 */
+function connectSyringe(src: VesselView) {
+  connectFrom = null;
+  hud.hint(null);
+  if (src.vessel.inverted) return log('Lật ngửa ống trước khi nối với xi lanh.', 'warning', src.name);
+  if (tubes.get(src)?.dst === syringeView) return;
+  for (const [s, t] of tubes) if (t.dst === syringeView) disconnect(s);
+  disconnect(src, true);
+  const t = new DeliveryTubeView(src, syringeView);
+  tubes.set(src, t);
+  scene.add(t.group);
+  syringeView.reset();
+  src.vessel.outlet = syringeView.syringe;
+  syringePanel.start(simTime, 0, `nối với ${src.name.toLowerCase()}`);
+  log('Đậy nút, nối ống dẫn khí vào xi lanh đo khí (pít-tông ở vạch 0)', 'action', src.name);
+}
+
 function startConnect(view: VesselView) {
   if (tubes.has(view) || [...tubes.values()].some((t) => t.dst === view)) return disconnect(view);
   if (view.vessel.inverted) {
@@ -412,11 +508,12 @@ function startConnect(view: VesselView) {
   }
   select(view);
   connectFrom = view;
-  hud.hint(`Bấm vào ống nghiệm hoặc cốc sẽ nhận khí từ ${view.name.toLowerCase()} (Esc để hủy)`);
+  hud.hint(`Bấm vào ống nghiệm, cốc hoặc xi lanh đo khí sẽ nhận khí từ ${view.name.toLowerCase()} (Esc để hủy)`);
 }
 
 // ── Úp ngược ống nghiệm (để thu khí nhẹ) ─────────────────────────────────
 function restPose(v: VesselView): THREE.Vector3 {
+  if (onBalance === v) return balanceView.panTopWorld().add(new THREE.Vector3(0, v.kind.type === 'tube' ? 0.15 : 0.12, 0));
   return v.vessel.inverted ? v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height + 2.2, 0)) : v.home.clone();
 }
 
@@ -451,6 +548,8 @@ function invert(v = requireSelected(), quiet = false) {
 
 function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
   if (entry.tool === 'delivery') return startConnect(view);
+  if (entry.tool === 'syringe') return connectSyringe(view);
+  if (entry.tool === 'balance') return placeOnBalance(view);
   if (entry.tool) {
     select(view);
     return probe(entry.tool, view);
@@ -500,6 +599,7 @@ function stopHeat() {
 function startHeat(v: VesselView) {
   if (heatingView === v) return;
   if (v.vessel.inverted) return log('Không đun ống đang úp ngược.', 'warning', v.name);
+  if (onBalance === v) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
   if (heatingView) stopHeat();
   heatingView = v;
   v.heating = true;
@@ -600,7 +700,7 @@ function toggleFocus() {
 // ── Chuột: bấm chọn dụng cụ / bấm đèn cồn ────────────────────────────────
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-const pickables: THREE.Object3D[] = [...views.map((v) => v.group), lamp.group];
+const pickables: THREE.Object3D[] = [...views.map((v) => v.group), lamp.group, syringeView.group, balanceView.group];
 
 function pickAt(x: number, y: number, objects = pickables): THREE.Object3D | null {
   const r = renderer.domElement.getBoundingClientRect();
@@ -621,12 +721,18 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const o = pickAt(e.clientX, e.clientY);
   if (connectFrom) {
     if (o?.userData.kind === 'vessel' && o.userData.view !== connectFrom) return connect(connectFrom, o.userData.view);
+    if (o?.userData.kind === 'syringe') return connectSyringe(connectFrom);
     connectFrom = null;
     hud.hint(null);
     return;
   }
   if (o?.userData.kind === 'vessel') select(o.userData.view);
   else if (o?.userData.kind === 'lamp') toggleHeat();
+  else if (o?.userData.kind === 'syringe' && !syringePanel.visible && syringeView.syringe.volumeML > 0) syringePanel.show(true);
+  else if (o?.userData.kind === 'balance') {
+    if (selected && selected !== onBalance) placeOnBalance(selected);
+    else if (!balancePanel.visible) balancePanel.start(simTime, balanceReading(), balanceNote());
+  }
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
   if (e.buttons) return hud.tooltip(null);
@@ -636,6 +742,10 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   const u = o.userData;
   const text = u.kind === 'vessel'
     ? `<b>${u.view.name}</b><br>${(u.view.vessel.mix.volumeL * 1000).toFixed(1)} mL`
+    : u.kind === 'balance'
+    ? `<b>Cân điện tử</b><br>${fmtG(balanceReading())} g<br><i>${selected && selected !== onBalance ? `Bấm để đặt ${selected.name.toLowerCase()} lên cân` : onBalance ? `Đang cân ${onBalance.name.toLowerCase()}` : 'Chọn một dụng cụ rồi bấm vào cân'}</i>`
+    : u.kind === 'syringe'
+    ? `<b>Xi lanh đo khí</b><br>${syringeView.syringe.volumeML.toFixed(1)} / 100 mL<br><i>${[...tubes.values()].some((t) => t.dst === syringeView) ? 'Đang đo' : 'Kéo "Xi lanh đo khí" trong kho thả vào dụng cụ phát khí'}</i>`
     : `<b>Đèn cồn</b><br><i>${heatingView ? 'Bấm để tắt' : 'Bấm để đun dụng cụ đang chọn'}</i>`;
   hud.tooltip(text, e.clientX, e.clientY);
 });
@@ -647,8 +757,61 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ── Bàn phím: di chuyển góc nhìn bằng W A S D / phím mũi tên ─────────────
+const MOVE_KEYS: Record<string, [number, number]> = {
+  KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1],
+  KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0],
+};
+const held = new Set<string>();
+const typing = (e: KeyboardEvent) =>
+  e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+window.addEventListener('keyup', (e) => held.delete(e.code));
+window.addEventListener('blur', () => held.clear());
+
+function moveCamera(dt: number) {
+  if (!held.size || view !== 'lab' || help.isOpen) return;
+  let fx = 0, sx = 0;
+  for (const k of held) {
+    const m = MOVE_KEYS[k];
+    if (m) { sx += m[0]; fx += m[1]; }
+  }
+  if (!fx && !sx) return;
+  const fwd = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
+  const right = new THREE.Vector3().crossVectors(fwd, camera.up).normalize();
+  const d = fwd.multiplyScalar(fx).add(right.multiplyScalar(sx)).normalize();
+  // Đi nhanh hơn khi đứng xa
+  d.multiplyScalar(dt * THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) * 0.7, 10, 50));
+  const t = controls.target.clone().add(d);
+  t.x = THREE.MathUtils.clamp(t.x, -40, 40);
+  t.z = THREE.MathUtils.clamp(t.z, -18, 24);
+  d.subVectors(t, controls.target);
+  camera.position.add(d);
+  controls.target.add(d);
+  camAnim = null;
+  focused = false;
+}
+
 window.addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLInputElement || view !== 'lab') return;
+  if (typing(e)) return;
+  if (e.code === 'KeyH' || e.key === '?' || e.key === 'F1') {
+    help.toggle();
+    e.preventDefault();
+    return;
+  }
+  if (help.isOpen) {
+    if (e.key === 'Escape') help.close();
+    return;
+  }
+  if (view !== 'lab' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (MOVE_KEYS[e.code]) {
+    held.add(e.code);
+    e.preventDefault();
+    return;
+  }
+  if (e.code === 'KeyR') {
+    focusMany(null);
+    return;
+  }
   if (e.key === 'Escape' && connectFrom) {
     connectFrom = null;
     hud.hint(null);
@@ -690,6 +853,11 @@ function resetAll() {
   hud.setHeating(false);
   stand.clamp.visible = stand.tripod.visible = false;
   for (const v of views) disconnect(v, true);
+  syringeView.reset();
+  syringePanel.show(false);
+  onBalance = null;
+  tareG = 0;
+  balancePanel.show(false);
   connectFrom = null;
   hud.hint(null);
   for (const v of views) {
@@ -707,8 +875,10 @@ const player = new RecipePlayer({
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
   probe: (tool, vessel) => probe(tool, views[vessel]),
-  connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], views[dst])),
+  connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
   invert: (vessel) => invert(views[vessel]),
+  weigh: (vessel) => (vessel === null ? takeOffBalance() : placeOnBalance(views[vessel], false)),
+  tare,
   focus: (vs) => focusMany(vs ? vs.map((i) => views[i]) : null),
   resetAll,
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
@@ -717,8 +887,10 @@ const player = new RecipePlayer({
   state: {
     mix: (i) => views[i].vessel.mix,
     tempC: (i) => views[i].vessel.mix.tempK - 273.15,
+    syringeML: () => syringeView.syringe.volumeML,
+    balanceG: balanceReading,
   },
-  vesselName: (i) => views[i].name,
+  vesselName: (i) => (i === SYRINGE ? syringeView.name : views[i].name),
   chemLabel: (key, amount) => {
     const c = CHEMICALS.find((x) => x.key === key)!;
     return `${fmt(amount)} ${c.unit} ${c.formula}${c.kind === 'solution' && c.key !== 'water' ? ' ' + c.sub : ''}`;
@@ -776,6 +948,7 @@ function frame() {
   const dt = Math.min(0.1, clock.getDelta());
   realTime += dt;
   animator.update(dt);
+  moveCamera(dt);
   if (camAnim) {
     camAnim.t = Math.min(1, camAnim.t + dt / 0.8);
     const k = camAnim.t < 0.5 ? 2 * camAnim.t ** 2 : 1 - (-2 * camAnim.t + 2) ** 2 / 2;
@@ -806,6 +979,11 @@ function frame() {
     if (v === selected) selObs = o;
   }
   for (const t of tubes.values()) t.update();
+  syringeView.update(dt);
+  syringePanel.record(simTime, syringeView.syringe.volumeML);
+  const g = balanceReading();
+  balanceView.display(g);
+  balancePanel.record(simTime, g);
   hud.panel(selected, selObs, realTime);
   hud.setTime(simTime);
   lamp.update(dt);
@@ -814,8 +992,12 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+const help = new HelpOverlay();
+document.querySelector<HTMLButtonElement>('#mainnav .nav-help')!.onclick = () => help.open();
+
 select(views[0]);
 frame();
+help.openIfFirstVisit();
 
 // API cho bảng điều khiển trình duyệt / kiểm thử
 Object.assign(window, {

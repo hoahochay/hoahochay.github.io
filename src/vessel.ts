@@ -2,12 +2,18 @@ import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
 import { bubbleAbsorption, exchangeGases, GAS_INDEX, headspaceFractions, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
-import { Mixture, SETTLE_TIME, SolidForm } from './mixture';
+import { contentsMassG, Mixture, SETTLE_TIME, SolidForm } from './mixture';
 import { solutionColor, turbidity } from './optics';
 import { REACTIONS } from './reactions';
 import { makeSolution } from './reagents';
 import { GAS_IDS, pretty, RGB, species } from './species';
 import { enthalpy, hydrogenAtoms, liquidHeatCapacity } from './thermo';
+
+/** Nơi nhận khí từ ống dẫn: một dụng cụ khác, hoặc xi lanh đo khí */
+export interface GasReceiver {
+  /** `gases`: mol từng khí; `total`: tổng mol kể cả không khí bị đẩy sang */
+  receiveGas(gases: Map<string, number>, total: number): void;
+}
 
 export interface VesselSpec {
   name: string;
@@ -20,14 +26,17 @@ export interface VesselSpec {
   volumeL: number;
   /** Diện tích miệng, cm² */
   mouthAreaCm2: number;
+  /** Khối lượng dụng cụ rỗng, g (để cân) */
+  glassMassG: number;
 }
 
 export const VESSELS = {
-  testTube: { name: 'Ống nghiệm', glassHeatCapacity: 12, pathLengthCm: 1.5, capacityL: 0.025, volumeL: 0.026, mouthAreaCm2: 1.77 },
-  beaker100: { name: 'Cốc 100 mL', glassHeatCapacity: 45, pathLengthCm: 5, capacityL: 0.1, volumeL: 0.15, mouthAreaCm2: 21.2 },
-  beaker250: { name: 'Cốc 250 mL', glassHeatCapacity: 90, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.35, mouthAreaCm2: 38.5 },
+  testTube: { name: 'Ống nghiệm', glassHeatCapacity: 12, pathLengthCm: 1.5, capacityL: 0.025, volumeL: 0.026, mouthAreaCm2: 1.77, glassMassG: 11.5 },
+  beaker100: { name: 'Cốc 100 mL', glassHeatCapacity: 45, pathLengthCm: 5, capacityL: 0.1, volumeL: 0.15, mouthAreaCm2: 21.2, glassMassG: 48 },
+  beaker250: { name: 'Cốc 250 mL', glassHeatCapacity: 90, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.35, mouthAreaCm2: 38.5, glassMassG: 95 },
   /** Cốc xốp cách nhiệt, dùng cho thí nghiệm đo nhiệt */
-  foamCup: { name: 'Cốc xốp', glassHeatCapacity: 0, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.3, mouthAreaCm2: 38.5 },
+  flask100: { name: 'Bình nón 100 mL', glassHeatCapacity: 50, pathLengthCm: 5, capacityL: 0.11, volumeL: 0.13, mouthAreaCm2: 3.8, glassMassG: 62 },
+  foamCup: { name: 'Cốc xốp', glassHeatCapacity: 0, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.3, mouthAreaCm2: 38.5, glassMassG: 2.5 },
 } satisfies Record<string, VesselSpec>;
 
 export interface SolidObservation {
@@ -75,7 +84,7 @@ function lossCoefficient(volumeML: number): number {
  * Mỗi bước thời gian: phản ứng chậm → hòa tan → cân bằng nhanh → bảo toàn H (nước)
  * → nhiệt phản ứng → khí thoát ra → đun nóng / tỏa nhiệt ra môi trường.
  */
-export class Vessel {
+export class Vessel implements GasReceiver {
   readonly mix = new Mixture();
   time = 0;
   /** Công suất đun (W) truyền vào dung dịch; đèn cồn ≈ 30–60 W */
@@ -88,7 +97,7 @@ export class Vessel {
   /** Tổng khí đã bay ra khỏi miệng dụng cụ, mol */
   readonly gasEscaped = new Map<string, number>();
   /** Ống dẫn khí: nút kín miệng dụng cụ này, dẫn khí sang dụng cụ khác */
-  outlet: Vessel | null = null;
+  outlet: GasReceiver | null = null;
   /** Úp ngược miệng xuống (để thu khí nhẹ) */
   inverted = false;
   /** Tốc độ khí đi vào từ ống dẫn, mol/s (làm mượt, để vẽ bọt khí ở đầu ống) */
@@ -302,6 +311,11 @@ export class Vessel {
     const end = this.time + maxSeconds;
     while (this.time < end && !pred(this)) this.step(dt);
     return this;
+  }
+
+  /** Số đọc của cân khi đặt dụng cụ này lên: thủy tinh + hóa chất bên trong, g */
+  massG(): number {
+    return this.spec.glassMassG + contentsMassG(this.mix);
   }
 
   observe(): Observation {

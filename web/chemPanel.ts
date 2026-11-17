@@ -32,7 +32,7 @@ export class ChemPanel {
     root.innerHTML = `
       <div class="chem-body">
         <input class="chem-search" type="search" placeholder="Tìm chất: acid, NaOH, copper…" autocomplete="off" />
-        <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm hoặc cốc.</div>
+        <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm, cốc hoặc bình nón.</div>
         <div class="chem-list"></div>
       </div>`;
     this.list = root.querySelector('.chem-list')!;
@@ -64,7 +64,7 @@ export class ChemPanel {
       html += `<div class="chem-group">${g.title}</div>`;
       for (const e of items) {
         html += `
-          <div class="chem" data-key="${e.key}" title="Kéo vào ống nghiệm hoặc cốc">
+          <div class="chem" data-key="${e.key}" title="Kéo vào ống nghiệm, cốc hoặc bình nón">
             <img src="${this.thumbs.get(e.key) ?? ''}" alt="" draggable="false" />
             <div class="meta">
               ${e.kind === 'tool'

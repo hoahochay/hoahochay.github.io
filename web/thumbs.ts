@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ChemEntry } from './catalog';
 import { deliveryTubeModel } from './deliveryTube';
+import { syringeModel } from './syringe';
+import { balanceModel } from './balance';
 import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 
@@ -26,6 +28,10 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
     let obj: THREE.Object3D;
     if (e.tool === 'delivery') {
       obj = deliveryTubeModel();
+    } else if (e.tool === 'syringe') {
+      obj = syringeModel();
+    } else if (e.tool === 'balance') {
+      obj = balanceModel();
     } else if (e.tool) {
       const p = new ProbeView(e.tool);
       p.update(0.016);

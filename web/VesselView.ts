@@ -5,11 +5,11 @@
 import * as THREE from 'three';
 import { FORM_FACTOR, Observation, RGB, species, Vessel, VESSELS, VesselSpec } from '../src';
 import { SolidItem } from './catalog';
-import { beakerProfile, filledLathe, glassLathe, Profile, tubeProfile, VolumeMap } from './geometry';
+import { beakerProfile, filledLathe, flaskProfile, glassLathe, Profile, tubeProfile, VolumeMap } from './geometry';
 import { glassMaterial, setRGB, softCircleTexture, textSprite } from './materials';
 
 export interface VesselKind {
-  type: 'tube' | 'beaker';
+  type: 'tube' | 'beaker' | 'flask';
   spec: VesselSpec;
   profile: Profile;
   wall: number;
@@ -19,6 +19,7 @@ export interface VesselKind {
 
 export const TUBE: VesselKind = { type: 'tube', spec: VESSELS.testTube, profile: tubeProfile(0.75, 15), wall: 0.07, solidScale: 1 };
 export const BEAKER: VesselKind = { type: 'beaker', spec: VESSELS.beaker100, profile: beakerProfile(2.6, 7.4), wall: 0.12, solidScale: 1.8 };
+export const FLASK: VesselKind = { type: 'flask', spec: VESSELS.flask100, profile: flaskProfile(3.3, 1.1, 7.2, 10.2), wall: 0.1, solidScale: 1.5 };
 
 const MAX_BUBBLES = 180;
 const MAX_PARTICLES = 320;

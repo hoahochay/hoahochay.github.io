@@ -3,9 +3,9 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, Vessel, VESSELS } from '../src';
+import { GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
-import { BEAKER, LabState, Recipe, RECIPES } from '../web/recipes';
+import { BEAKER, FLASK, LabState, Recipe, RECIPES, SYRINGE } from '../web/recipes';
 
 interface RunResult {
   vessels: Vessel[];
@@ -13,14 +13,23 @@ interface RunResult {
   timedOut: number[];
   /** Kết quả các lần thử khí, theo thứ tự */
   probes: string[];
+  syringe: GasSyringe;
+  weighings: number[];
 }
 
 function runRecipe(r: Recipe): RunResult {
   const vessels = [0, 1, 2, 3].map(() => new Vessel(VESSELS.testTube));
-  vessels.push(new Vessel(VESSELS.beaker100));
+  vessels.push(new Vessel(VESSELS.beaker100), new Vessel(VESSELS.flask100));
+  const syringe = new GasSyringe(100);
+  let onBalance: number | null = null;
+  let tareG = 0;
+  /** Số đọc của cân sau mỗi bước, để kiểm tra kết quả */
+  const weighings: number[] = [];
   const state: LabState = {
     mix: (i) => vessels[i].mix,
     tempC: (i) => vessels[i].mix.tempK - 273.15,
+    syringeML: () => syringe.volumeML,
+    balanceG: () => Math.round(((onBalance !== null ? vessels[onBalance].massG() : 0) - tareG) * 100) / 100,
   };
   const timedOut: number[] = [];
   const probes: string[] = [];
@@ -54,17 +63,26 @@ function runRecipe(r: Recipe): RunResult {
         break;
       }
       case 'heat':
-        vessels[s.vessel].heaterW = s.on ? (s.vessel === BEAKER ? 60 : 35) : 0;
+        vessels[s.vessel].heaterW = s.on ? (s.vessel >= BEAKER ? 60 : 35) : 0;
         break;
       case 'stir':
         vessels[s.vessel].stir();
         break;
       case 'connect':
-        if (s.dst !== null) vessels[s.src].outlet = vessels[s.dst];
+        if (s.dst === SYRINGE) {
+          syringe.reset();
+          vessels[s.src].outlet = syringe;
+        } else if (s.dst !== null) vessels[s.src].outlet = vessels[s.dst];
         else vessels[s.src].outlet = null;
         break;
       case 'invert':
         vessels[s.vessel].inverted = !vessels[s.vessel].inverted;
+        break;
+      case 'weigh':
+        onBalance = s.vessel;
+        break;
+      case 'tare':
+        tareG += state.balanceG();
         break;
       case 'probe': {
         const v = vessels[s.vessel];
@@ -78,8 +96,9 @@ function runRecipe(r: Recipe): RunResult {
         break;
       }
     }
+    weighings.push(state.balanceG());
   });
-  return { vessels, timedOut, probes };
+  return { vessels, timedOut, probes, syringe, weighings };
 }
 
 describe('Thí nghiệm mẫu', () => {
@@ -95,6 +114,26 @@ describe('Thí nghiệm mẫu', () => {
   }
 
   const run = (id: string) => runRecipe(RECIPES.find((r) => r.id === id)!).vessels;
+
+  it('bảo toàn khối lượng: kết tủa không đổi, đá vôi + acid giảm khoảng 0,2 g', () => {
+    const r = RECIPES.find((x) => x.id === 'mass-change')!;
+    const res = runRecipe(r);
+    const idx = (text: string) => r.steps.findIndex((s) => 'text' in s && s.text?.startsWith(text));
+    const w = res.weighings;
+    const afterMix = w[idx('Kết tủa trắng')];
+    expect(w[idx('Theo dõi tiếp')]).toBeCloseTo(afterMix, 2);
+    expect(afterMix).toBeGreaterThan(10);
+    const final = w[w.length - 1];
+    expect(final).toBeGreaterThan(0.25);
+    expect(final).toBeLessThan(0.35);
+  });
+
+  it('đo tốc độ bằng xi lanh: thu được khoảng 40 mL khí như bài RSC', () => {
+    const res = runRecipe(RECIPES.find((r) => r.id === 'mg-rate')!);
+    expect(res.syringe.volumeML).toBeGreaterThan(34);
+    expect(res.syringe.volumeML).toBeLessThan(44);
+    expect(res.vessels[FLASK].mix.get('Mg')).toBeLessThan(1e-5);
+  });
 
   it('Mg + HCl: Mg tan hết, thoát H2, nóng lên', () => {
     const [t1] = run('mg-hcl');

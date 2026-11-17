@@ -11,3 +11,4 @@ export * from './optics';
 export * from './vessel';
 export * from './gas';
 export * from './gasTests';
+export * from './gasSyringe';
