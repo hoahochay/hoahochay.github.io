@@ -1,6 +1,6 @@
 /**
  * Giải các cân bằng nhanh (tức thời) trong dung dịch:
- *  - axit–bazơ: tìm [H+] thỏa mãn định luật bảo toàn điện tích
+ *  - acid–base: tìm [H+] thỏa mãn định luật bảo toàn điện tích
  *  - kết tủa: nếu Q > Ksp thì kết tủa phần dư cho đến khi Q = Ksp
  *
  * H+ và OH- không được lưu như số liệu đầu vào; chúng được suy ra từ cân bằng
@@ -43,9 +43,9 @@ export function constantsAt(T: number): EqConstants {
 /** Tổng lượng (mol) của các chất tan, nhóm theo vai trò */
 export interface Totals {
   V: number;
-  /** Ion "cố định" (không tham gia axit–bazơ): Na+, Cl-, ... */
+  /** Ion "cố định" (không tham gia acid–base): Na+, Cl-, ... */
   fixed: Map<string, number>;
-  /** Tổng mol của từng hệ axit–bazơ */
+  /** Tổng mol của từng hệ acid–base */
   family: number[];
 }
 
@@ -62,7 +62,7 @@ export function collectTotals(mix: Mixture): Totals {
   return { V: mix.volumeL, fixed, family };
 }
 
-/** Phần mol của từng dạng trong hệ axit–bazơ tại [H+] = 10^logh */
+/** Phần mol của từng dạng trong hệ acid–base tại [H+] = 10^logh */
 export function alphas(pKa: number[], logh: number): number[] {
   const m = pKa.length;
   const logs: number[] = [];

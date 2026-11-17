@@ -22,7 +22,7 @@ export interface KineticReaction {
   products: Record<string, number>;
   /** Tốc độ phản ứng, mol/s (theo tiến độ ξ) */
   rate(ctx: RateContext): number;
-  /** Hình dạng của sản phẩm rắn (vd. đồng bám trên đinh sắt) */
+  /** Hình dạng của sản phẩm rắn (vd. copper bám trên đinh sắt) */
   productForm?: SolidForm;
 }
 

@@ -320,7 +320,7 @@ export class VesselView {
         for (const m of v.mats) m.color.copy(v.baseColor).lerp(tmpC, f);
       }
       if (v.item.floats) {
-        // Mẩu natri nổi, chạy trên mặt nước khi phản ứng
+        // Mẩu sodium nổi, chạy trên mặt nước khi phản ứng
         const r = this.kind.profile.radius(this.liquidH) - 0.35 * this.kind.solidScale;
         const active = (o.gasRateML.H2 ?? 0) > 0.01;
         if (active) {

@@ -36,7 +36,7 @@ export function atmosphere(v: Vessel): Atmosphere {
 export type GlowingSplintResult = 'relight' | 'none';
 export type BurningSplintResult = 'pop' | 'burns-at-mouth' | 'brighter' | 'extinguished' | 'normal';
 
-/** Que đóm còn tàn đỏ bùng cháy khi khí giàu oxi (≳ 50% O2) */
+/** Que đóm còn tàn đỏ bùng cháy khi khí giàu oxygen (≳ 50% O2) */
 export function testGlowingSplint(v: Vessel): GlowingSplintResult {
   return atmosphere(v).O2 >= 0.5 ? 'relight' : 'none';
 }

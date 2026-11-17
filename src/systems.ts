@@ -1,5 +1,5 @@
 /**
- * Các cân bằng nhanh: hệ axit–bazơ (Ka) và chất ít tan (Ksp).
+ * Các cân bằng nhanh: hệ acid–base (Ka) và chất ít tan (Ksp).
  * Hằng số ở 25°C; sự phụ thuộc nhiệt độ được tính tự động theo van 't Hoff
  * từ ΔfH° của các chất (xem equilibrium.ts).
  */
@@ -37,7 +37,7 @@ export interface SolidDef {
   Ksp: number;
   /**
    * Tốc độ hòa tan (mol/s/cm²) = (k + kH·[H+]) · S · (1 − Q/Ksp).
-   * Kết tủa hình thành tức thời; hòa tan thì cần thời gian. Hiđroxit mới kết tủa tan rất nhanh trong axit.
+   * Kết tủa hình thành tức thời; hòa tan thì cần thời gian. Hydroxide mới kết tủa tan rất nhanh trong acid.
    */
   dissolution: { k: number; kH?: number; Ea: number };
 }

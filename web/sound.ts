@@ -11,7 +11,7 @@ function audio(): AudioContext | null {
   }
 }
 
-/** Tiếng nổ nhỏ "bụp" khi đốt hiđro */
+/** Tiếng nổ nhỏ "bụp" khi đốt hydrogen */
 export function playPop(): void {
   const a = audio();
   if (!a) return;

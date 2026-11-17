@@ -5,12 +5,12 @@ export type RGB = [number, number, number];
 /** Chất chỉ thị: màu phụ thuộc pH, nồng độ rất nhỏ nên bỏ qua trong cân bằng điện tích */
 export interface IndicatorDef {
   pKa: number;
-  /** Hệ số hấp thụ mol (L/mol/cm) của dạng axit theo R, G, B */
+  /** Hệ số hấp thụ mol (L/mol/cm) của dạng acid theo R, G, B */
   acidEps: RGB;
-  /** Hệ số hấp thụ mol của dạng bazơ */
+  /** Hệ số hấp thụ mol của dạng base */
   baseEps: RGB;
   /**
-   * Độ dốc vùng chuyển màu (hệ số Hill). Phenolphtalein chuyển màu qua 2 nấc proton
+   * Độ dốc vùng chuyển màu (hệ số Hill). Phenolphthalein chuyển màu qua 2 nấc proton
    * nên dốc hơn: không màu hoàn toàn ở pH 7, bắt đầu hồng từ pH ≈ 8,2.
    */
   hill?: number;
@@ -46,77 +46,77 @@ const WHITE: RGB = [0.95, 0.95, 0.95];
 
 // ── Nước, H+, OH- ────────────────────────────────────────────────────────
 sp('H2O', 'nước', 'l', 0, 2, -285.83, 18.015);
-sp('H+', 'ion hiđro', 'aq', 1, 1, 0, 1.008);
-sp('OH-', 'ion hiđroxit', 'aq', -1, 1, -229.99, 17.007);
+sp('H+', 'ion hydrogen', 'aq', 1, 1, 0, 1.008);
+sp('OH-', 'ion hydroxide', 'aq', -1, 1, -229.99, 17.007);
 
-// ── Ion không tham gia axit–bazơ ─────────────────────────────────────────
-sp('Na+', 'ion natri', 'aq', 1, 0, -240.12, 22.99);
-sp('Li+', 'ion liti', 'aq', 1, 0, -278.49, 6.94);
-sp('K+', 'ion kali', 'aq', 1, 0, -252.38, 39.1);
-sp('Cl-', 'ion clorua', 'aq', -1, 0, -167.16, 35.45);
-sp('I-', 'ion iođua', 'aq', -1, 0, -55.19, 126.9);
-sp('NO3-', 'ion nitrat', 'aq', -1, 0, -205.0, 62.0);
-sp('Ag+', 'ion bạc', 'aq', 1, 0, 105.58, 107.87);
-sp('Fe^2+', 'ion sắt(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
-sp('Mg^2+', 'ion magie', 'aq', 2, 0, -466.85, 24.305);
-sp('Zn^2+', 'ion kẽm', 'aq', 2, 0, -153.89, 65.38);
-sp('Ca^2+', 'ion canxi', 'aq', 2, 0, -542.83, 40.08);
-sp('Ba^2+', 'ion bari', 'aq', 2, 0, -537.64, 137.33);
-sp('Pb^2+', 'ion chì(II)', 'aq', 2, 0, -1.7, 207.2);
+// ── Ion không tham gia acid–base ─────────────────────────────────────────
+sp('Na+', 'ion sodium', 'aq', 1, 0, -240.12, 22.99);
+sp('Li+', 'ion lithium', 'aq', 1, 0, -278.49, 6.94);
+sp('K+', 'ion potassium', 'aq', 1, 0, -252.38, 39.1);
+sp('Cl-', 'ion chloride', 'aq', -1, 0, -167.16, 35.45);
+sp('I-', 'ion iodide', 'aq', -1, 0, -55.19, 126.9);
+sp('NO3-', 'ion nitrate', 'aq', -1, 0, -205.0, 62.0);
+sp('Ag+', 'ion silver', 'aq', 1, 0, 105.58, 107.87);
+sp('Fe^2+', 'ion iron(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
+sp('Mg^2+', 'ion magnesium', 'aq', 2, 0, -466.85, 24.305);
+sp('Zn^2+', 'ion zinc', 'aq', 2, 0, -153.89, 65.38);
+sp('Ca^2+', 'ion calcium', 'aq', 2, 0, -542.83, 40.08);
+sp('Ba^2+', 'ion barium', 'aq', 2, 0, -537.64, 137.33);
+sp('Pb^2+', 'ion lead(II)', 'aq', 2, 0, -1.7, 207.2);
 
-// ── Các hệ axit–bazơ (xem systems.ts) ────────────────────────────────────
-sp('Cu^2+', 'ion đồng(II)', 'aq', 2, 0, 64.77, 63.55, { epsilon: [12, 3, 0.3] });
+// ── Các hệ acid–base (xem systems.ts) ────────────────────────────────────
+sp('Cu^2+', 'ion copper(II)', 'aq', 2, 0, 64.77, 63.55, { epsilon: [12, 3, 0.3] });
 // ΔfH của CuOH+ là giá trị ước lượng (ΔH thủy phân ≈ +40 kJ/mol)
 sp('CuOH+', 'ion CuOH+', 'aq', 1, 1, -181.0, 80.55, { epsilon: [12, 3, 0.3] });
-sp('Fe^3+', 'ion sắt(III)', 'aq', 3, 0, -48.5, 55.85, { epsilon: [0.4, 2.5, 20] });
+sp('Fe^3+', 'ion iron(III)', 'aq', 3, 0, -48.5, 55.85, { epsilon: [0.4, 2.5, 20] });
 sp('FeOH^2+', 'ion FeOH2+', 'aq', 2, 1, -290.8, 72.85, { epsilon: [0.5, 6, 40] });
-sp('HSO4-', 'ion hiđrosunfat', 'aq', -1, 1, -887.34, 97.07);
-sp('SO4^2-', 'ion sunfat', 'aq', -2, 0, -909.27, 96.06);
-sp('CH3COOH', 'axit axetic', 'aq', 0, 4, -485.76, 60.05);
-sp('CH3COO-', 'ion axetat', 'aq', -1, 3, -486.01, 59.04);
-sp('H2CO3', 'axit cacbonic (CO2 tan)', 'aq', 0, 2, -699.65, 62.03);
-sp('HCO3-', 'ion hiđrocacbonat', 'aq', -1, 1, -691.99, 61.02);
-sp('CO3^2-', 'ion cacbonat', 'aq', -2, 0, -677.14, 60.01);
-sp('NH4+', 'ion amoni', 'aq', 1, 4, -132.51, 18.04);
-sp('NH3', 'amoniac', 'aq', 0, 3, -80.29, 17.03);
+sp('HSO4-', 'ion hydrogensulfate', 'aq', -1, 1, -887.34, 97.07);
+sp('SO4^2-', 'ion sulfate', 'aq', -2, 0, -909.27, 96.06);
+sp('CH3COOH', 'acetic acid', 'aq', 0, 4, -485.76, 60.05);
+sp('CH3COO-', 'ion acetate', 'aq', -1, 3, -486.01, 59.04);
+sp('H2CO3', 'carbonic acid (CO2 tan)', 'aq', 0, 2, -699.65, 62.03);
+sp('HCO3-', 'ion hydrogencarbonate', 'aq', -1, 1, -691.99, 61.02);
+sp('CO3^2-', 'ion carbonate', 'aq', -2, 0, -677.14, 60.01);
+sp('NH4+', 'ion ammonium', 'aq', 1, 4, -132.51, 18.04);
+sp('NH3', 'ammonia', 'aq', 0, 3, -80.29, 17.03);
 
 // ── Phân tử tan trung hòa ────────────────────────────────────────────────
-sp('H2O2', 'hiđro peoxit', 'aq', 0, 2, -191.17, 34.01);
+sp('H2O2', 'hydrogen peroxide', 'aq', 0, 2, -191.17, 34.01);
 
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
-sp('phenolphthalein', 'phenolphtalein', 'aq', 0, 0, 0, 318.3, {
+sp('phenolphthalein', 'phenolphthalein', 'aq', 0, 0, 0, 318.3, {
   indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2 },
 });
-sp('methyl orange', 'metyl da cam', 'aq', 0, 0, 0, 327.3, {
+sp('methyl orange', 'methyl orange', 'aq', 0, 0, 0, 327.3, {
   indicator: { pKa: 3.47, acidEps: [300, 25000, 12000], baseEps: [0, 3000, 25000] },
 });
 
 // ── Kim loại & chất rắn ──────────────────────────────────────────────────
-sp('Na', 'natri', 's', 0, 0, 0, 22.99, { color: [0.82, 0.82, 0.8] });
-sp('Li', 'liti', 's', 0, 0, 0, 6.94, { color: [0.75, 0.75, 0.76] });
-sp('K', 'kali', 's', 0, 0, 0, 39.1, { color: [0.8, 0.8, 0.82] });
-sp('Mg', 'magie', 's', 0, 0, 0, 24.305, { color: [0.78, 0.78, 0.78] });
-sp('Zn', 'kẽm', 's', 0, 0, 0, 65.38, { color: [0.62, 0.64, 0.67] });
-sp('Fe', 'sắt', 's', 0, 0, 0, 55.85, { color: [0.4, 0.4, 0.42] });
-sp('Cu', 'đồng', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
-sp('Ag', 'bạc', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
-sp('MnO2', 'mangan đioxit', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
+sp('Na', 'sodium', 's', 0, 0, 0, 22.99, { color: [0.82, 0.82, 0.8] });
+sp('Li', 'lithium', 's', 0, 0, 0, 6.94, { color: [0.75, 0.75, 0.76] });
+sp('K', 'potassium', 's', 0, 0, 0, 39.1, { color: [0.8, 0.8, 0.82] });
+sp('Mg', 'magnesium', 's', 0, 0, 0, 24.305, { color: [0.78, 0.78, 0.78] });
+sp('Zn', 'zinc', 's', 0, 0, 0, 65.38, { color: [0.62, 0.64, 0.67] });
+sp('Fe', 'iron', 's', 0, 0, 0, 55.85, { color: [0.4, 0.4, 0.42] });
+sp('Cu', 'copper', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
+sp('Ag', 'silver', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
+sp('MnO2', 'manganese(IV) oxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
 
 // Kết tủa (Ksp xem systems.ts)
-sp('AgCl', 'bạc clorua', 's', 0, 0, -127.07, 143.32, { color: WHITE });
-sp('Cu(OH)2', 'đồng(II) hiđroxit', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });
-sp('Fe(OH)2', 'sắt(II) hiđroxit', 's', 0, 2, -569.0, 89.86, { color: [0.6, 0.72, 0.62] });
-sp('Fe(OH)3', 'sắt(III) hiđroxit', 's', 0, 3, -823.0, 106.87, { color: [0.6, 0.28, 0.1] });
-sp('Mg(OH)2', 'magie hiđroxit', 's', 0, 2, -924.54, 58.32, { color: WHITE });
-sp('CaCO3', 'canxi cacbonat', 's', 0, 0, -1206.92, 100.09, { color: WHITE });
-sp('BaSO4', 'bari sunfat', 's', 0, 0, -1473.2, 233.39, { color: WHITE });
-sp('PbI2', 'chì(II) iođua', 's', 0, 0, -175.48, 461.0, { color: [0.98, 0.84, 0.1] });
+sp('AgCl', 'silver chloride', 's', 0, 0, -127.07, 143.32, { color: WHITE });
+sp('Cu(OH)2', 'copper(II) hydroxide', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });
+sp('Fe(OH)2', 'iron(II) hydroxide', 's', 0, 2, -569.0, 89.86, { color: [0.6, 0.72, 0.62] });
+sp('Fe(OH)3', 'iron(III) hydroxide', 's', 0, 3, -823.0, 106.87, { color: [0.6, 0.28, 0.1] });
+sp('Mg(OH)2', 'magnesium hydroxide', 's', 0, 2, -924.54, 58.32, { color: WHITE });
+sp('CaCO3', 'calcium carbonate', 's', 0, 0, -1206.92, 100.09, { color: WHITE });
+sp('BaSO4', 'barium sulfate', 's', 0, 0, -1473.2, 233.39, { color: WHITE });
+sp('PbI2', 'lead(II) iodide', 's', 0, 0, -175.48, 461.0, { color: [0.98, 0.84, 0.1] });
 
 // ── Khí (thoát ra khỏi dung dịch) ────────────────────────────────────────
-sp('H2', 'khí hiđro', 'g', 0, 2, 0, 2.016);
-sp('O2', 'khí oxi', 'g', 0, 0, 0, 32.0);
-sp('CO2', 'khí cacbonic', 'g', 0, 0, -393.51, 44.01);
-sp('NH3(g)', 'khí amoniac', 'g', 0, 3, -45.94, 17.03);
+sp('H2', 'khí hydrogen', 'g', 0, 2, 0, 2.016);
+sp('O2', 'khí oxygen', 'g', 0, 0, 0, 32.0);
+sp('CO2', 'khí carbon dioxide', 'g', 0, 0, -393.51, 44.01);
+sp('NH3(g)', 'khí ammonia', 'g', 0, 3, -45.94, 17.03);
 
 export const SPECIES: Readonly<Record<string, SpeciesDef>> = Object.fromEntries(
   list.map((s) => [s.id, s]),

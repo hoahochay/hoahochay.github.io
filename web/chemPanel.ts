@@ -31,7 +31,7 @@ export class ChemPanel {
     for (const e of entries) this.amounts.set(e.key, e.defaultAmount);
     root.innerHTML = `
       <div class="chem-body">
-        <input class="chem-search" type="search" placeholder="Tìm chất: axit, NaOH, đồng…" autocomplete="off" />
+        <input class="chem-search" type="search" placeholder="Tìm chất: acid, NaOH, copper…" autocomplete="off" />
         <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm hoặc cốc.</div>
         <div class="chem-list"></div>
       </div>`;

@@ -1,6 +1,6 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
-import { LabState, Recipe, RECIPES, Step } from './recipes';
+import { LabState, Level, LEVELS, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
 export interface LabApi {
@@ -229,15 +229,31 @@ class RecipeUi {
     return this.bar.querySelector(sel) as T;
   }
 
+  private levelFilter: Level | 'all' = 'all';
+
   private renderList(): void {
-    this.listRoot.innerHTML = `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát.</div>` +
-      RECIPES.map((r) => `
+    const shown = RECIPES.filter((r) => this.levelFilter === 'all' || r.level === this.levelFilter);
+    const topics = (Object.keys(TOPICS) as TopicId[]).filter((t) => shown.some((r) => r.topic === t));
+    const chip = (v: Level | 'all', label: string) =>
+      `<button class="r-lv${this.levelFilter === v ? ' on' : ''}" data-lv="${v}">${label}</button>`;
+    this.listRoot.innerHTML =
+      `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Nội dung dựa trên các bài thực hành của RSC Education.</div>
+      <div class="r-levels">${chip('all', 'Tất cả')}${(Object.keys(LEVELS) as Level[]).map((l) => chip(l, LEVELS[l])).join('')}</div>` +
+      topics.map((t) => `
+        <div class="r-topic">${TOPICS[t]}</div>` +
+        shown.filter((r) => r.topic === t).map((r) => `
         <div class="recipe" data-id="${r.id}">
           <div class="r-title">${r.title}</div>
-          <div class="r-tags"><span>${r.level}</span><span>${r.topic}</span></div>
+          <div class="r-tags"><span class="lv-${r.level}">${LEVELS[r.level]}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
           <div class="r-sum">${r.summary}</div>
-          <button class="r-play">▶ Xem thí nghiệm</button>
-        </div>`).join('');
+          <div class="r-foot">
+            <button class="r-play">▶ Xem thí nghiệm</button>
+            <a class="r-src" href="${r.source.url}" target="_blank" rel="noopener" title="${r.source.title}">Nguồn RSC ↗</a>
+          </div>
+        </div>`).join('')).join('');
+    this.listRoot.querySelectorAll<HTMLButtonElement>('.r-lv').forEach((b) => {
+      b.onclick = () => { this.levelFilter = b.dataset.lv as Level | 'all'; this.renderList(); };
+    });
     this.listRoot.querySelectorAll<HTMLElement>('.recipe').forEach((el) => {
       const r = RECIPES.find((x) => x.id === el.dataset.id)!;
       el.querySelector<HTMLButtonElement>('.r-play')!.onclick = () => this.h.play(r);

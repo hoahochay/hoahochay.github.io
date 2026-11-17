@@ -2,6 +2,7 @@
 import { normalize } from '../catalog';
 import { CATEGORY_INFO, Category, COMMON, Element, ELEMENTS, groupName, STATE_NAME } from './elements';
 import { chemicalsFor, recipesFor } from './labLinks';
+import { LEVELS, TOPICS } from '../recipes';
 
 export interface TableLinks {
   openChemical(key: string): void;
@@ -47,7 +48,7 @@ const YEAR_RAMP = ['#f2e8c9', '#9fd3b8', '#4f9fd0', '#4b4fa6'];
 const SCALES: Partial<Record<ColorMode, { min: number; max: number; ramp: string[]; get: (e: Element) => number | null; unit: string; trend: string }>> = {
   en: {
     min: 0.7, max: 4, ramp: EN_RAMP, get: (e) => e.electronegativity, unit: '',
-    trend: 'Trong một chu kỳ, độ âm điện tăng từ trái sang phải; trong một nhóm A, giảm dần từ trên xuống. Flo có độ âm điện lớn nhất.',
+    trend: 'Trong một chu kỳ, độ âm điện tăng từ trái sang phải; trong một nhóm A, giảm dần từ trên xuống. Fluorine có độ âm điện lớn nhất.',
   },
   melt: {
     min: -270, max: 3500, ramp: MELT_RAMP, get: (e) => e.meltC, unit: ' °C',
@@ -85,7 +86,7 @@ export class PeriodicTable {
       <div class="pt-wrap">
         <header class="pt-head">
           <h1>Bảng tuần hoàn các nguyên tố hóa học</h1>
-          <input class="pt-search" type="search" placeholder="Tìm: Na, natri, sodium, 11…" autocomplete="off" />
+          <input class="pt-search" type="search" placeholder="Tìm: Na, sodium, sodium, 11…" autocomplete="off" />
         </header>
         <div class="pt-controls">
           <div class="seg pt-modes">${MODES.map((m) => `<button data-mode="${m.id}">${m.label}</button>`).join('')}</div>
@@ -140,10 +141,10 @@ export class PeriodicTable {
     html += `<div class="pt-ref" style="grid-column:4;grid-row:8">89–103</div>`;
     for (const e of ELEMENTS) {
       html += `
-        <button class="pt-cell" data-z="${e.z}" style="grid-column:${e.col + 1};grid-row:${e.row + 1}" title="${e.name} (${e.iupac})">
+        <button class="pt-cell" data-z="${e.z}" style="grid-column:${e.col + 1};grid-row:${e.row + 1}" title="${e.iupac}${e.name !== e.iupac ? ` (${e.name})` : ''}">
           <span class="z">${e.z}</span>
           <span class="sym">${e.symbol}</span>
-          <span class="nm">${e.name}</span>
+          <span class="nm">${e.iupac}</span>
           <span class="val"></span>
         </button>`;
     }
@@ -218,7 +219,7 @@ export class PeriodicTable {
     if (this.mode === 'state') {
       this.legend.innerHTML = `<div class="pt-swatches">${(['s', 'l', 'g', ''] as const).map((k) => `
         <span class="pt-sw"><i style="background:${STATE_COLOR[k]}"></i>${STATE_NAME[k]}</span>`).join('')}</div>
-        <div class="pt-note">Ở 25 °C chỉ có 2 nguyên tố ở thể lỏng: brom (Br) và thủy ngân (Hg). Có 11 nguyên tố ở thể khí, đều là phi kim.</div>`;
+        <div class="pt-note">Ở 25 °C chỉ có 2 nguyên tố ở thể lỏng: bromine (Br) và thủy ngân (Hg). Có 11 nguyên tố ở thể khí, đều là phi kim.</div>`;
       return;
     }
     const s = SCALES[this.mode]!;
@@ -254,8 +255,8 @@ export class PeriodicTable {
           <span class="m">${e.massIsotope ? `[${e.mass}]` : fmtNum(e.mass, 3)}</span>
         </div>
         <div>
-          <div class="pc-name">${e.name}</div>
-          <div class="pc-iupac">Tên IUPAC: ${e.iupac}</div>
+          <div class="pc-name">${e.iupac}</div>
+          ${e.name.toLowerCase() !== e.iupac.toLowerCase() ? `<div class="pc-iupac">Tên tiếng Việt cũ: ${e.name}</div>` : ''}
           <div class="pc-tags">
             <span>${CATEGORY_INFO[e.category].name}${predicted ? ' (dự đoán)' : ''}</span>
             ${e.synthetic ? '<span>Nhân tạo</span>' : ''}
@@ -266,7 +267,7 @@ export class PeriodicTable {
       <table class="pc-props">
         ${row('Vị trí', `Ô ${e.z}, chu kỳ ${e.period}, nhóm ${groupName(e.group)}${e.group ? ` (nhóm ${e.group})` : ''}`)}
         ${row('Cấu hình electron', `<span class="cfg">${e.config}</span>${predicted ? ' <i>(dự đoán)</i>' : ''}`)}
-        ${row('Khối lượng nguyên tử', e.massIsotope ? `${e.mass} (số khối đồng vị bền nhất)` : fmtNum(e.mass, 4))}
+        ${row('Khối lượng nguyên tử', e.massIsotope ? `${e.mass} (số khối copper vị bền nhất)` : fmtNum(e.mass, 4))}
         ${row('Độ âm điện', e.electronegativity !== null ? fmtNum(e.electronegativity) : '')}
         ${row('Số oxi hóa thường gặp', e.oxidation)}
         ${row('Trạng thái ở 25 °C', e.state ? STATE_NAME[e.state] : '')}
@@ -275,9 +276,9 @@ export class PeriodicTable {
       </table>
       ${e.about ? `<p class="pc-about">${e.about}</p>` : ''}
       ${recipes.length ? `
-        <div class="sec">Thí nghiệm mẫu có ${e.name.toLowerCase()}</div>
+        <div class="sec">Thí nghiệm mẫu có ${e.iupac.toLowerCase()}</div>
         <div class="pc-recipes">${recipes.map((r) => `
-          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${r.level} · ${r.topic}</small></button>`).join('')}
+          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${LEVELS[r.level]} · ${TOPICS[r.topic]}</small></button>`).join('')}
         </div>` : ''}
       ${chems.length ? `
         <div class="sec">Hóa chất có trong kho</div>
@@ -311,7 +312,7 @@ function bohrSvg(e: Element): string {
   const R = 74;
   const r0 = 15;
   const step = (R - r0) / n;
-  let s = `<svg viewBox="-80 -80 160 160" class="bohr" role="img" aria-label="Sơ đồ các lớp electron của ${e.name}">`;
+  let s = `<svg viewBox="-80 -80 160 160" class="bohr" role="img" aria-label="Sơ đồ các lớp electron của ${e.iupac}">`;
   s += `<circle r="${r0}" class="nuc"/><text class="nuc-t" y="4">+${e.z}</text>`;
   e.shells.forEach((count, i) => {
     const r = r0 + step * (i + 1);

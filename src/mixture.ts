@@ -6,7 +6,7 @@ export type SolidForm = 'strip' | 'granule' | 'powder' | 'precipitate';
 
 /** Diện tích bề mặt S (cm²) = hệ số × n^(2/3), n tính bằng mol */
 export const FORM_FACTOR: Record<SolidForm, number> = {
-  granule: 30, // viên, cục (đá vôi, mẩu natri)
+  granule: 30, // viên, cục (đá vôi, mẩu sodium)
   strip: 110, // dải, lá, đinh
   powder: 5000, // bột
   precipitate: 20000, // kết tủa mịn

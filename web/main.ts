@@ -283,23 +283,23 @@ function probe(kind: ToolKind, view: VesselView) {
     if (kind === 'glowing') {
       if (testGlowingSplint(v) === 'relight') {
         p.setFlame('bright');
-        log('Que đóm bùng cháy trở lại → khí thoát ra là oxi (O₂)', 'phenomenon', view.name);
-      } else log('Que đóm vẫn chỉ còn tàn đỏ, không bùng cháy → không giàu oxi', 'phenomenon', view.name);
+        log('Que đóm bùng cháy trở lại → khí thoát ra là oxygen (O₂)', 'phenomenon', view.name);
+      } else log('Que đóm vẫn chỉ còn tàn đỏ, không bùng cháy → không giàu oxygen', 'phenomenon', view.name);
       return;
     }
     switch (testBurningSplint(v)) {
       case 'pop':
         playPop();
         effect(popFlash(), 0.35, (o, t) => { o.scale.setScalar(1 + t * 5); (o as THREE.Sprite).material.opacity = 1 - t; });
-        log('Có tiếng nổ nhỏ "bụp" → khí hiđro (H₂) lẫn không khí', 'phenomenon', view.name);
+        log('Có tiếng nổ nhỏ "bụp" → khí hydrogen (H₂) lẫn không khí', 'phenomenon', view.name);
         break;
       case 'burns-at-mouth':
         effect(blueFlame(), holdTime, (o, t) => { o.scale.setScalar(Math.min(1, t * 8) * (1 - t * 0.5)); });
-        log('Khí cháy ở miệng ống với ngọn lửa xanh nhạt → khí hiđro (H₂)', 'phenomenon', view.name);
+        log('Khí cháy ở miệng ống với ngọn lửa xanh nhạt → khí hydrogen (H₂)', 'phenomenon', view.name);
         break;
       case 'brighter':
         p.setFlame('bright');
-        log('Que đóm cháy sáng mạnh hơn → khí giàu oxi', 'phenomenon', view.name);
+        log('Que đóm cháy sáng mạnh hơn → khí giàu oxygen', 'phenomenon', view.name);
         break;
       case 'extinguished':
         p.setFlame('none');
@@ -354,8 +354,8 @@ function probe(kind: ToolKind, view: VesselView) {
       if (elapsed < holdTime) return false;
       if (isPaper) {
         const verdict = litmusVerdict(litmusPH(view.vessel));
-        log(verdict === 'base' ? 'Giấy quỳ ẩm chuyển màu xanh → khí có tính bazơ (như NH₃)'
-          : verdict === 'acid' ? 'Giấy quỳ ẩm chuyển màu đỏ → khí có tính axit (như CO₂)'
+        log(verdict === 'base' ? 'Giấy quỳ ẩm chuyển màu xanh → khí có tính base (như NH₃)'
+          : verdict === 'acid' ? 'Giấy quỳ ẩm chuyển màu đỏ → khí có tính acid (như CO₂)'
             : 'Giấy quỳ ẩm không đổi màu', 'phenomenon', view.name);
       }
       for (const f of fx) removeTemp(f.obj);
