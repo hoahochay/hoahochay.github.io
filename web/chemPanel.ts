@@ -41,6 +41,18 @@ export class ChemPanel {
     this.render();
   }
 
+  /** Mở kho tại một hóa chất: xóa ô tìm kiếm, cuộn tới và nhấp nháy để học sinh dễ thấy */
+  reveal(key: string): void {
+    this.search.value = '';
+    this.render();
+    const el = this.list.querySelector<HTMLElement>(`.chem[data-key="${key}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
   private render(): void {
     const q = normalize(this.search.value.trim());
     const terms = q.split(/\s+/).filter(Boolean);

@@ -176,6 +176,32 @@ describe('Thí nghiệm mẫu', () => {
     expect(probesOf('h2-collect')).toEqual(['normal', 'pop']);
   });
 
+  it('Li, Na, K với nước: kali hết nhanh nhất, liti chậm nhất', () => {
+    const r = RECIPES.find((x) => x.id === 'alkali-water')!;
+    const vs = runRecipe(r).vessels;
+    // Sau khi chạy xong: cả ba đều hết kim loại, đều là bazơ mạnh
+    for (const v of vs.slice(0, 3)) expect(v.observe().pH).toBeGreaterThan(12);
+    const left = (key: string, id: string, g: number, s: number) => {
+      const v = new Vessel(VESSELS.testTube);
+      v.add(makeSolution({}, 0.005)).addSolid(id, solidMol(CHEMICALS.find((c) => c.key === key)!.solid!, g), 'granule');
+      const n0 = v.mix.get(id);
+      v.run(s);
+      return v.mix.get(id) / n0;
+    };
+    const li = left('li', 'Li', 0.01, 3), na = left('na', 'Na', 0.05, 3), k = left('k', 'K', 0.05, 3);
+    expect(k).toBeLessThan(na);
+    expect(na).toBeLessThan(li);
+  });
+
+  it('dãy hoạt động: Mg > Zn > Fe > Cu', () => {
+    const r = RECIPES.find((x) => x.id === 'metal-activity')!;
+    const h2 = runRecipe(r).vessels.slice(0, 4).map((v) => v.gasTotal.get('H2') ?? 0);
+    expect(h2[0]).toBeGreaterThan(h2[1]);
+    expect(h2[1]).toBeGreaterThan(h2[2]);
+    expect(h2[2]).toBeGreaterThan(0);
+    expect(h2[3]).toBe(0);
+  });
+
   it('đá vôi + HCl: thoát CO2', () => {
     expect(run('caco3-hcl')[0].gasTotal.get('CO2') ?? 0).toBeGreaterThan(1e-3);
   });

@@ -68,6 +68,8 @@ export interface SolidItem {
   shape: SolidShape;
   /** Nổi trên mặt nước (Na) */
   floats?: boolean;
+  /** Màu ngọn lửa khi phản ứng mạnh tỏa nhiệt bốc cháy (K) */
+  flame?: number;
 }
 
 export const SOLID_ITEMS: SolidItem[] = [
@@ -77,6 +79,8 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'fe', id: 'Fe', label: 'Đinh sắt', grams: 2, form: 'strip', shape: 'nail' },
   { key: 'cu', id: 'Cu', label: 'Dây đồng', grams: 1, form: 'strip', shape: 'wire' },
   { key: 'na', id: 'Na', label: 'Natri (mẩu)', grams: 0.1, form: 'granule', shape: 'chunk', floats: true },
+  { key: 'li', id: 'Li', label: 'Liti (mẩu)', grams: 0.02, form: 'granule', shape: 'chunk', floats: true },
+  { key: 'k', id: 'K', label: 'Kali (mẩu)', grams: 0.05, form: 'granule', shape: 'chunk', floats: true, flame: 0xc58cff },
   { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', grams: 0.5, form: 'granule', shape: 'granule' },
   { key: 'mno2', id: 'MnO2', label: 'Mangan đioxit (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
@@ -115,7 +119,7 @@ export function normalize(s: string): string {
     .toLowerCase();
 }
 
-const SOLID_FORMULA: Record<string, string> = { Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {

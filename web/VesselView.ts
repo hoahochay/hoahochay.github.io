@@ -41,6 +41,8 @@ interface SolidVisual {
   /** Hộp bao (trước khi co) trong hệ tọa độ của dụng cụ, để sinh bọt khí trên bề mặt */
   box: THREE.Box3;
   vel: THREE.Vector2;
+  /** Ngọn lửa trên mẩu kim loại (K bốc cháy màu tím hồng) */
+  flame?: THREE.Sprite;
 }
 
 const steamTex = softCircleTexture();
@@ -200,7 +202,10 @@ export class VesselView {
   /** Đổ bỏ: tạo dụng cụ mới, xóa mọi hiển thị */
   reset(): void {
     this.vessel = new Vessel(this.kind.spec);
-    for (const v of this.solids.values()) this.group.remove(v.obj);
+    for (const v of this.solids.values()) {
+      this.group.remove(v.obj);
+      if (v.flame) this.group.remove(v.flame);
+    }
     this.solids.clear();
     this.bubbles.length = 0;
     this.particles.length = 0;
@@ -221,7 +226,17 @@ export class VesselView {
       return;
     }
     if (existing) this.group.remove(existing.obj);
+    if (existing?.flame) this.group.remove(existing.flame);
     const { obj, mats } = buildSolid(item, this.kind);
+    let flame: THREE.Sprite | undefined;
+    if (item.flame) {
+      flame = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: steamTex, color: item.flame, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      flame.renderOrder = 5;
+      flame.visible = false;
+      this.group.add(flame);
+    }
     obj.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(obj);
     this.group.add(obj);
@@ -229,6 +244,7 @@ export class VesselView {
       item, obj, mats, box, size, baseColor: mats[0].color.clone(),
       mol0: this.vessel.mix.get(item.id),
       vel: new THREE.Vector2((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
+      flame,
     });
   }
 
@@ -320,6 +336,17 @@ export class VesselView {
           v.obj.rotation.y += dt * 4;
         }
         v.obj.position.y = Math.max(0.2, this.liquidH - 0.08);
+        if (v.flame) {
+          // Phản ứng đủ mạnh thì nhiệt tỏa ra làm H2 bốc cháy ngay trên mẩu kim loại
+          const burning = active && (o.gasRateML.H2 ?? 0) > 0.8;
+          v.flame.visible = burning && v.obj.visible;
+          if (v.flame.visible) {
+            const f = 1 + 0.25 * Math.sin(this.time * 31) + 0.15 * Math.sin(this.time * 17);
+            v.flame.position.set(v.obj.position.x, v.obj.position.y + 0.45 * this.kind.solidScale, v.obj.position.z);
+            v.flame.scale.set(0.7 * this.kind.solidScale, 1.2 * f * this.kind.solidScale, 1);
+            v.flame.material.opacity = 0.85;
+          }
+        }
       }
     }
     // Không còn kim loại nền: kim loại sinh ra nằm thành đống dưới đáy

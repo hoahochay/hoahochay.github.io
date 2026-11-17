@@ -16,6 +16,7 @@ import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './prop
 import { playPop } from './sound';
 import './style.css';
 import { renderThumbnails } from './thumbs';
+import { PeriodicTable } from './periodic/PeriodicTable';
 import { BEAKER, TUBE, VesselView } from './VesselView';
 
 // ── Renderer, cảnh, camera ───────────────────────────────────────────────
@@ -647,7 +648,7 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLInputElement) return;
+  if (e.target instanceof HTMLInputElement || view !== 'lab') return;
   if (e.key === 'Escape' && connectFrom) {
     connectFrom = null;
     hud.hint(null);
@@ -664,7 +665,7 @@ window.addEventListener('keydown', (e) => {
 // ── Kho hóa chất (kéo-thả) ───────────────────────────────────────────────
 const vesselGroups = views.map((v) => v.group);
 let hoverView: VesselView | null = null;
-new ChemPanel(document.getElementById('chem')!, CHEMICALS, renderThumbnails(CHEMICALS), {
+const chemPanel = new ChemPanel(document.getElementById('chem')!, CHEMICALS, renderThumbnails(CHEMICALS), {
   hitTest: (x, y) => {
     const o = pickAt(x, y, vesselGroups);
     return o ? (o.userData.view as VesselView) : null;
@@ -733,11 +734,39 @@ left.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => {
     left.querySelectorAll<HTMLElement>('.pane').forEach((p) => p.classList.toggle('hidden', p.id !== b.dataset.tab));
   };
 });
+function showTab(tab: 'chem' | 'recipes') {
+  left.querySelector<HTMLButtonElement>(`.tabs [data-tab="${tab}"]`)!.click();
+}
 const collapseBtn = left.querySelector<HTMLButtonElement>('.collapse')!;
 collapseBtn.onclick = () => {
   const c = left.classList.toggle('collapsed');
   collapseBtn.textContent = c ? '›' : '‹';
 };
+
+// ── Menu chính: phòng thí nghiệm / bảng tuần hoàn ────────────────────────
+let view: 'lab' | 'table' = 'lab';
+const ptableRoot = document.getElementById('ptable')!;
+function showView(v: 'lab' | 'table') {
+  view = v;
+  document.body.classList.toggle('table-mode', v === 'table');
+  ptableRoot.classList.toggle('hidden', v !== 'table');
+  document.querySelectorAll<HTMLButtonElement>('#mainnav [data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+  hud.tooltip(null);
+}
+document.querySelectorAll<HTMLButtonElement>('#mainnav [data-view]').forEach((b) => (b.onclick = () => showView(b.dataset.view as 'lab' | 'table')));
+new PeriodicTable(ptableRoot, {
+  openChemical: (key) => {
+    showView('lab');
+    showTab('chem');
+    chemPanel.reveal(key);
+  },
+  playRecipe: (id) => {
+    showView('lab');
+    showTab('recipes');
+    const r = RECIPES.find((x) => x.id === id);
+    if (r) void player.play(r);
+  },
+});
 
 // ── Vòng lặp chính ───────────────────────────────────────────────────────
 const clock = new THREE.Clock();
@@ -781,7 +810,7 @@ function frame() {
   hud.setTime(simTime);
   lamp.update(dt);
   controls.update();
-  renderer.render(scene, camera);
+  if (view === 'lab') renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 

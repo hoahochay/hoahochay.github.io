@@ -19,13 +19,13 @@ export const REACTIONS: KineticReaction[] = [
     id: 'zn_acid', name: 'Kẽm tác dụng với axit',
     equation: 'Zn + 2H⁺ → Zn²⁺ + H₂↑',
     reactants: { Zn: 1, 'H+': 2 }, products: { 'Zn^2+': 1, H2: 1 },
-    rate: massAction({ k25: 3e-6, Ea: 45000, orders: { 'H+': 1 }, surface: 'Zn' }),
+    rate: massAction({ k25: 1.2e-5, Ea: 45000, orders: { 'H+': 1 }, surface: 'Zn' }),
   },
   {
     id: 'fe_acid', name: 'Sắt tác dụng với axit',
     equation: 'Fe + 2H⁺ → Fe²⁺ + H₂↑',
     reactants: { Fe: 1, 'H+': 2 }, products: { 'Fe^2+': 1, H2: 1 },
-    rate: massAction({ k25: 8e-7, Ea: 50000, orders: { 'H+': 1 }, surface: 'Fe' }),
+    rate: massAction({ k25: 4e-7, Ea: 50000, orders: { 'H+': 1 }, surface: 'Fe' }),
   },
 
   // ── Kim loại mạnh đẩy kim loại yếu ra khỏi dung dịch muối ───────────
@@ -57,6 +57,19 @@ export const REACTIONS: KineticReaction[] = [
     equation: '2Na + 2H₂O → 2NaOH + H₂↑',
     reactants: { Na: 1, H2O: 1 }, products: { 'Na+': 1, 'OH-': 1, H2: 0.5 },
     rate: massAction({ k25: 7.7e-4, Ea: 20000, surface: 'Na' }),
+  },
+  // Cùng nhóm IA: tính kim loại tăng từ Li → Na → K, phản ứng với nước mạnh dần
+  {
+    id: 'li_water', name: 'Liti tác dụng với nước',
+    equation: '2Li + 2H₂O → 2LiOH + H₂↑',
+    reactants: { Li: 1, H2O: 1 }, products: { 'Li+': 1, 'OH-': 1, H2: 0.5 },
+    rate: massAction({ k25: 1.2e-4, Ea: 30000, surface: 'Li' }),
+  },
+  {
+    id: 'k_water', name: 'Kali tác dụng với nước',
+    equation: '2K + 2H₂O → 2KOH + H₂↑',
+    reactants: { K: 1, H2O: 1 }, products: { 'K+': 1, 'OH-': 1, H2: 0.5 },
+    rate: massAction({ k25: 4e-3, Ea: 15000, surface: 'K' }),
   },
 
   // ── Phân hủy H2O2 (xúc tác MnO2) ─────────────────────────────────────
