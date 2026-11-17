@@ -1,0 +1,19 @@
+{
+  "name": "chem-lab-engine",
+  "version": "0.1.0",
+  "description": "Chemistry simulation engine for a virtual school chemistry lab",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx demo/demo.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
