@@ -34,6 +34,11 @@ const PROBE_NAME: Record<ToolKind, string> = {
 };
 
 const FAST = 60;
+
+/** Thời gian đọc một câu thuyết minh (giây), khoảng 15 kí tự mỗi giây */
+function readTime(text: string): number {
+  return Math.min(10, Math.max(3, text.length / 15));
+}
 const frame = () => new Promise<number>((r) => requestAnimationFrame(r));
 
 function fmtTime(t: number): string {
@@ -84,9 +89,15 @@ export class RecipePlayer {
       for (let i = 0; i < r.steps.length; i++) {
         const step = r.steps[i];
         this.skip = false;
-        this.ui.step(i, r.steps.length, this.describe(step));
+        const text = this.describe(step);
+        this.ui.step(i, r.steps.length, text);
+        const t0 = performance.now();
         await this.exec(step, id);
-        await this.hold(step.kind === 'focus' ? 0.2 : 0.7, id);
+        // Bước thao tác (không phải bước chờ có đồng hồ): giữ lời thuyết minh đủ lâu để đọc hết
+        if (step.kind !== 'wait' && step.kind !== 'focus' && step.kind !== 'say') {
+          const shown = (performance.now() - t0) / 1000;
+          await this.hold(Math.max(1.2, readTime(text) - shown), id);
+        } else await this.hold(step.kind === 'focus' ? 0.2 : 0.8, id);
       }
       this.setSpeed(1);
       this.current = null;
@@ -167,7 +178,7 @@ export class RecipePlayer {
     switch (s.kind) {
       case 'say':
         this.ui.progress(null);
-        return this.hold(s.hold ?? Math.min(7, Math.max(2.5, s.text.length * 0.045)), id);
+        return this.hold(s.hold ?? readTime(s.text), id);
       case 'focus':
         this.lab.focus(s.vessels);
         return this.hold(0.9, id);
