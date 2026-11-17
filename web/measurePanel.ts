@@ -45,7 +45,8 @@ export class MeasurePanel {
 
   constructor(private readonly o: MeasureOptions) {
     this.root = document.createElement('div');
-    this.root.className = 'measure card hidden';
+    // Điện thoại: thu gọn sẵn (chỉ hiện số đọc) để không che cảnh 3D; bấm "–" để mở đồ thị
+    this.root.className = 'measure card hidden' + (window.matchMedia('(max-width: 700px)').matches ? ' mini' : '');
     this.root.innerHTML = `
       <div class="g-head">
         <b>${o.title}</b>
@@ -145,7 +146,7 @@ export class MeasurePanel {
 
     const ctx = this.canvas.getContext('2d')!;
     const W = this.canvas.width, H = this.canvas.height;
-    const L = 64, R = 16, T = 16, B = 46;
+    const L = 86, R = 16, T = 16, B = 46;
     const tMax = Math.max(60, Math.ceil(t / 30) * 30);
     const vals = this.samples.map((s) => s.v).concat(v);
     let lo = Math.min(...vals), hi = Math.max(...vals);

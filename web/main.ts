@@ -50,7 +50,7 @@ function fitPos(pos: THREE.Vector3, target: THREE.Vector3): THREE.Vector3 {
   const k = Math.max(1, (1.25 / camera.aspect) ** 0.8);
   return target.clone().add(pos.clone().sub(target).multiplyScalar(k));
 }
-camera.position.copy(fitPos(HOME_CAM.pos, HOME_CAM.target));
+camera.position.copy(HOME_CAM.pos);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(HOME_CAM.target);
 controls.enableDamping = true;
@@ -666,7 +666,103 @@ let focused = false;
 let camAnim: { t: number; fromP: THREE.Vector3; fromT: THREE.Vector3; toP: THREE.Vector3; toT: THREE.Vector3 } | null = null;
 
 function camTo(pos: THREE.Vector3, target: THREE.Vector3) {
-  camAnim = { t: 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: fitPos(pos, target), toT: target };
+  camAnim = { t: 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: pos, toT: target };
+}
+
+/** Phần màn hình không bị các bảng giao diện che (px) */
+function safeRect(): { l: number; r: number; t: number; b: number } {
+  const W = window.innerWidth, H = window.innerHeight;
+  let l = 8, r = W - 8, t = 8, b = H - 8;
+  const box = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el || getComputedStyle(el).display === 'none') return null;
+    const rc = el.getBoundingClientRect();
+    return rc.width > 0 && rc.height > 0 ? rc : null;
+  };
+  const nav = box('mainnav');
+  if (nav) t = Math.max(t, nav.bottom + 8);
+  const tb = box('toolbar');
+  if (tb) b = Math.min(b, tb.top - 8);
+  if (!window.matchMedia('(max-width: 700px)').matches) {
+    const left = box('left');
+    if (left) l = Math.max(l, left.right + 8);
+    const panel = box('panel');
+    if (panel) r = Math.min(r, panel.left - 8);
+  }
+  // Màn hình quá chật thì bỏ qua các bảng hai bên (chúng trong suốt một phần)
+  if (r - l < W * 0.35) { l = 8; r = W - 8; }
+  if (b - t < H * 0.3) { t = 8; b = H - 8; }
+  return { l, r, t, b };
+}
+
+/**
+ * Góc nhìn toàn cảnh: giữ hướng nhìn mặc định, chọn điểm nhìn và khoảng cách sao cho mọi đồ vật
+ * trên bàn (dụng cụ, giá, đèn cồn, cân, xi lanh) nằm trọn trong phần màn hình không bị bảng che.
+ */
+function homeView(): { pos: THREE.Vector3; target: THREE.Vector3 } {
+  const pts: THREE.Vector3[] = [];
+  const objs: THREE.Object3D[] = [...views.map((v) => v.group), rack, lamp.group, stand.group, syringeView.group, balanceView.group];
+  for (const o of objs) {
+    const bx = new THREE.Box3().setFromObject(o);
+    if (bx.isEmpty()) continue;
+    for (const x of [bx.min.x, bx.max.x]) for (const y of [bx.min.y, bx.max.y]) for (const z of [bx.min.z, bx.max.z]) pts.push(new THREE.Vector3(x, y, z));
+  }
+  const dir = HOME_CAM.pos.clone().sub(HOME_CAM.target).normalize();
+  const target = new THREE.Box3().setFromPoints(pts).getCenter(new THREE.Vector3());
+  const W = window.innerWidth, H = window.innerHeight;
+  const safe = safeRect();
+  const cam = new THREE.PerspectiveCamera(camera.fov, W / H, 0.5, 600);
+  let d = HOME_CAM.pos.distanceTo(HOME_CAM.target);
+  const right = new THREE.Vector3(), up = new THREE.Vector3(), fwd = new THREE.Vector3();
+  for (let i = 0; i < 12; i++) {
+    cam.position.copy(target).addScaledVector(dir, d);
+    cam.lookAt(target);
+    cam.updateMatrixWorld();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of pts) {
+      const n = p.clone().project(cam);
+      const px = (n.x + 1) / 2 * W, py = (1 - n.y) / 2 * H;
+      x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+    }
+    // Dời điểm nhìn để khối đồ vật nằm giữa vùng an toàn, rồi lùi / tiến cho vừa khít
+    cam.matrixWorld.extractBasis(right, up, fwd);
+    const wpp = (2 * d * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2))) / H;
+    target.addScaledVector(right, ((x0 + x1) / 2 - (safe.l + safe.r) / 2) * wpp);
+    target.addScaledVector(up, -((y0 + y1) / 2 - (safe.t + safe.b) / 2) * wpp);
+    const scale = Math.max((x1 - x0) / (safe.r - safe.l), (y1 - y0) / (safe.b - safe.t));
+    d *= 0.5 + 0.5 * scale * 1.04;
+  }
+  return { pos: target.clone().addScaledVector(dir, d), target };
+}
+
+function goHome() {
+  focused = false;
+  const h = homeView();
+  camTo(h.pos, h.target);
+}
+
+/**
+ * Thí nghiệm mẫu không bao giờ đổi mức zoom hay góc xoay của người dùng. Chỉ khi dụng cụ đang dùng
+ * nằm ngoài phần màn hình nhìn thấy (vd. người dùng đã phóng to chỗ khác) thì dời điểm nhìn sang đó.
+ */
+function panTo(vs: VesselView[] | null) {
+  if (!vs || !vs.length) return;
+  const pts: THREE.Vector3[] = [];
+  for (const v of vs) {
+    const p = v.group.position;
+    pts.push(p.clone(), p.clone().add(new THREE.Vector3(0, v.kind.profile.height, 0)));
+  }
+  const safe = safeRect();
+  const W = window.innerWidth, H = window.innerHeight;
+  const inView = pts.every((p) => {
+    const n = p.clone().project(camera);
+    const x = (n.x + 1) / 2 * W, y = (1 - n.y) / 2 * H;
+    return n.z < 1 && x >= safe.l && x <= safe.r && y >= safe.t && y <= safe.b;
+  });
+  if (inView) return;
+  const c = new THREE.Box3().setFromPoints(pts).getCenter(new THREE.Vector3());
+  const offset = camera.position.clone().sub(controls.target);
+  camTo(c.clone().add(offset), c);
 }
 
 /**
@@ -675,7 +771,7 @@ function camTo(pos: THREE.Vector3, target: THREE.Vector3) {
  */
 function lookAt(c: THREE.Vector3, dist: number) {
   const target = c.clone().add(new THREE.Vector3(0, -dist * 0.14, 0));
-  camTo(target.clone().add(new THREE.Vector3(0, dist * 0.32, dist)), target);
+  camTo(fitPos(target.clone().add(new THREE.Vector3(0, dist * 0.32, dist)), target), target);
 }
 
 function focusOn(v: VesselView) {
@@ -683,27 +779,9 @@ function focusOn(v: VesselView) {
   lookAt(c, v.kind.type === 'tube' ? 25 : 31);
 }
 
-/** Nhìn gần một nhóm dụng cụ (null: về góc nhìn toàn cảnh) */
-function focusMany(vs: VesselView[] | null) {
-  if (!vs || !vs.length) {
-    focused = false;
-    camTo(HOME_CAM.pos.clone(), HOME_CAM.target.clone());
-    return;
-  }
-  if (vs.length === 1) {
-    focused = true;
-    return focusOn(vs[0]);
-  }
-  focused = false;
-  const box = new THREE.Box3();
-  for (const v of vs) box.expandByPoint(v.home).expandByPoint(v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height, 0)));
-  lookAt(box.getCenter(new THREE.Vector3()), 24 + box.getSize(new THREE.Vector3()).x * 1.3);
-}
-
 function toggleFocus() {
   if (focused) {
-    focused = false;
-    camTo(HOME_CAM.pos.clone(), HOME_CAM.target.clone());
+    goHome();
   } else {
     const v = requireSelected();
     if (!v) return;
@@ -830,7 +908,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'KeyR') {
-    focusMany(null);
+    goHome();
     return;
   }
   if (e.key === 'Escape' && chemPanel.armed) chemPanel.arm(null);
@@ -907,7 +985,7 @@ const player = new RecipePlayer({
   invert: (vessel) => invert(views[vessel]),
   weigh: (vessel) => (vessel === null ? takeOffBalance() : placeOnBalance(views[vessel], false)),
   tare,
-  focus: (vs) => focusMany(vs ? vs.map((i) => views[i]) : null),
+  focus: (vs) => panTo(vs ? vs.map((i) => views[i]) : null),
   resetAll,
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
   simTime: () => simTime,
@@ -1084,6 +1162,13 @@ const help = new HelpOverlay();
 document.querySelector<HTMLButtonElement>('#mainnav .nav-help')!.onclick = () => help.open();
 
 select(views[0]);
+// Góc nhìn ban đầu: thấy toàn bộ bàn thí nghiệm (tính sau khi các bảng giao diện đã hiện)
+{
+  const h = homeView();
+  camera.position.copy(h.pos);
+  controls.target.copy(h.target);
+  controls.update();
+}
 frame();
 const startRoute = parseHash(location.hash);
 applyRoute(startRoute);
