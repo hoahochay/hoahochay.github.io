@@ -9,7 +9,18 @@
   <body>
     <div id="app"></div>
 
-    <aside id="chem" class="card"></aside>
+    <aside id="left" class="card">
+      <div class="tabs">
+        <button data-tab="chem" class="on">Kho hóa chất</button>
+        <button data-tab="recipes">Thí nghiệm mẫu</button>
+        <button class="collapse" title="Thu gọn">‹</button>
+      </div>
+      <div id="chem" class="pane"></div>
+      <div id="recipes" class="pane hidden"></div>
+    </aside>
+
+    <div id="recipe-bar" class="card hidden"></div>
+    <div id="recipe-result" class="card hidden"></div>
 
     <aside id="panel" class="card">
       <div id="info"></div>

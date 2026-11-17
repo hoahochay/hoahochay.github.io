@@ -29,10 +29,6 @@ export class ChemPanel {
   ) {
     for (const e of entries) this.amounts.set(e.key, e.defaultAmount);
     root.innerHTML = `
-      <div class="chem-head">
-        <div class="chem-title">Kho hóa chất</div>
-        <button class="chem-toggle" title="Thu gọn">‹</button>
-      </div>
       <div class="chem-body">
         <input class="chem-search" type="search" placeholder="Tìm chất: axit, NaOH, đồng…" autocomplete="off" />
         <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm hoặc cốc.</div>
@@ -41,10 +37,6 @@ export class ChemPanel {
     this.list = root.querySelector('.chem-list')!;
     this.search = root.querySelector('.chem-search')!;
     this.search.addEventListener('input', () => this.render());
-    root.querySelector<HTMLButtonElement>('.chem-toggle')!.onclick = () => {
-      const collapsed = root.classList.toggle('collapsed');
-      root.querySelector('.chem-toggle')!.textContent = collapsed ? '›' : '‹';
-    };
     this.render();
   }
 

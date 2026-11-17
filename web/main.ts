@@ -4,6 +4,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { indicatorDrops, makeSolution } from '../src';
 import { Animator, call, easeIn, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
+import { RecipePlayer } from './recipePlayer';
+import { RECIPES } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
@@ -131,6 +133,11 @@ const drop = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10).scale(1, 1.3,
 drop.visible = false;
 scene.add(drop);
 
+/** Vật thể tạm của hoạt ảnh (lọ, mẫu rắn), để dọn khi hủy hoạt ảnh */
+const temps = new Set<THREE.Object3D>();
+const addTemp = (o: THREE.Object3D) => { scene.add(o); temps.add(o); };
+const removeTemp = (o: THREE.Object3D) => { scene.remove(o); temps.delete(o); };
+
 const pending = new Map<VesselView, number>();
 const pendingML = (v: VesselView) => pending.get(v) ?? 0;
 const addPending = (v: VesselView, mL: number) => pending.set(v, pendingML(v) + mL);
@@ -173,7 +180,7 @@ function pour(def: ReagentDef, amount: number, view: VesselView) {
         upright = new THREE.Vector3(m.x - 3.5, m.y + 1, m.z);
         b.group.position.copy(upright);
         b.group.scale.setScalar(0.001);
-        scene.add(b.group);
+        addTemp(b.group);
         setRGB(stream.material.color, def.color);
       },
     }),
@@ -210,7 +217,7 @@ function pour(def: ReagentDef, amount: number, view: VesselView) {
       b.group.position.lerpVectors(target, upright, t);
       b.group.scale.setScalar(scale * (1 - t * 0.999));
     }),
-    call(() => scene.remove(b.group)),
+    call(() => removeTemp(b.group)),
   );
 }
 
@@ -225,7 +232,7 @@ function dropSolid(item: SolidItem, grams: number, view: VesselView) {
         above = view.mouthWorld().add(new THREE.Vector3(0, 2, 0));
         piece.position.copy(above);
         piece.scale.setScalar(0.001);
-        scene.add(piece);
+        addTemp(piece);
       },
     }),
     tween(0.45, (t) => {
@@ -233,7 +240,7 @@ function dropSolid(item: SolidItem, grams: number, view: VesselView) {
       piece.position.y = THREE.MathUtils.lerp(above.y, bottom.y, t);
     }, { ease: easeIn }),
     call(() => {
-      scene.remove(piece);
+      removeTemp(piece);
       view.vessel.addSolid(item.id, solidMol(item, grams), item.form);
       view.addSolidVisual(item, grams);
       log(`Cho ${fmt(grams)} g ${item.label.toLowerCase()} vào`, 'action', view.name);
@@ -265,23 +272,24 @@ function moveVessel(v: VesselView, to: () => THREE.Vector3, dur = 0.9) {
   }, { onStart: () => { from = v.group.position.clone(); dest = to(); } });
 }
 
-function toggleHeat() {
-  if (heatingView) {
-    const v = heatingView;
-    heatingView = null;
-    v.vessel.heaterW = 0;
-    lamp.setLit(false);
-    hud.setHeating(false);
-    log('Tắt đèn cồn', 'action', v.name);
-    animator.run(
-      call(() => (stand.clamp.visible = stand.tripod.visible = false)),
-      moveVessel(v, () => v.home),
-      call(() => (v.heating = false)),
-    );
-    return;
-  }
-  const v = requireSelected();
+function stopHeat() {
+  const v = heatingView;
   if (!v) return;
+  heatingView = null;
+  v.vessel.heaterW = 0;
+  lamp.setLit(false);
+  hud.setHeating(false);
+  log('Tắt đèn cồn', 'action', v.name);
+  animator.run(
+    call(() => (stand.clamp.visible = stand.tripod.visible = false)),
+    moveVessel(v, () => v.home),
+    call(() => (v.heating = false)),
+  );
+}
+
+function startHeat(v: VesselView) {
+  if (heatingView === v) return;
+  if (heatingView) stopHeat();
   heatingView = v;
   v.heating = true;
   hud.setHeating(true);
@@ -297,8 +305,13 @@ function toggleHeat() {
   );
 }
 
-function stir() {
+function toggleHeat() {
+  if (heatingView) return stopHeat();
   const v = requireSelected();
+  if (v) startHeat(v);
+}
+
+function stir(v = requireSelected()) {
   if (!v) return;
   const base = v.group.rotation.z;
   animator.run(
@@ -337,6 +350,25 @@ function camTo(pos: THREE.Vector3, target: THREE.Vector3) {
 function focusOn(v: VesselView) {
   const c = v.group.position.clone().add(new THREE.Vector3(0, v.kind.profile.height * 0.45, 0));
   const dist = v.kind.type === 'tube' ? 17 : 22;
+  camTo(c.clone().add(new THREE.Vector3(0, dist * 0.3, dist)), c);
+}
+
+/** Nhìn gần một nhóm dụng cụ (null: về góc nhìn toàn cảnh) */
+function focusMany(vs: VesselView[] | null) {
+  if (!vs || !vs.length) {
+    focused = false;
+    camTo(HOME_CAM.pos.clone(), HOME_CAM.target.clone());
+    return;
+  }
+  if (vs.length === 1) {
+    focused = true;
+    return focusOn(vs[0]);
+  }
+  focused = false;
+  const box = new THREE.Box3();
+  for (const v of vs) box.expandByPoint(v.home).expandByPoint(v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height, 0)));
+  const c = box.getCenter(new THREE.Vector3());
+  const dist = 16 + box.getSize(new THREE.Vector3()).x * 1.2;
   camTo(c.clone().add(new THREE.Vector3(0, dist * 0.3, dist)), c);
 }
 
@@ -423,6 +455,62 @@ new ChemPanel(document.getElementById('chem')!, CHEMICALS, renderThumbnails(CHEM
   drop: (entry, amount, t) => dropEntry(entry, amount, t as VesselView),
 });
 
+// ── Thí nghiệm mẫu ───────────────────────────────────────────────────────
+/** Đưa mọi dụng cụ về trạng thái sạch, hủy hoạt ảnh đang dở */
+function resetAll() {
+  animator.clear();
+  for (const o of [...temps]) removeTemp(o);
+  stream.visible = drop.visible = false;
+  pending.clear();
+  heatingView = null;
+  lamp.setLit(false);
+  hud.setHeating(false);
+  stand.clamp.visible = stand.tripod.visible = false;
+  for (const v of views) {
+    v.reset();
+    v.heating = false;
+    v.group.position.copy(v.home);
+    v.group.rotation.set(0, 0, 0);
+    tracker.reset(v);
+  }
+  hud.clearLog();
+}
+
+const player = new RecipePlayer({
+  add: (chem, amount, vessel) => dropEntry(CHEMICALS.find((c) => c.key === chem)!, amount, views[vessel]),
+  setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
+  stir: (vessel) => stir(views[vessel]),
+  focus: (vs) => focusMany(vs ? vs.map((i) => views[i]) : null),
+  resetAll,
+  setSpeed: (s) => { speed = s; hud.setSpeed(s); },
+  simTime: () => simTime,
+  busy: () => animator.busy,
+  state: {
+    mix: (i) => views[i].vessel.mix,
+    tempC: (i) => views[i].vessel.mix.tempK - 273.15,
+  },
+  vesselName: (i) => views[i].name,
+  chemLabel: (key, amount) => {
+    const c = CHEMICALS.find((x) => x.key === key)!;
+    return `${fmt(amount)} ${c.unit} ${c.formula}${c.kind === 'solution' && c.key !== 'water' ? ' ' + c.sub : ''}`;
+  },
+}, document.getElementById('recipes')!);
+
+// Tab bên trái: kho hóa chất / thí nghiệm mẫu
+const left = document.getElementById('left')!;
+left.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => {
+  b.onclick = () => {
+    left.classList.remove('collapsed');
+    left.querySelectorAll('.tabs [data-tab]').forEach((x) => x.classList.toggle('on', x === b));
+    left.querySelectorAll<HTMLElement>('.pane').forEach((p) => p.classList.toggle('hidden', p.id !== b.dataset.tab));
+  };
+});
+const collapseBtn = left.querySelector<HTMLButtonElement>('.collapse')!;
+collapseBtn.onclick = () => {
+  const c = left.classList.toggle('collapsed');
+  collapseBtn.textContent = c ? '›' : '‹';
+};
+
 // ── Vòng lặp chính ───────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let realTime = 0;
@@ -479,6 +567,8 @@ Object.assign(window, {
     add: (key: string, amount: number, vessel = 0) =>
       dropEntry(CHEMICALS.find((c) => c.key === key)!, amount, views[vessel]),
     heat: () => toggleHeat(),
+    player,
+    recipes: RECIPES,
     setSpeed: (s: number) => { speed = s; hud.setSpeed(s); },
     busy: () => animator.busy,
   },

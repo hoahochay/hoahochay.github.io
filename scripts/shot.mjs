@@ -26,40 +26,14 @@ const scenarios = {
     await sleep(1500);
     await shot('01-overview');
   },
-  async reactions() {
-    // Ống 1: HCl + Mg ; Ống 2: CuSO4 + NaOH ; Ống 3: CuSO4 + đinh sắt ; Cốc: nước + phenolphtalein + Na
-    await lab(() => { window.__lab.select(0); window.__lab.pour('hcl', 5); window.__lab.drop('mg_strip'); });
-    await idle();
-    await lab(() => { window.__lab.select(1); window.__lab.pour('cuso4', 2); window.__lab.pour('naoh', 2); });
-    await idle();
-    await lab(() => { window.__lab.select(2); window.__lab.pour('cuso4', 5); window.__lab.drop('fe'); });
-    await idle();
-    await lab(() => { window.__lab.select(3); window.__lab.pour('pbno3', 5); window.__lab.pour('ki', 5); });
-    await idle();
-    await lab(() => { window.__lab.select(4); window.__lab.pour('water', 20); window.__lab.pour('water', 20); window.__lab.pour('phenol'); window.__lab.drop('na'); });
-    await idle();
-    await sleep(1500);
-    await shot('02-reactions');
-    await lab(() => { window.__lab.select(0); window.__lab.focus(); });
-    await sleep(1500);
-    await shot('03-closeup-mg');
-    await lab(() => { window.__lab.select(1); });
-    await sleep(1500);
-    await shot('04-closeup-cuoh2');
-    await lab(() => { window.__lab.select(4); });
-    await sleep(1500);
-    await shot('05-closeup-na');
-    await lab(() => { window.__lab.select(2); window.__lab.setSpeed(60); });
+  /** Phát một thí nghiệm mẫu và chụp ảnh giữa chừng: node scripts/shot.mjs <url> <dir> recipe:<id> */
+  async recipe(id) {
+    await lab((rid) => { const p = window.__lab.player; p.play(window.__lab.recipes.find((r) => r.id === rid)); }, id);
     await sleep(8000);
-    await lab(() => window.__lab.setSpeed(1));
-    await shot('06-closeup-nail');
-    await lab(() => { window.__lab.select(3); window.__lab.heat(); window.__lab.setSpeed(20); });
-    await idle();
-    await sleep(1500);
-    await lab(() => window.__lab.setSpeed(1));
-    await shot('07-heating-pbi2');
+    await shot(`recipe-${id}`);
   },
 };
-await scenarios[scenario]();
+const [name, arg] = scenario.split(':');
+await scenarios[name](arg);
 console.log('errors:', errors.length ? errors : 'none');
 await browser.close();

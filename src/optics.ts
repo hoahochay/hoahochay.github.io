@@ -16,7 +16,7 @@ export function solutionColor(mix: Mixture, pathCm: number): RGB {
     const c = n / mix.volumeL;
     if (s.epsilon) for (let i = 0; i < 3; i++) A[i] += s.epsilon[i] * c * pathCm;
     if (s.indicator) {
-      const f = 1 / (1 + 10 ** (s.indicator.pKa - pH)); // phần dạng bazơ
+      const f = 1 / (1 + 10 ** ((s.indicator.hill ?? 1) * (s.indicator.pKa - pH))); // phần dạng bazơ
       for (let i = 0; i < 3; i++) {
         A[i] += ((1 - f) * s.indicator.acidEps[i] + f * s.indicator.baseEps[i]) * c * pathCm;
       }

@@ -9,6 +9,11 @@ export interface IndicatorDef {
   acidEps: RGB;
   /** Hệ số hấp thụ mol của dạng bazơ */
   baseEps: RGB;
+  /**
+   * Độ dốc vùng chuyển màu (hệ số Hill). Phenolphtalein chuyển màu qua 2 nấc proton
+   * nên dốc hơn: không màu hoàn toàn ở pH 7, bắt đầu hồng từ pH ≈ 8,2.
+   */
+  hill?: number;
 }
 
 export interface SpeciesDef {
@@ -79,7 +84,7 @@ sp('H2O2', 'hiđro peoxit', 'aq', 0, 2, -191.17, 34.01);
 
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
 sp('phenolphthalein', 'phenolphtalein', 'aq', 0, 0, 0, 318.3, {
-  indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600] },
+  indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2 },
 });
 sp('methyl orange', 'metyl da cam', 'aq', 0, 0, 0, 327.3, {
   indicator: { pKa: 3.47, acidEps: [300, 25000, 12000], baseEps: [0, 3000, 25000] },

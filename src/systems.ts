@@ -37,18 +37,18 @@ export interface SolidDef {
   Ksp: number;
   /**
    * Tốc độ hòa tan (mol/s/cm²) = (k + kH·[H+]) · S · (1 − Q/Ksp).
-   * Kết tủa hình thành tức thời; hòa tan thì cần thời gian.
+   * Kết tủa hình thành tức thời; hòa tan thì cần thời gian. Hiđroxit mới kết tủa tan rất nhanh trong axit.
    */
   dissolution: { k: number; kH?: number; Ea: number };
 }
 
 export const SOLIDS: SolidDef[] = [
   { id: 'AgCl', ions: { 'Ag+': 1, 'Cl-': 1 }, Ksp: 1.77e-10, dissolution: { k: 1e-6, Ea: 40000 } },
-  { id: 'Cu(OH)2', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2.2e-20, dissolution: { k: 1e-6, kH: 1e-5, Ea: 40000 } },
-  { id: 'Fe(OH)2', ions: { 'Fe^2+': 1, 'OH-': 2 }, Ksp: 4.87e-17, dissolution: { k: 1e-6, kH: 1e-5, Ea: 40000 } },
+  { id: 'Cu(OH)2', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2.2e-20, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
+  { id: 'Fe(OH)2', ions: { 'Fe^2+': 1, 'OH-': 2 }, Ksp: 4.87e-17, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   // Fe(OH)3 mới kết tủa (vô định hình) tan nhiều hơn dạng tinh thể
-  { id: 'Fe(OH)3', ions: { 'Fe^3+': 1, 'OH-': 3 }, Ksp: 4e-38, dissolution: { k: 1e-7, kH: 3e-6, Ea: 45000 } },
-  { id: 'Mg(OH)2', ions: { 'Mg^2+': 1, 'OH-': 2 }, Ksp: 5.61e-12, dissolution: { k: 1e-6, kH: 1e-5, Ea: 40000 } },
+  { id: 'Fe(OH)3', ions: { 'Fe^3+': 1, 'OH-': 3 }, Ksp: 4e-38, dissolution: { k: 1e-7, kH: 3e-5, Ea: 45000 } },
+  { id: 'Mg(OH)2', ions: { 'Mg^2+': 1, 'OH-': 2 }, Ksp: 5.61e-12, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   { id: 'CaCO3', ions: { 'Ca^2+': 1, 'CO3^2-': 1 }, Ksp: 3.36e-9, dissolution: { k: 1e-7, kH: 6e-5, Ea: 35000 } },
   { id: 'BaSO4', ions: { 'Ba^2+': 1, 'SO4^2-': 1 }, Ksp: 1.08e-10, dissolution: { k: 1e-7, Ea: 40000 } },
   { id: 'PbI2', ions: { 'Pb^2+': 1, 'I-': 2 }, Ksp: 9.8e-9, dissolution: { k: 1e-6, Ea: 40000 } },

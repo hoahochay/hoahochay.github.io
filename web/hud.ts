@@ -86,6 +86,10 @@ export class Hud {
     while (list.children.length > 60) list.lastChild?.remove();
   }
 
+  clearLog(): void {
+    $('#log').innerHTML = '';
+  }
+
   /** Cập nhật bảng thông tin (giới hạn ~6 lần/giây) */
   panel(view: VesselView | null, o: Observation | null, now: number): void {
     if (now - this.lastPanel < 0.16) return;

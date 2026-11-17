@@ -35,6 +35,12 @@ export class Animator {
     this.queue.push(steps);
   }
 
+  /** Hủy mọi hoạt ảnh đang chờ và đang chạy */
+  clear(): void {
+    this.queue.length = 0;
+    this.current = null;
+  }
+
   get busy(): boolean {
     return this.current !== null || this.queue.length > 0;
   }
