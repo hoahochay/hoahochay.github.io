@@ -1,0 +1,141 @@
+:root {
+  --bg: #dfe5ec;
+  --card: rgba(255, 255, 255, 0.9);
+  --ink: #1d2430;
+  --muted: #5d6675;
+  --line: #d8dde4;
+  --accent: #2f6fe0;
+  --accent-soft: #e6eefc;
+  --warn: #b4540a;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ink);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+#app { position: fixed; inset: 0; }
+canvas { display: block; touch-action: none; }
+
+.card {
+  position: fixed;
+  background: var(--card);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(30, 40, 60, 0.12);
+}
+
+button {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Kho hóa chất */
+#chem {
+  top: 16px; left: 16px; width: 300px; max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column; padding: 12px 12px 8px; font-size: 13px;
+}
+.chem-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.chem-title { font-weight: 700; font-size: 15px; }
+.chem-toggle { border: none; background: none; font-size: 18px; padding: 0 6px; line-height: 1; }
+#chem.collapsed { width: auto; }
+#chem.collapsed .chem-body { display: none; }
+#chem.collapsed .chem-head { margin: 0; gap: 8px; }
+.chem-body { display: flex; flex-direction: column; min-height: 0; }
+.chem-search {
+  font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; outline: none;
+}
+.chem-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.chem-hint { color: var(--muted); font-size: 12px; margin: 6px 2px 4px; border-radius: 6px; }
+.chem-hint.flash { animation: flash 1.2s; }
+@keyframes flash { 0%, 60% { background: #fff3c4; color: var(--ink); } 100% { background: transparent; } }
+.chem-list { overflow-y: auto; min-height: 0; margin: 0 -4px; padding: 0 4px; }
+.chem-group { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 10px 2px 4px; }
+.chem-empty { color: var(--muted); padding: 16px 4px; text-align: center; }
+.chem {
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 10px; cursor: grab; user-select: none; touch-action: none;
+  border: 1px solid transparent;
+}
+.chem:hover { background: #f3f6fa; border-color: var(--line); }
+.chem.dragging { opacity: 0.45; }
+.chem img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+.chem .f { font-weight: 600; white-space: nowrap; }
+.chem .f small { font-weight: 500; color: var(--muted); margin-left: 2px; }
+.chem .n { font-size: 12px; color: var(--muted); line-height: 1.25; }
+.amt { display: flex; align-items: center; gap: 3px; cursor: default; }
+.amt input {
+  font: inherit; font-size: 12.5px; width: 52px; padding: 4px 5px; text-align: right;
+  border: 1px solid var(--line); border-radius: 6px; background: #fff;
+}
+.amt input:focus { outline: none; border-color: var(--accent); }
+.amt span { font-size: 11.5px; color: var(--muted); width: 24px; }
+.chem-ghost {
+  position: fixed; left: 0; top: 0; z-index: 20; pointer-events: none;
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px;
+  background: rgba(255, 255, 255, 0.95); border: 2px solid #c9ced6; border-radius: 30px;
+  box-shadow: 0 8px 24px rgba(30, 40, 60, 0.2); font-size: 13px; font-weight: 600;
+}
+.chem-ghost.ok { border-color: #22b35e; }
+.chem-ghost img { width: 44px; height: 44px; object-fit: contain; }
+
+/* Bảng thông tin */
+#panel {
+  top: 16px; right: 16px; max-height: calc(100vh - 120px); width: 340px;
+  padding: 14px 16px; overflow-y: auto; font-size: 13px;
+}
+#info .title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+.muted { color: var(--muted); }
+.meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+.meter { background: #f3f5f8; border-radius: 8px; padding: 6px 8px; }
+.meter .k { font-size: 11px; color: var(--muted); }
+.meter .val { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.meter small { font-size: 11px; font-weight: 500; color: var(--muted); }
+.row { margin: 4px 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.k { color: var(--muted); }
+.sec { margin: 12px 0 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { background: #f3f5f8; border-radius: 6px; padding: 2px 7px; font-size: 12px; }
+.chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.eq { font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace; font-size: 12.5px; background: #eef6ee; color: #1f5130; border-radius: 6px; padding: 3px 7px; margin: 3px 0; display: inline-block; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0, 0, 0, 0.2); vertical-align: -2px; margin-right: 4px; }
+
+#log { list-style: none; margin: 0; padding: 0; }
+#log li { display: grid; grid-template-columns: 38px 1fr; gap: 0 6px; padding: 5px 0; border-top: 1px solid #eef0f3; font-size: 12.5px; }
+#log .t { color: var(--muted); font-variant-numeric: tabular-nums; grid-row: span 2; }
+#log .v { font-size: 11px; color: var(--muted); }
+#log li.phenomenon .m { font-weight: 600; }
+#log li.action .m { color: var(--muted); }
+#log li.warning .m { color: var(--warn); }
+
+/* Thanh công cụ */
+#toolbar {
+  left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; gap: 18px; align-items: flex-end; padding: 10px 14px;
+  max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+}
+.group { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.group.actions { flex-direction: row; gap: 6px; }
+.seg { display: flex; gap: 3px; }
+#clock { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+#tip {
+  position: fixed; display: none; pointer-events: none; z-index: 10;
+  background: rgba(20, 26, 36, 0.92); color: #fff; padding: 6px 9px; border-radius: 7px; font-size: 12.5px; line-height: 1.4;
+}
+#tip i { color: #b8c4d6; }
+
+@media (max-width: 900px) {
+  #chem { width: 240px; max-height: 45vh; }
+  #panel { top: auto; bottom: 150px; left: 16px; right: 16px; width: auto; max-height: 32vh; }
+  #toolbar { gap: 10px; }
+}
