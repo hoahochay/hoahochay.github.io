@@ -1,5 +1,6 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
+import { copyText, shareUrl } from './router';
 import { LabState, Level, LEVELS, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
@@ -49,6 +50,8 @@ export class RecipePlayer {
   private stepSpeed = 1;
   private current: Recipe | null = null;
   private readonly ui: RecipeUi;
+  /** Gọi khi bắt đầu (recipe) hoặc dừng (null) một thí nghiệm, để cập nhật đường dẫn */
+  onChange: (r: Recipe | null) => void = () => {};
 
   constructor(private readonly lab: LabApi, listRoot: HTMLElement) {
     this.ui = new RecipeUi(listRoot, {
@@ -56,7 +59,13 @@ export class RecipePlayer {
       pause: () => this.togglePause(),
       skip: () => (this.skip = true),
       stop: () => this.stop(),
+      share: (r) => this.share(r),
     });
+  }
+
+  /** Thí nghiệm đang chạy */
+  get currentId(): string | null {
+    return this.current?.id ?? null;
   }
 
   get playing(): boolean {
@@ -68,6 +77,7 @@ export class RecipePlayer {
     this.current = r;
     this.paused = false;
     this.ui.start(r);
+    this.onChange(r);
     this.lab.resetAll();
     this.setSpeed(1);
     try {
@@ -92,6 +102,13 @@ export class RecipePlayer {
     this.paused = false;
     this.setSpeed(1);
     this.ui.hide();
+    this.onChange(null);
+  }
+
+  /** Sao chép link tới thí nghiệm để gửi cho người khác */
+  private async share(r: Recipe): Promise<void> {
+    const ok = await copyText(shareUrl({ view: 'lab', tab: 'recipes', recipe: r.id }));
+    this.ui.toast(ok ? 'Đã sao chép link thí nghiệm' : 'Không sao chép được, hãy copy từ thanh địa chỉ');
   }
 
   private togglePause(): void {
@@ -212,6 +229,7 @@ interface UiHandlers {
   pause(): void;
   skip(): void;
   stop(): void;
+  share(r: Recipe): void;
 }
 
 class RecipeUi {
@@ -229,6 +247,7 @@ class RecipeUi {
         <div class="rb-ctrl">
           <button class="rb-pause" title="Tạm dừng / tiếp tục">⏸</button>
           <button class="rb-skip" title="Bỏ qua / tua nhanh bước này">⏭</button>
+          <button class="rb-share" title="Sao chép link tới thí nghiệm này">🔗</button>
           <button class="rb-stop" title="Dừng thí nghiệm mẫu">✕</button>
         </div>
       </div>
@@ -237,6 +256,19 @@ class RecipeUi {
     this.q<HTMLButtonElement>('.rb-pause').onclick = () => h.pause();
     this.q<HTMLButtonElement>('.rb-skip').onclick = () => h.skip();
     this.q<HTMLButtonElement>('.rb-stop').onclick = () => h.stop();
+    this.q<HTMLButtonElement>('.rb-share').onclick = () => this.current && h.share(this.current);
+  }
+
+  private current: Recipe | null = null;
+
+  /** Thông báo ngắn ở giữa màn hình */
+  toast(text: string): void {
+    const t = document.createElement('div');
+    t.className = 'toast card';
+    t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('out'), 1600);
+    setTimeout(() => t.remove(), 2100);
   }
 
   private q<T extends HTMLElement>(sel: string): T {
@@ -262,6 +294,7 @@ class RecipeUi {
           <div class="r-sum">${r.summary}</div>
           <div class="r-foot">
             <button class="r-play">▶ Xem thí nghiệm</button>
+            <button class="r-share" title="Sao chép link tới thí nghiệm này">🔗</button>
             <a class="r-src" href="${r.source.url}" target="_blank" rel="noopener" title="${r.source.title}">Nguồn RSC ↗</a>
           </div>
         </div>`).join('')).join('');
@@ -271,10 +304,12 @@ class RecipeUi {
     this.listRoot.querySelectorAll<HTMLElement>('.recipe').forEach((el) => {
       const r = RECIPES.find((x) => x.id === el.dataset.id)!;
       el.querySelector<HTMLButtonElement>('.r-play')!.onclick = () => this.h.play(r);
+      el.querySelector<HTMLButtonElement>('.r-share')!.onclick = () => this.h.share(r);
     });
   }
 
   start(r: Recipe): void {
+    this.current = r;
     this.result.classList.add('hidden');
     this.bar.classList.remove('hidden');
     this.q('.rb-title').textContent = r.title;

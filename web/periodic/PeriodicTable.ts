@@ -7,6 +7,8 @@ import { LEVELS, TOPICS } from '../recipes';
 export interface TableLinks {
   openChemical(key: string): void;
   playRecipe(id: string): void;
+  /** Mở / đóng thẻ nguyên tố (để cập nhật đường dẫn) */
+  elementChanged?(symbol: string | null): void;
 }
 
 type ColorMode = 'category' | 'en' | 'melt' | 'state' | 'year';
@@ -235,8 +237,16 @@ export class PeriodicTable {
   }
 
   // ── Thẻ chi tiết ──────────────────────────────────────────────────────
+  /** Mở thẻ nguyên tố theo kí hiệu (không phân biệt hoa thường); false nếu không có */
+  openSymbol(symbol: string): boolean {
+    const e = ELEMENTS.find((x) => x.symbol.toLowerCase() === symbol.toLowerCase());
+    if (e) this.open(e);
+    return !!e;
+  }
+
   open(e: Element): void {
     this.current = e;
+    this.links.elementChanged?.(e.symbol);
     this.paint();
     const color = CATEGORY_INFO[e.category].color;
     const predicted = e.z >= 104;
@@ -299,6 +309,7 @@ export class PeriodicTable {
   }
 
   close(): void {
+    if (this.current) this.links.elementChanged?.(null);
     this.current = null;
     this.card.classList.add('hidden');
     this.root.querySelector('.pt-wrap')!.classList.remove('with-card');

@@ -22,6 +22,7 @@ import { SyringeView } from './syringe';
 import { MeasurePanel } from './measurePanel';
 import { BalanceView } from './balance';
 import { HelpOverlay } from './help';
+import { parseHash, Route, setRoute } from './router';
 
 // ── Renderer, cảnh, camera ───────────────────────────────────────────────
 const app = document.getElementById('app')!;
@@ -41,7 +42,15 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 600);
 const HOME_CAM = { pos: new THREE.Vector3(-2, 27, 46), target: new THREE.Vector3(-2, 7, 2) };
-camera.position.copy(HOME_CAM.pos);
+/**
+ * Màn hình hẹp (điện thoại dựng đứng) có góc nhìn ngang rất nhỏ: lùi camera ra xa
+ * để vẫn thấy đủ bề ngang như trên màn hình rộng.
+ */
+function fitPos(pos: THREE.Vector3, target: THREE.Vector3): THREE.Vector3 {
+  const k = Math.max(1, (1.25 / camera.aspect) ** 0.8);
+  return target.clone().add(pos.clone().sub(target).multiplyScalar(k));
+}
+camera.position.copy(fitPos(HOME_CAM.pos, HOME_CAM.target));
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(HOME_CAM.target);
 controls.enableDamping = true;
@@ -657,7 +666,7 @@ let focused = false;
 let camAnim: { t: number; fromP: THREE.Vector3; fromT: THREE.Vector3; toP: THREE.Vector3; toT: THREE.Vector3 } | null = null;
 
 function camTo(pos: THREE.Vector3, target: THREE.Vector3) {
-  camAnim = { t: 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: pos, toT: target };
+  camAnim = { t: 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: fitPos(pos, target), toT: target };
 }
 
 /**
@@ -725,6 +734,12 @@ renderer.domElement.addEventListener('pointerdown', (e) => (downAt = { x: e.clie
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
   const o = pickAt(e.clientX, e.clientY);
+  const armed = chemPanel.armed;
+  if (armed) {
+    chemPanel.arm(null);
+    if (o?.userData.kind === 'vessel') dropEntry(armed.entry, armed.amount, o.userData.view);
+    return;
+  }
   if (connectFrom) {
     if (o?.userData.kind === 'vessel' && o.userData.view !== connectFrom) return connect(connectFrom, o.userData.view);
     if (o?.userData.kind === 'syringe') return connectSyringe(connectFrom);
@@ -818,6 +833,7 @@ window.addEventListener('keydown', (e) => {
     focusMany(null);
     return;
   }
+  if (e.key === 'Escape' && chemPanel.armed) chemPanel.arm(null);
   if (e.key === 'Escape' && connectFrom) {
     connectFrom = null;
     hud.hint(null);
@@ -845,6 +861,12 @@ const chemPanel = new ChemPanel(document.getElementById('chem')!, CHEMICALS, ren
     hoverView?.setHover(true);
   },
   drop: (entry, amount, t) => dropEntry(entry, amount, t as VesselView),
+  armChanged: (entry, amount) => {
+    if (entry) revealScene();
+    hud.hint(entry
+    ? `Bấm vào dụng cụ để ${entry.kind === 'tool' ? `dùng ${entry.title.toLowerCase()}` : `cho ${fmt(amount)} ${entry.unit} ${entry.formula} vào`} (bấm chỗ trống hoặc Esc để hủy)`
+    : null);
+  },
 });
 
 // ── Thí nghiệm mẫu ───────────────────────────────────────────────────────
@@ -905,11 +927,14 @@ const player = new RecipePlayer({
 
 // Tab bên trái: kho hóa chất / thí nghiệm mẫu
 const left = document.getElementById('left')!;
+let leftTab: 'chem' | 'recipes' = 'chem';
 left.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => {
   b.onclick = () => {
     left.classList.remove('collapsed');
     left.querySelectorAll('.tabs [data-tab]').forEach((x) => x.classList.toggle('on', x === b));
     left.querySelectorAll<HTMLElement>('.pane').forEach((p) => p.classList.toggle('hidden', p.id !== b.dataset.tab));
+    leftTab = b.dataset.tab as 'chem' | 'recipes';
+    syncRoute();
   };
 });
 function showTab(tab: 'chem' | 'recipes') {
@@ -930,12 +955,19 @@ function showView(v: 'lab' | 'table') {
   ptableRoot.classList.toggle('hidden', v !== 'table');
   document.querySelectorAll<HTMLButtonElement>('#mainnav [data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
   hud.tooltip(null);
+  syncRoute();
 }
 document.querySelectorAll<HTMLButtonElement>('#mainnav [data-view]').forEach((b) => (b.onclick = () => showView(b.dataset.view as 'lab' | 'table')));
-new PeriodicTable(ptableRoot, {
+let tableElement: string | null = null;
+const ptable = new PeriodicTable(ptableRoot, {
+  elementChanged: (sym) => {
+    tableElement = sym;
+    syncRoute();
+  },
   openChemical: (key) => {
     showView('lab');
     showTab('chem');
+    if (phone.matches) setSheet('chem');
     chemPanel.reveal(key);
   },
   playRecipe: (id) => {
@@ -945,6 +977,56 @@ new PeriodicTable(ptableRoot, {
     if (r) void player.play(r);
   },
 });
+
+// ── Điện thoại: kho và bảng thông tin là hai ngăn kéo, mỗi lúc mở một ngăn ──
+const phone = window.matchMedia('(max-width: 700px)');
+type Sheet = 'chem' | 'info' | null;
+function setSheet(sh: Sheet) {
+  document.body.classList.toggle('sheet-chem', sh === 'chem');
+  document.body.classList.toggle('sheet-info', sh === 'info');
+  document.getElementById('btn-sheet-chem')!.classList.toggle('on', sh === 'chem');
+  document.getElementById('btn-sheet-info')!.classList.toggle('on', sh === 'info');
+}
+const sheetOpen = (sh: 'chem' | 'info') => document.body.classList.contains(`sheet-${sh}`);
+document.getElementById('btn-sheet-chem')!.onclick = () => setSheet(sheetOpen('chem') ? null : 'chem');
+document.getElementById('btn-sheet-info')!.onclick = () => setSheet(sheetOpen('info') ? null : 'info');
+/** Trên điện thoại, đóng ngăn kéo để nhìn thấy cảnh 3D (khi chọn hóa chất, khi chạy thí nghiệm) */
+function revealScene() {
+  if (phone.matches) setSheet(null);
+}
+
+// ── Đường dẫn: link thẳng tới thí nghiệm / nguyên tố ─────────────────────
+let applyingRoute = false;
+function syncRoute() {
+  if (applyingRoute) return;
+  const id = player.currentId;
+  setRoute(view === 'table'
+    ? { view: 'table', element: tableElement ?? undefined }
+    : { view: 'lab', tab: id ? 'recipes' : leftTab, recipe: id ?? undefined });
+}
+player.onChange = (r) => {
+  if (r) revealScene();
+  syncRoute();
+};
+
+function applyRoute(r: Route) {
+  applyingRoute = true;
+  try {
+    if (r.view === 'table') {
+      showView('table');
+      if (!r.element || !ptable.openSymbol(r.element)) ptable.close();
+      return;
+    }
+    showView('lab');
+    showTab(r.tab);
+    const recipe = r.recipe ? RECIPES.find((x) => x.id === r.recipe) : undefined;
+    if (recipe && player.currentId !== recipe.id) void player.play(recipe);
+  } finally {
+    applyingRoute = false;
+    syncRoute();
+  }
+}
+window.addEventListener('hashchange', () => applyRoute(parseHash(location.hash)));
 
 // ── Vòng lặp chính ───────────────────────────────────────────────────────
 const clock = new THREE.Clock();
@@ -1003,7 +1085,10 @@ document.querySelector<HTMLButtonElement>('#mainnav .nav-help')!.onclick = () =>
 
 select(views[0]);
 frame();
-help.openIfFirstVisit();
+const startRoute = parseHash(location.hash);
+applyRoute(startRoute);
+// Người mở link tới một bài cụ thể muốn xem ngay; hướng dẫn vẫn mở được bằng nút ❓
+if (startRoute.view === 'lab' && !startRoute.recipe) help.openIfFirstVisit();
 
 // API cho bảng điều khiển trình duyệt / kiểm thử
 Object.assign(window, {

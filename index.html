@@ -10,9 +10,9 @@
     <div id="app"></div>
 
     <nav id="mainnav" class="card">
-      <button data-view="lab" class="on">⚗️ Phòng thí nghiệm</button>
-      <button data-view="table">🧮 Bảng tuần hoàn</button>
-      <button class="nav-help" title="Hướng dẫn thao tác (H)">❓ Hướng dẫn</button>
+      <button data-view="lab" class="on">⚗️ <span data-short="Phòng TN">Phòng thí nghiệm</span></button>
+      <button data-view="table">🧮 <span data-short="Bảng TH">Bảng tuần hoàn</span></button>
+      <button class="nav-help" title="Hướng dẫn thao tác (H)">❓ <span data-short="">Hướng dẫn</span></button>
     </nav>
     <section id="ptable" class="hidden"></section>
 
@@ -39,6 +39,8 @@
     <div id="toolbar" class="card">
       <div class="group"><span class="k">Thời gian <b id="clock">0:00</b></span><div id="speed" class="seg"></div></div>
       <div class="group actions">
+        <button id="btn-sheet-chem" class="phone-only" title="Kho hóa chất và thí nghiệm mẫu">🧪 Kho</button>
+        <button id="btn-sheet-info" class="phone-only" title="Thông tin dụng cụ và nhật ký">ℹ️ Thông tin</button>
         <button id="btn-stir">🥄 Khuấy</button>
         <button id="btn-heat">🔥 Đun</button>
         <button id="btn-empty">🗑 Đổ bỏ</button>

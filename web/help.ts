@@ -29,7 +29,7 @@ const HTML = `
         <ol>
           <li>Mở <b>Kho hóa chất</b> bên trái, tìm theo tên (gõ được cả tên cũ như "natri", "axit") hoặc công thức.</li>
           <li>Nhập lượng (mL, giọt hoặc g).</li>
-          <li><b>Kéo thả</b> lọ hoặc đĩa mẫu vào dụng cụ. Viền xanh lá hiện ra khi thả đúng chỗ.</li>
+          <li><b>Kéo thả</b> lọ hoặc đĩa mẫu vào dụng cụ (viền xanh lá hiện ra khi thả đúng chỗ), hoặc <b>bấm chọn</b> lọ rồi bấm vào dụng cụ.</li>
         </ol>
       </section>
       <section>
@@ -52,7 +52,15 @@ const HTML = `
       </section>
       <section>
         <h3>▶ Thí nghiệm mẫu</h3>
-        <p>Tab <b>Thí nghiệm mẫu</b> có các bài dựa trên RSC Education, xếp theo chủ đề và lọc theo mức độ. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình.</p>
+        <p>Tab <b>Thí nghiệm mẫu</b> có các bài dựa trên RSC Education, xếp theo chủ đề và lọc theo mức độ. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
+      </section>
+      <section>
+        <h3>📱 Trên điện thoại</h3>
+        <ul>
+          <li>Một ngón kéo: xoay. Hai ngón: di chuyển và phóng to.</li>
+          <li>Nút <b>🧪 Kho</b> và <b>ℹ️ Thông tin</b> ở thanh dưới cùng mở kho hóa chất và bảng thông tin.</li>
+          <li>Chạm vào hóa chất để chọn, kho tự đóng lại, rồi chạm vào dụng cụ.</li>
+        </ul>
       </section>
       <section>
         <h3>📋 Nhật ký hiện tượng</h3>

@@ -1,4 +1,7 @@
-/** Kho hóa chất: tìm kiếm, nhập lượng, kéo-thả vào dụng cụ */
+/**
+ * Kho hóa chất: tìm kiếm, nhập lượng, rồi kéo thả vào dụng cụ.
+ * Trên màn hình cảm ứng (hoặc khi thích bấm hơn kéo): chạm một mục để chọn, rồi chạm vào dụng cụ.
+ */
 import { ChemEntry, normalize } from './catalog';
 
 export interface DropTarget {
@@ -6,6 +9,8 @@ export interface DropTarget {
   hitTest(x: number, y: number): unknown | null;
   hover(target: unknown | null): void;
   drop(entry: ChemEntry, amount: number, target: unknown): void;
+  /** Mục đang được chọn để chạm-rồi-đặt thay đổi (null: bỏ chọn) */
+  armChanged(entry: ChemEntry | null, amount: number): void;
 }
 
 const GROUPS: { kind: ChemEntry['kind']; title: string }[] = [
@@ -21,6 +26,8 @@ export class ChemPanel {
   private readonly amounts = new Map<string, number>();
   private readonly list: HTMLElement;
   private readonly search: HTMLInputElement;
+  /** Mục đang chọn (chạm-rồi-đặt) */
+  private armedKey: string | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -32,7 +39,7 @@ export class ChemPanel {
     root.innerHTML = `
       <div class="chem-body">
         <input class="chem-search" type="search" placeholder="Tìm chất: acid, NaOH, copper…" autocomplete="off" />
-        <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm, cốc hoặc bình nón.</div>
+        <div class="chem-hint">Nhập lượng rồi <b>kéo thả</b> vào ống nghiệm, cốc hoặc bình nón, hoặc <b>chạm chọn</b> rồi chạm vào dụng cụ.</div>
         <div class="chem-list"></div>
       </div>`;
     this.list = root.querySelector('.chem-list')!;
@@ -53,6 +60,19 @@ export class ChemPanel {
     el.classList.add('flash');
   }
 
+  /** Mục đang chọn và lượng của nó, hoặc null */
+  get armed(): { entry: ChemEntry; amount: number } | null {
+    const entry = this.armedKey ? this.entries.find((e) => e.key === this.armedKey) : undefined;
+    return entry ? { entry, amount: this.amounts.get(entry.key)! } : null;
+  }
+
+  arm(key: string | null): void {
+    this.armedKey = key;
+    this.list.querySelectorAll<HTMLElement>('.chem').forEach((el) => el.classList.toggle('armed', el.dataset.key === key));
+    const a = this.armed;
+    this.target.armChanged(a?.entry ?? null, a?.amount ?? 0);
+  }
+
   private render(): void {
     const q = normalize(this.search.value.trim());
     const terms = q.split(/\s+/).filter(Boolean);
@@ -64,7 +84,7 @@ export class ChemPanel {
       html += `<div class="chem-group">${g.title}</div>`;
       for (const e of items) {
         html += `
-          <div class="chem" data-key="${e.key}" title="Kéo vào ống nghiệm, cốc hoặc bình nón">
+          <div class="chem${e.key === this.armedKey ? ' armed' : ''}" data-key="${e.key}" title="Kéo vào dụng cụ, hoặc bấm chọn rồi bấm vào dụng cụ">
             <img src="${this.thumbs.get(e.key) ?? ''}" alt="" draggable="false" />
             <div class="meta">
               ${e.kind === 'tool'
@@ -88,12 +108,14 @@ export class ChemPanel {
     input?.addEventListener('input', () => {
       const v = Number(input.value);
       if (v > 0) this.amounts.set(entry.key, Math.min(entry.max, v));
+      if (this.armedKey === entry.key) this.arm(entry.key);
     });
     input?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
 
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
-      ev.preventDefault();
+      // Chuột: chặn bôi đen chữ. Cảm ứng: để trình duyệt còn cuộn được danh sách (vuốt dọc)
+      if (ev.pointerType === 'mouse') ev.preventDefault();
       const start = { x: ev.clientX, y: ev.clientY };
       let ghost: HTMLElement | null = null;
       let over: unknown | null = null;
@@ -114,15 +136,20 @@ export class ChemPanel {
           ghost.classList.toggle('ok', !!t);
         }
       };
-      const up = () => {
+      const up = (e: PointerEvent) => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', up);
         el.classList.remove('dragging');
         ghost?.remove();
         this.target.hover(null);
-        if (ghost && over) this.target.drop(entry, this.amounts.get(entry.key)!, over);
-        else if (!ghost) this.flashHint();
+        if (ghost && over) {
+          this.arm(null);
+          this.target.drop(entry, this.amounts.get(entry.key)!, over);
+        } else if (!ghost && e.type === 'pointerup') {
+          // Chạm / bấm không kéo: chọn mục này (bấm lần nữa để bỏ chọn)
+          this.arm(this.armedKey === entry.key ? null : entry.key);
+        }
       };
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
@@ -139,10 +166,4 @@ export class ChemPanel {
     return g;
   }
 
-  private flashHint(): void {
-    const h = this.root.querySelector<HTMLElement>('.chem-hint')!;
-    h.classList.remove('flash');
-    void h.offsetWidth;
-    h.classList.add('flash');
-  }
 }
