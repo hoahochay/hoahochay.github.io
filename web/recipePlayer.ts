@@ -1,7 +1,16 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
 import { copyText, shareUrl } from './router';
-import { LabState, LESSONS, LessonId, Level, LEVEL_GRADES, LEVELS, Recipe, RECIPES, Step } from './recipes';
+import { BookId, BOOKS, gradeOf, LabState, LESSONS, LessonId, Recipe, RECIPES, Step } from './recipes';
+
+const BOOK_KEY = 'lab-book';
+function savedBook(): BookId {
+  try {
+    const b = localStorage.getItem(BOOK_KEY);
+    if (b && b in BOOKS) return b as BookId;
+  } catch { /* bộ nhớ trình duyệt bị chặn */ }
+  return 'kntt';
+}
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
 export interface LabApi {
@@ -9,6 +18,8 @@ export interface LabApi {
   setHeat(vessel: number, on: boolean): void;
   stir(vessel: number): void;
   probe(tool: ToolKind, vessel: number): void;
+  /** Kẹp mẩu chất rắn đốt trên ngọn lửa đèn cồn */
+  burn(chem: string): void;
   connect(src: number, dst: number | null): void;
   invert(vessel: number): void;
   /** Đặt dụng cụ lên cân điện tử; null: lấy xuống */
@@ -148,6 +159,7 @@ export class RecipePlayer {
       case 'probe': return s.text ?? (s.tool === 'magnet'
         ? `Đưa nam châm lại gần đáy ${this.lab.vesselName(s.vessel).toLowerCase()}.`
         : `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`);
+      case 'burn': return s.text ?? `Dùng kẹp sắt giữ ${this.lab.chemLabel(s.chem, 0).replace(/^0 \S* /, '')} đốt trên ngọn lửa đèn cồn.`;
       case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${this.lab.vesselName(s.vessel).toLowerCase()} lên cân điện tử.`);
       case 'tare': return s.text ?? 'Bấm nút trừ bì: cân trở về 0,00 g.';
       case 'focus': return '';
@@ -188,6 +200,10 @@ export class RecipePlayer {
       case 'add':
         this.ui.progress(null);
         this.lab.add(s.chem, s.amount, s.vessel);
+        return this.untilIdle(id);
+      case 'burn':
+        this.ui.progress(null);
+        this.lab.burn(s.chem);
         return this.untilIdle(id);
       case 'heat':
         this.ui.progress(null);
@@ -289,23 +305,37 @@ class RecipeUi {
     return this.bar.querySelector(sel) as T;
   }
 
-  private levelFilter: Level | 'all' = 'all';
+  private gradeFilter: number | 'all' = 'all';
+  /** Bộ sách đang xem */
+  private book: BookId = savedBook();
+
+  private setBook(b: BookId): void {
+    if (b === this.book) return;
+    this.book = b;
+    try { localStorage.setItem(BOOK_KEY, b); } catch { /* bỏ qua */ }
+    this.renderList();
+  }
 
   private renderList(): void {
-    const shown = RECIPES.filter((r) => this.levelFilter === 'all' || r.level === this.levelFilter);
+    const inBook = RECIPES.filter((r) => LESSONS[r.lesson].book === this.book);
+    const grades = [...new Set(inBook.map(gradeOf))].sort((a, b) => a - b);
+    if (this.gradeFilter !== 'all' && !grades.includes(this.gradeFilter)) this.gradeFilter = 'all';
+    const shown = inBook.filter((r) => this.gradeFilter === 'all' || gradeOf(r) === this.gradeFilter);
     const lessons = (Object.keys(LESSONS) as LessonId[]).filter((t) => shown.some((r) => r.lesson === t));
-    const chip = (v: Level | 'all', label: string) =>
-      `<button class="r-lv${this.levelFilter === v ? ' on' : ''}" data-lv="${v}"${v === 'all' ? '' : ` title="${LEVEL_GRADES[v]}"`}>${label}</button>`;
+    const chip = (v: number | 'all', label: string) =>
+      `<button class="r-lv${this.gradeFilter === v ? ' on' : ''}" data-grade="${v}">${label}</button>`;
     this.listRoot.innerHTML =
       `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Các thí nghiệm theo sách giáo khoa, xếp theo bài học.</div>
-      <div class="r-levels">${chip('all', 'Tất cả')}${(Object.keys(LEVELS) as Level[]).map((l) => chip(l, `${LEVELS[l]} · ${LEVEL_GRADES[l]}`)).join('')}</div>` +
-      (shown.length ? '' : '<div class="chem-hint">Chưa có thí nghiệm nào ở mức này.</div>') +
+      <div class="r-books">${(Object.keys(BOOKS) as BookId[]).map((b) =>
+        `<button class="r-book${this.book === b ? ' on' : ''}" data-book="${b}">${BOOKS[b]}</button>`).join('')}</div>
+      <div class="r-levels">${chip('all', 'Tất cả các lớp')}${grades.map((g) => chip(g, `Lớp ${g}`)).join('')}</div>` +
+      (shown.length ? '' : '<div class="chem-hint">Bộ sách này chưa có thí nghiệm nào.</div>') +
       lessons.map((t) => `
-        <div class="r-topic">${LESSONS[t]}</div>` +
+        <div class="r-topic">${LESSONS[t].title}</div>` +
         shown.filter((r) => r.lesson === t).map((r) => `
         <div class="recipe" data-id="${r.id}">
           <div class="r-title">${r.title}</div>
-          <div class="r-tags"><span class="lv-${r.level}">${LEVELS[r.level]}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
+          <div class="r-tags"><span class="grade">Lớp ${gradeOf(r)}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
           <div class="r-sum">${r.summary}</div>
           <div class="r-foot">
             <button class="r-play">▶ Xem thí nghiệm</button>
@@ -313,8 +343,11 @@ class RecipeUi {
             ${r.page ? `<span class="r-src">SGK tr. ${r.page}</span>` : ''}
           </div>
         </div>`).join('')).join('');
+    this.listRoot.querySelectorAll<HTMLButtonElement>('.r-book').forEach((b) => {
+      b.onclick = () => this.setBook(b.dataset.book as BookId);
+    });
     this.listRoot.querySelectorAll<HTMLButtonElement>('.r-lv').forEach((b) => {
-      b.onclick = () => { this.levelFilter = b.dataset.lv as Level | 'all'; this.renderList(); };
+      b.onclick = () => { this.gradeFilter = b.dataset.grade === 'all' ? 'all' : Number(b.dataset.grade); this.renderList(); };
     });
     this.listRoot.querySelectorAll<HTMLElement>('.recipe').forEach((el) => {
       const r = RECIPES.find((x) => x.id === el.dataset.id)!;
@@ -325,6 +358,8 @@ class RecipeUi {
 
   start(r: Recipe): void {
     this.current = r;
+    // Mở bằng link tới bài của bộ sách khác: chuyển danh sách sang bộ sách đó
+    this.setBook(LESSONS[r.lesson].book);
     this.result.classList.add('hidden');
     this.bar.classList.remove('hidden');
     this.q('.rb-title').textContent = r.title;

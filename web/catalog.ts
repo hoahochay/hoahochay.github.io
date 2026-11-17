@@ -34,6 +34,8 @@ export const REAGENTS: ReagentDef[] = [
   reagent('hcl', 'HCl', '1M', 'hydrochloric acid', { HCl: 1 }),
   reagent('h2so4', 'H₂SO₄', '0,5M', 'sulfuric acid loãng', { H2SO4: 0.5 }),
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
+  // Giấm ăn: acetic acid khoảng 5% (≈ 0,83 M)
+  reagent('vinegar', 'CH₃COOH', '5%', 'giấm ăn', { CH3COOH: 0.83 }, { aka: 'vinegar acetic acid giam' }),
   reagent('naoh', 'NaOH', '1M', 'sodium hydroxide', { NaOH: 1 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
@@ -89,6 +91,7 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate', grams: 0.5, form: 'granule', shape: 'granule' },
   { key: 'fe_powder', id: 'Fe', label: 'Bột sắt', aka: 'iron powder', grams: 0.7, form: 'powder', shape: 'powder' },
   { key: 's_powder', id: 'S', label: 'Bột lưu huỳnh', aka: 'sulfur', grams: 0.4, form: 'powder', shape: 'powder' },
+  { key: 'baking_soda', id: 'NaHCO3', label: 'Bột baking soda', aka: 'sodium hydrogencarbonate bot no', grams: 0.2, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
@@ -141,7 +144,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {

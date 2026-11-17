@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
-import { BEAKER, FLASK, LabState, Recipe, RECIPES, SYRINGE } from '../web/recipes';
+import { BEAKER, BOOKS, FLASK, LabState, LESSONS, Recipe, RECIPES, SYRINGE } from '../web/recipes';
 
 interface RunResult {
   vessels: Vessel[];
@@ -81,6 +81,12 @@ function runRecipe(r: Recipe): RunResult {
       case 'weigh':
         onBalance = s.vessel;
         break;
+      case 'burn': {
+        const c = CHEMICALS.find((x) => x.key === s.chem);
+        if (!c?.solid) throw new Error(`${r.id}: không có chất rắn "${s.chem}"`);
+        probes.push('burn-' + c.solid.id);
+        break;
+      }
       case 'tare':
         tareG += state.balanceG();
         break;
@@ -130,5 +136,19 @@ describe('Thí nghiệm mẫu', () => {
     expect(res.probes).toEqual(['magnet-attracted', 'magnet-none']);
     expect(res.vessels[1].mix.get('FeS')).toBeGreaterThan(0.012);
     expect(res.vessels[0].mix.get('FeS')).toBeLessThan(1e-8);
+  });
+
+  it('CTST Bài 2 – làm đục nước vôi trong: có CaCO3 trong ống 2', () => {
+    const v = run('lam-duc-nuoc-voi-trong');
+    expect(v[1].mix.get('CaCO3')).toBeGreaterThan(1e-5);
+    expect(v[0].gasTotal.get('CO2') ?? 0).toBeGreaterThan(3e-4);
+  });
+
+  it('CTST Bài 2 – đốt magnesium', () => {
+    expect(runRecipe(RECIPES.find((x) => x.id === 'dot-chay-magnesium')!).probes).toEqual(['burn-Mg']);
+  });
+
+  it('mỗi bài học thuộc một bộ sách có trong danh sách', () => {
+    for (const r of RECIPES) expect(BOOKS[LESSONS[r.lesson].book]).toBeTruthy();
   });
 });

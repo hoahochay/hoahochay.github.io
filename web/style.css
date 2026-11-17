@@ -71,13 +71,15 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 .r-share { width: 30px; padding: 0; margin-right: auto; font-size: 14px; }
 .r-src { font-size: 11.5px; color: var(--muted); text-decoration: none; }
 .r-src:hover { color: var(--accent); text-decoration: underline; }
+.r-books { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.r-book { border: 0; border-radius: 0; font-size: 12.5px; padding: 6px 4px; background: transparent; }
+.r-book + .r-book { border-left: 1px solid var(--line); }
+.r-book.on { background: var(--accent); color: #fff; font-weight: 600; }
 .r-levels { display: flex; gap: 4px; margin: 8px 0 2px; flex-wrap: wrap; }
 .r-lv { font-size: 12px; padding: 3px 10px; border-radius: 14px; }
 .r-lv.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .r-topic { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 2px 2px; }
-.r-tags span.lv-basic { background: #e3f4e8; color: #23784a; }
-.r-tags span.lv-intermediate { background: #fff1d6; color: #9a6400; }
-.r-tags span.lv-advanced { background: #fde4e4; color: #b03030; }
+.r-tags span.grade { background: #e3eefc; color: #1f5fbf; font-weight: 600; }
 .recipe.active .r-play { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 #recipe-bar {
@@ -176,7 +178,7 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 
 /* Thanh công cụ */
 #toolbar {
-  left: 50%; bottom: 16px; transform: translateX(-50%);
+  left: 50%; bottom: 16px; transform: translateX(-50%); width: max-content;
   display: flex; gap: 18px; align-items: flex-end; padding: 10px 14px;
   max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
 }
@@ -415,7 +417,7 @@ kbd {
 
   /* Thanh dưới: hàng 1 thời gian + tốc độ, hàng 2 tất cả nút thao tác (biểu tượng trên, chữ dưới) */
   #toolbar {
-    left: 0; right: 0; bottom: 0; transform: none; max-width: none; border-radius: 14px 14px 0 0;
+    left: 0; right: 0; bottom: 0; transform: none; width: auto; max-width: none; border-radius: 14px 14px 0 0;
     flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
     padding: 6px 4px max(6px, env(safe-area-inset-bottom));
   }

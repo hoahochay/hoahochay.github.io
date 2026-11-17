@@ -46,18 +46,20 @@ const HTML = `
       <section>
         <h3>🛠 Thanh công cụ dưới cùng</h3>
         <ul>
+          <li><b>Kéo ống nghiệm, cốc, bình</b> trên bàn: thả vào <b>đèn cồn</b> để đun, thả lên <b>cân</b> để cân, thả chỗ khác để cất về chỗ cũ.</li>
           <li><b>Khuấy</b>, <b>Đun</b> (hoặc bấm vào đèn cồn), <b>Đổ bỏ</b>, <b>Úp ống</b> (để thu khí nhẹ như H₂), <b>Nhìn gần</b>: tác dụng lên dụng cụ đang chọn.</li>
+          <li>Kéo mẩu kim loại (dải magnesium, dây đồng, đinh sắt…) thả vào <b>đèn cồn</b>: kẹp sắt sẽ giữ mẫu đốt trên ngọn lửa. Dùng <b>nam châm</b> để thử xem trong ống còn sắt không.</li>
           <li>Tốc độ thời gian <b>1×</b> đến <b>60×</b> để tua nhanh phản ứng chậm; <kbd>Space</kbd> tạm dừng / chạy tiếp.</li>
         </ul>
       </section>
       <section>
         <h3>▶ Thí nghiệm mẫu</h3>
-        <p>Tab <b>Thí nghiệm mẫu</b> có các thí nghiệm theo sách giáo khoa, xếp theo bài học và lọc theo mức độ (Cơ bản: lớp 8–9, Trung cấp: lớp 10–11, Nâng cao: lớp 12). Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
+        <p>Tab <b>Thí nghiệm mẫu</b> có các thí nghiệm theo sách giáo khoa (chọn bộ Kết nối tri thức hoặc Chân trời sáng tạo), xếp theo bài học và lọc theo lớp. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
       </section>
       <section>
         <h3>📱 Trên điện thoại</h3>
         <ul>
-          <li>Một ngón vuốt: di chuyển. Hai ngón: chụm/mở để phóng to, xoay hai ngón để đổi góc nhìn.</li>
+          <li>Một ngón vuốt chỗ trống: di chuyển cảnh; một ngón kéo dụng cụ: cầm dụng cụ đi. Hai ngón: chụm/mở để phóng to, xoay hai ngón để đổi góc nhìn.</li>
           <li>Nút <b>🧪 Kho</b> và <b>ℹ️ Thông tin</b> ở thanh dưới cùng mở kho hóa chất và bảng thông tin; mọi nút thao tác đều nằm ở thanh này.</li>
           <li>Chạm vào hóa chất để chọn, kho tự đóng lại, rồi chạm vào dụng cụ.</li>
         </ul>

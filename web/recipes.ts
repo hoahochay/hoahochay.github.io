@@ -26,35 +26,45 @@ export type Step =
   | { kind: 'heat'; vessel: number; on: boolean; text?: string }
   | { kind: 'stir'; vessel: number; text?: string }
   | { kind: 'probe'; tool: ToolKind; vessel: number; text?: string }
+  /** Dùng kẹp sắt giữ mẩu chất rắn đốt trên ngọn lửa đèn cồn */
+  | { kind: 'burn'; chem: string; text?: string }
   | { kind: 'connect'; src: number; dst: number | null; text?: string }
   | { kind: 'invert'; vessel: number; text?: string }
   | { kind: 'weigh'; vessel: number | null; text?: string }
   | { kind: 'tare'; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
 
+/** Các bộ SGK có trong ứng dụng */
+export const BOOKS = {
+  kntt: 'Kết nối tri thức',
+  ctst: 'Chân trời sáng tạo',
+} as const;
+export type BookId = keyof typeof BOOKS;
+
 /** Bài học trong SGK mà thí nghiệm thuộc về; thứ tự ở đây là thứ tự hiện trong danh sách */
 export const LESSONS = {
-  'khtn8-b2': 'KHTN 8 · Bài 2. Phản ứng hóa học',
-  'khtn8-b4': 'KHTN 8 · Bài 4. Dung dịch và nồng độ',
-  'khtn8-b5': 'KHTN 8 · Bài 5. Định luật bảo toàn khối lượng',
-  'khtn8-b7': 'KHTN 8 · Bài 7. Tốc độ phản ứng và chất xúc tác',
-  'khtn8-b8': 'KHTN 8 · Bài 8. Acid',
-  'khtn8-b9': 'KHTN 8 · Bài 9. Base. Thang pH',
-  'khtn8-b10': 'KHTN 8 · Bài 10. Oxide',
-  'khtn8-b11': 'KHTN 8 · Bài 11. Muối',
-} as const;
+  // KHTN 8 – Kết nối tri thức
+  'khtn8-b2': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 2. Phản ứng hóa học' },
+  'khtn8-b4': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 4. Dung dịch và nồng độ' },
+  'khtn8-b5': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 5. Định luật bảo toàn khối lượng' },
+  'khtn8-b7': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 7. Tốc độ phản ứng và chất xúc tác' },
+  'khtn8-b8': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 8. Acid' },
+  'khtn8-b9': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 9. Base. Thang pH' },
+  'khtn8-b10': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 10. Oxide' },
+  'khtn8-b11': { book: 'kntt', grade: 8, title: 'KHTN 8 · Bài 11. Muối' },
+  // KHTN 8 – Chân trời sáng tạo
+  'ctst8-b2': { book: 'ctst', grade: 8, title: 'KHTN 8 · Bài 2. Biến đổi vật lí và biến đổi hóa học' },
+} as const satisfies Record<string, { book: BookId; grade: number; title: string }>;
 export type LessonId = keyof typeof LESSONS;
 
-/** Mức độ theo lớp: lớp 8–9 / lớp 10–11 / lớp 12 */
-export const LEVELS = { basic: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao' } as const;
-export const LEVEL_GRADES = { basic: 'lớp 8–9', intermediate: 'lớp 10–11', advanced: 'lớp 12' } as const;
-export type Level = keyof typeof LEVELS;
+/** Lớp học của một thí nghiệm (theo bài trong SGK) */
+export const gradeOf = (r: Recipe): number => LESSONS[r.lesson].grade;
+
 
 export interface Recipe {
   id: string;
   title: string;
   lesson: LessonId;
-  level: Level;
   /** Khái niệm chính, hiện dưới dạng thẻ */
   concepts: string[];
   /** Trang trong SGK có thí nghiệm này */
@@ -73,6 +83,7 @@ const stir = (vessel: number, text?: string): Step => ({ kind: 'stir', vessel, t
 const connect = (src: number, dst: number | null, text?: string): Step => ({ kind: 'connect', src, dst, text });
 const invert = (vessel: number, text?: string): Step => ({ kind: 'invert', vessel, text });
 const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 'probe', tool, vessel, text });
+const burn = (chem: string, text?: string): Step => ({ kind: 'burn', chem, text });
 const weigh = (vessel: number | null, text?: string): Step => ({ kind: 'weigh', vessel, text });
 const tare = (text?: string): Step => ({ kind: 'tare', text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
@@ -81,7 +92,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'sat-luu-huynh',
     title: 'Biến đổi hóa học: sắt tác dụng với lưu huỳnh',
-    lesson: 'khtn8-b2', level: 'basic', page: 12,
+    lesson: 'khtn8-b2', page: 12,
     concepts: ['biến đổi hóa học', 'chất mới', 'phản ứng tỏa nhiệt'],
     summary: 'Trộn bột sắt với bột lưu huỳnh rồi thử bằng nam châm. Đun nóng hỗn hợp, để nguội và thử lại: nam châm còn hút không?',
     steps: [
@@ -115,7 +126,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'dau-hieu-chat-moi',
     title: 'Dấu hiệu nhận biết có chất mới tạo thành',
-    lesson: 'khtn8-b2', level: 'basic', page: 14,
+    lesson: 'khtn8-b2', page: 14,
     concepts: ['phản ứng hóa học', 'chất khí', 'kết tủa'],
     summary: 'Cho hydrochloric acid vào kẽm viên và vào barium chloride, cho sodium hydroxide vào copper(II) sulfate. Ống nào có phản ứng hóa học?',
     steps: [
@@ -140,6 +151,59 @@ export const RECIPES: Recipe[] = [
       ],
       equations: ['Zn + 2HCl → ZnCl₂ + H₂↑', 'CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄'],
       explain: 'Phản ứng xảy ra ở ống (1) và ống (3). Khí hydrogen và kết tủa copper(II) hydroxide là những chất mới, khác với các chất ban đầu. Ở ống (2), hydrochloric acid và barium chloride trộn lẫn nhưng không tạo ra chất mới nào.',
+    },
+  },
+
+  // ── KHTN 8 – Chân trời sáng tạo ───────────────────────────────────────
+  {
+    id: 'lam-duc-nuoc-voi-trong',
+    title: 'Làm đục nước vôi trong',
+    lesson: 'ctst8-b2', page: 17,
+    concepts: ['biến đổi hóa học', 'khí carbon dioxide', 'nước vôi trong'],
+    summary: 'Cho giấm ăn vào bột baking soda, dẫn khí sinh ra sang ống nghiệm chứa nước vôi trong. Nước vôi trong thay đổi thế nào?',
+    steps: [
+      say('Chuẩn bị 2 ống nghiệm, một ống dẫn khí hình chữ U có nút cao su, giấm ăn và bột baking soda (NaHCO₃).'),
+      focus(TUBE1, TUBE2),
+      add('baking_soda', 0.05, TUBE1, 'Ống (1): cho một ít bột baking soda.'),
+      add('limewater', 5, TUBE2, 'Ống (2): cho 5 mL nước vôi trong.'),
+      add('vinegar', 5, TUBE1, 'Thêm 5 mL giấm ăn vào ống (1).'),
+      connect(TUBE1, TUBE2, 'Đậy ngay ống (1) bằng nút cao su có ống dẫn khí chữ U, đầu kia nhúng vào nước vôi trong ở ống (2).'),
+      wait(25, { text: 'Ống (1) sủi bọt khí. Khí theo ống dẫn sang ống (2) và sủi lên trong nước vôi trong.', until: (l) => l.mix(TUBE2).get('CaCO3') > 1e-5 }),
+      wait(4, { text: 'Nước vôi trong ở ống (2) bị vẩn đục.' }),
+      connect(TUBE1, null, 'Nhấc ống dẫn khí ra khỏi ống (2).'),
+      say('Giấm ăn tác dụng với baking soda tạo ra khí carbon dioxide. Khí này làm nước vôi trong vẩn đục vì tạo ra calcium carbonate không tan: đã có chất mới, đó là biến đổi hóa học.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1): sủi bọt khí, bột baking soda tan dần',
+        'Ống (2): có bọt khí sủi lên, nước vôi trong bị vẩn đục (màu trắng đục)',
+      ],
+      equations: [
+        'NaHCO₃ + CH₃COOH → CH₃COONa + CO₂↑ + H₂O',
+        'CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O',
+      ],
+      explain: 'Khí carbon dioxide sinh ra ở ống (1) tác dụng với calcium hydroxide trong nước vôi trong, tạo calcium carbonate là chất rắn không tan nên nước vôi bị vẩn đục. Nước vôi trong đã bị biến đổi thành chất khác: đó là biến đổi hóa học. Đây cũng là cách nhận biết khí carbon dioxide. Nếu tiếp tục dẫn thật nhiều khí vào, nước vôi sẽ trong trở lại.',
+    },
+  },
+  {
+    id: 'dot-chay-magnesium',
+    title: 'Đốt cháy kim loại magnesium',
+    lesson: 'ctst8-b2', page: 18,
+    concepts: ['biến đổi hóa học', 'sự cháy', 'oxide'],
+    summary: 'Dùng kẹp sắt giữ mảnh magnesium đốt trên ngọn lửa đèn cồn. Sau khi cháy, mảnh magnesium biến thành chất gì?',
+    steps: [
+      say('Magnesium là kim loại màu trắng bạc, có ánh kim. Dùng kẹp sắt giữ mảnh magnesium đã làm sạch rồi đưa vào ngọn lửa đèn cồn.'),
+      burn('mg_strip', 'Dùng kẹp sắt giữ mảnh magnesium, đốt trên ngọn lửa đèn cồn. Không nhìn thẳng vào ánh lửa quá lâu.'),
+      say('Mảnh kim loại trắng bạc đã biến thành chất bột màu trắng, giòn, không còn ánh kim: magnesium đã biến đổi thành chất khác là magnesium oxide.'),
+    ],
+    result: {
+      phenomena: [
+        'Mảnh magnesium cháy với ngọn lửa sáng chói màu trắng, tỏa nhiều nhiệt',
+        'Có khói trắng bay lên',
+        'Sau khi cháy còn lại chất bột màu trắng, giòn, dễ vụn',
+      ],
+      equations: ['2Mg + O₂ → 2MgO'],
+      explain: 'Khi đốt, magnesium tác dụng với khí oxygen trong không khí tạo thành magnesium oxide, chất bột màu trắng. Sản phẩm có tính chất khác hẳn kim loại ban đầu nên đây là biến đổi hóa học. Ánh sáng chói của magnesium cháy từng được dùng làm đèn chớp khi chụp ảnh và trong pháo hoa.',
     },
   },
 ];

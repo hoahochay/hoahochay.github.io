@@ -51,6 +51,8 @@ export const SOLIDS: SolidDef[] = [
   { id: 'Mg(OH)2', ions: { 'Mg^2+': 1, 'OH-': 2 }, Ksp: 5.61e-12, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   { id: 'CaCO3', ions: { 'Ca^2+': 1, 'CO3^2-': 1 }, Ksp: 3.36e-9, dissolution: { k: 1e-7, kH: 6e-5, Ea: 35000 } },
   { id: 'BaSO4', ions: { 'Ba^2+': 1, 'SO4^2-': 1 }, Ksp: 1.08e-10, dissolution: { k: 1e-7, Ea: 40000 } },
+  // Muối dễ tan (độ tan ≈ 1,1 M): chỉ dùng khi cho bột rắn vào, hòa tan nhanh
+  { id: 'NaHCO3', ions: { 'Na+': 1, 'HCO3-': 1 }, Ksp: 1.2, dissolution: { k: 1e-5, Ea: 20000 } },
   { id: 'PbI2', ions: { 'Pb^2+': 1, 'I-': 2 }, Ksp: 9.8e-9, dissolution: { k: 1e-6, Ea: 40000 } },
 ];
 

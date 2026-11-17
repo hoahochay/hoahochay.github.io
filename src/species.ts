@@ -100,6 +100,8 @@ sp('Zn', 'kẽm', 's', 0, 0, 0, 65.38, { color: [0.62, 0.64, 0.67] });
 sp('Fe', 'sắt', 's', 0, 0, 0, 55.85, { color: [0.4, 0.4, 0.42] });
 sp('Cu', 'đồng', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
 sp('Ag', 'bạc', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
+// Muối tan được ở dạng rắn (bột baking soda): tan dần khi gặp nước, xem SOLIDS
+sp('NaHCO3', 'sodium hydrogencarbonate', 's', 0, 1, -950.8, 84.01, { color: WHITE });
 sp('S', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.96, 0.84, 0.18] });
 sp('FeS', 'iron(II) sulfide', 's', 0, 0, -100.0, 87.91, { color: [0.13, 0.12, 0.11] });
 sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
-import { Animator, call, easeIn, tween } from './anim';
+import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
 import { RECIPES, SYRINGE } from './recipes';
@@ -12,6 +12,7 @@ import { Hud } from './hud';
 import { setRGB } from './materials';
 import { DeliveryTubeView } from './deliveryTube';
 import { blueFlame, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
+import { burnOutcome, burnRefusal, TongsView } from './burn';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
 import './style.css';
@@ -455,6 +456,116 @@ function probe(kind: ToolKind, view: VesselView) {
   );
 }
 
+const LAMP_NAME = 'Đèn cồn';
+
+// ── Đốt mẩu kim loại trên ngọn lửa đèn cồn (cầm bằng kẹp sắt) ───────────
+function burnInFlame(item: SolidItem) {
+  const refusal = burnRefusal(item);
+  if (refusal) return log(refusal, 'warning', LAMP_NAME);
+  if (heatingView) return log('Đèn cồn đang dùng để đun. Tắt đèn trước rồi mới đốt mẫu.', 'warning', LAMP_NAME);
+  const out = burnOutcome(item.id);
+  const tongs = new TongsView(item);
+  const g = tongs.group;
+  const name = item.label.toLowerCase();
+  // Cán kẹp chĩa sang phải và về phía người xem, hơi chếch lên
+  g.rotation.set(0, -Math.atan2(0.66, 0.75), 0.3, 'YXZ');
+  let inFlame = new THREE.Vector3(), lifted = new THREE.Vector3(), away = new THREE.Vector3();
+  const light = new THREE.PointLight(out.light ?? 0xffffff, 0, 70, 2);
+  const smoke: { s: THREE.Sprite; age: number }[] = [];
+  let puffAcc = 0;
+  const tickSmoke = (dt: number, spawn: boolean, at: THREE.Vector3) => {
+    puffAcc += dt;
+    if (spawn && puffAcc > 0.12) {
+      puffAcc = 0;
+      const s = smokePuff();
+      s.material.color.set(0xf2f2f2);
+      s.position.copy(at).add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.3, (Math.random() - 0.5) * 0.4));
+      addTemp(s);
+      smoke.push({ s, age: 0 });
+    }
+    for (const p of smoke) {
+      p.age += dt;
+      p.s.position.y += dt * 1.6;
+      p.s.position.x += dt * 0.3;
+      p.s.scale.setScalar(0.6 + p.age * 1.8);
+      p.s.material.opacity = Math.max(0, 0.55 * (1 - p.age / 2.5));
+    }
+    for (const p of smoke.filter((x) => x.age > 2.5)) removeTemp(p.s);
+    smoke.splice(0, smoke.length, ...smoke.filter((x) => x.age <= 2.5));
+  };
+  const worldAlong = (t: number) => g.localToWorld(tongs.pointAlong(t));
+  let time = 0;
+  const phase = (dur: number, fn: (k: number, dt: number) => void): AnimStep => {
+    let e = 0;
+    return (dt) => { e += dt; time += dt; fn(Math.min(1, e / dur), dt); return e >= dur; };
+  };
+  animator.run(
+    call(() => {
+      // Đặt sao cho đầu mẫu nằm trong phần nóng nhất của ngọn lửa
+      const flame = lamp.group.localToWorld(lamp.flameTip.clone()).add(new THREE.Vector3(0, -0.9, 0));
+      g.position.set(0, 0, 0);
+      g.updateMatrixWorld(true);
+      inFlame = flame.sub(g.localToWorld(tongs.tipLocal.clone()));
+      lifted = inFlame.clone().add(new THREE.Vector3(0, 2.6, 1.2));
+      away = inFlame.clone().add(new THREE.Vector3(1.5, 4.5, 3));
+      g.position.copy(away);
+      addTemp(g);
+      addTemp(light);
+      lamp.setLit(true);
+      log(`Dùng kẹp sắt giữ ${name} đưa vào ngọn lửa đèn cồn`, 'action', LAMP_NAME);
+    }),
+    tween(0.9, (t) => g.position.lerpVectors(away, inFlame, t)),
+    // Mẫu nóng dần
+    phase(1.6, (k) => tongs.setHot(k)),
+    ...(out.burns ? [
+      call(() => hud.log({ t: simTime, vessel: LAMP_NAME, text: out.during, kind: 'phenomenon', color: [1, 1, 1], equation: out.equation })),
+      // Ngọn lửa sáng chói chạy dọc mảnh kim loại từ đầu tới sát kẹp
+      phase(4.5, (k, dt) => {
+        const front = Math.min(1, k * 1.15);
+        const flick = 1 + 0.18 * Math.sin(time * 41) + 0.1 * Math.sin(time * 67);
+        const fade = k > 0.87 ? (1 - k) / 0.13 : Math.min(1, k * 8);
+        tongs.setFlame(front * 0.9, 1.1 * fade, out.light, flick);
+        tongs.setConverted(front, out.after, true);
+        tongs.setHot(1 - k);
+        light.position.copy(worldAlong(front * 0.9));
+        light.intensity = 450 * fade * flick;
+        g.position.copy(inFlame).add(new THREE.Vector3(0, 1.4 * Math.min(1, k * 3), 0.5 * Math.min(1, k * 3)));
+        tickSmoke(dt, fade > 0.2, worldAlong(front * 0.9));
+      }),
+    ] : [
+      call(() => log(out.during, 'phenomenon', LAMP_NAME)),
+      phase(3, (k, dt) => {
+        tongs.setHot(1);
+        tongs.setConverted(k, out.after, false);
+        tickSmoke(dt, false, inFlame);
+      }),
+    ]),
+    // Nhấc ra khỏi lửa, tắt đèn, quan sát sản phẩm
+    phase(0.8, (k, dt) => {
+      g.position.lerpVectors(out.burns ? g.position.clone() : inFlame, lifted, k);
+      tongs.setHot(out.burns ? 0 : 1 - k);
+      tongs.setFlame(0, 0);
+      light.intensity = 0;
+      tickSmoke(dt, false, inFlame);
+    }),
+    call(() => {
+      lamp.setLit(false);
+      hud.log({ t: simTime, vessel: LAMP_NAME, text: out.result, kind: 'phenomenon', color: out.after, equation: out.burns ? undefined : out.equation });
+    }),
+    phase(2.8, (_k, dt) => tickSmoke(dt, false, inFlame)),
+    phase(0.6, (k, dt) => {
+      g.position.lerpVectors(lifted, away, k);
+      g.scale.setScalar(Math.max(0.001, 1 - k));
+      tickSmoke(dt, false, inFlame);
+    }),
+    call(() => {
+      for (const p of smoke) removeTemp(p.s);
+      removeTemp(g);
+      removeTemp(light);
+    }),
+  );
+}
+
 // ── Ống dẫn khí ──────────────────────────────────────────────────────────
 const tubes = new Map<VesselView, DeliveryTubeView>();
 const syringePanel = new MeasurePanel({
@@ -606,6 +717,12 @@ function invert(v = requireSelected(), quiet = false) {
       hud.setInverted(selected?.vessel.inverted ?? false);
     }),
   );
+}
+
+/** Thả một mục trong kho vào đèn cồn: mẩu chất rắn thì cầm bằng kẹp sắt đốt trên lửa */
+function dropOnLamp(entry: ChemEntry) {
+  if (entry.solid) return burnInFlame(entry.solid);
+  log('Chỉ đưa được mẩu chất rắn (dải, dây, đinh, viên) vào ngọn lửa, bằng kẹp sắt.', 'warning', LAMP_NAME);
 }
 
 function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
@@ -860,15 +977,127 @@ function pickAt(x: number, y: number, objects = pickables): THREE.Object3D | nul
   return null;
 }
 
+// ── Kéo dụng cụ trên bàn: thả vào đèn cồn để đun, thả lên cân để cân, thả chỗ khác để cất về chỗ cũ ──
+/** Bán kính (theo mặt bàn) quanh đèn cồn / cân mà thả vào thì tính là trúng */
+const DROP_RADIUS = 4.5;
+let drag: { view: VesselView; pointerId: number; started: boolean; lift: number; offset: THREE.Vector3; zone: 'lamp' | 'balance' | null } | null = null;
+const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const dragHit = new THREE.Vector3();
+
+function dragPoint(x: number, y: number): THREE.Vector3 | null {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  return raycaster.ray.intersectPlane(dragPlane, dragHit) ? dragHit.clone() : null;
+}
+
+/** Đích thả: con trỏ nằm trên đèn cồn / cân, hoặc dụng cụ đang kéo ở sát chúng (theo mặt bàn) */
+function dropZone(x: number, y: number, p: THREE.Vector3): 'lamp' | 'balance' | null {
+  const o = pickAt(x, y, [lamp.group, stand.group, balanceView.group]);
+  if (o?.userData.kind === 'lamp') return 'lamp';
+  if (o?.userData.kind === 'balance') return 'balance';
+  const flat = (a: THREE.Vector3) => Math.hypot(p.x - a.x, p.z - a.z);
+  if (flat(LAMP_POS) < DROP_RADIUS) return 'lamp';
+  if (flat(balanceView.group.position) < DROP_RADIUS) return 'balance';
+  return null;
+}
+
+/** Sau khi thả: nếu dụng cụ chưa về đúng chỗ (thao tác bị từ chối) thì đưa nó về */
+function settle(v: VesselView) {
+  animator.run(call(() => {
+    const want = heatingView === v ? heatPose(v) : restPose(v);
+    if (v.group.position.distanceTo(want) > 0.05) animator.run(moveVessel(v, () => want, 0.5));
+  }));
+}
+
+function finishDrag(v: VesselView, zone: 'lamp' | 'balance' | null) {
+  hud.hint(null);
+  if (zone === 'lamp') {
+    if (onBalance === v) { onBalance = null; balancePanel.start(simTime, balanceReading(), balanceNote()); }
+    select(v);
+    if (heatingView !== v) startHeat(v);
+  } else if (zone === 'balance') {
+    if (heatingView === v) {
+      heatingView = null;
+      v.vessel.heaterW = 0;
+      v.heating = false;
+      lamp.setLit(false);
+      stand.clamp.visible = stand.tripod.visible = false;
+      hud.setHeating(false);
+      log('Tắt đèn cồn', 'action', v.name);
+    }
+    if (onBalance !== v) placeOnBalance(v, false);
+  } else {
+    if (heatingView === v) stopHeat();
+    else if (onBalance === v) takeOffBalance();
+  }
+  settle(v);
+}
+
+// Bắt đầu chạm/bấm trên một dụng cụ: khóa camera (để một ngón kéo dụng cụ chứ không kéo cảnh)
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || player.playing || animator.busy || chemPanel.armed || connectFrom) return;
+  const o = pickAt(e.clientX, e.clientY, vesselGroups);
+  if (o?.userData.kind !== 'vessel') return;
+  const view = o.userData.view as VesselView;
+  // Kéo trên mặt phẳng ngang đi qua điểm vừa cầm, để dụng cụ bám đúng theo con trỏ
+  const hit = raycaster.intersectObject(view.group, true)[0]?.point;
+  dragPlane.constant = -(hit?.y ?? 0);
+  const p = dragPoint(e.clientX, e.clientY);
+  if (!p) return;
+  controls.enabled = false;
+  drag = { view, pointerId: e.pointerId, started: false, lift: 0, zone: null, offset: view.group.position.clone().setY(0).sub(p.setY(0)) };
+}, { capture: true });
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!drag || e.pointerId !== drag.pointerId || !downAt) return;
+  const v = drag.view;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) return;
+    drag.started = true;
+    renderer.domElement.setPointerCapture(e.pointerId);
+    select(v);
+    if (heatingView === v) stand.clamp.visible = stand.tripod.visible = false;
+  }
+  const p = dragPoint(e.clientX, e.clientY);
+  if (!p) return;
+  drag.lift = Math.min(3, drag.lift + 0.6);
+  const pos = p.setY(0).add(drag.offset);
+  v.group.position.set(pos.x, drag.lift, pos.z);
+  tubes.forEach((tb) => tb.update());
+  const zone = drag.zone = dropZone(e.clientX, e.clientY, v.group.position);
+  hud.hint(zone === 'lamp' ? `Thả để đun ${v.name.toLowerCase()} bằng đèn cồn`
+    : zone === 'balance' ? `Thả để đặt ${v.name.toLowerCase()} lên cân điện tử`
+    : 'Thả vào đèn cồn để đun, lên cân để cân; thả chỗ khác để cất về chỗ cũ');
+});
+
+const endDrag = (e: PointerEvent) => {
+  if (!drag || e.pointerId !== drag.pointerId) return false;
+  const d = drag;
+  drag = null;
+  controls.enabled = true;
+  if (!d.started) return false;
+  if (renderer.domElement.hasPointerCapture(e.pointerId)) renderer.domElement.releasePointerCapture(e.pointerId);
+  finishDrag(d.view, d.zone);
+  return true;
+};
+renderer.domElement.addEventListener('pointercancel', (e) => {
+  if (drag?.started) { hud.hint(null); settle(drag.view); }
+  drag = null;
+  controls.enabled = true;
+});
+
 let downAt: { x: number; y: number } | null = null;
 renderer.domElement.addEventListener('pointerdown', (e) => (downAt = { x: e.clientX, y: e.clientY }));
 renderer.domElement.addEventListener('pointerup', (e) => {
+  if (endDrag(e)) return;
   if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
   const o = pickAt(e.clientX, e.clientY);
   const armed = chemPanel.armed;
   if (armed) {
     chemPanel.arm(null);
     if (o?.userData.kind === 'vessel') dropEntry(armed.entry, armed.amount, o.userData.view);
+    else if (o?.userData.kind === 'lamp') dropOnLamp(armed.entry);
     return;
   }
   if (connectFrom) {
@@ -983,15 +1212,16 @@ const vesselGroups = views.map((v) => v.group);
 let hoverView: VesselView | null = null;
 const chemPanel = new ChemPanel(document.getElementById('chem')!, CHEMICALS, renderThumbnails(CHEMICALS), {
   hitTest: (x, y) => {
-    const o = pickAt(x, y, vesselGroups);
+    const o = pickAt(x, y, [...vesselGroups, lamp.group]);
+    if (o?.userData.kind === 'lamp') return lamp;
     return o ? (o.userData.view as VesselView) : null;
   },
   hover: (t) => {
     hoverView?.setHover(false);
-    hoverView = t as VesselView | null;
+    hoverView = t instanceof VesselView ? t : null;
     hoverView?.setHover(true);
   },
-  drop: (entry, amount, t) => dropEntry(entry, amount, t as VesselView),
+  drop: (entry, amount, t) => (t === lamp ? dropOnLamp(entry) : dropEntry(entry, amount, t as VesselView)),
   armChanged: (entry, amount) => {
     if (entry) revealScene();
     hud.hint(entry
@@ -1034,6 +1264,7 @@ const player = new RecipePlayer({
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
   probe: (tool, vessel) => probe(tool, views[vessel]),
+  burn: (chem) => burnInFlame(CHEMICALS.find((c) => c.key === chem)!.solid!),
   connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
   invert: (vessel) => invert(views[vessel]),
   weigh: (vessel) => (vessel === null ? takeOffBalance() : placeOnBalance(views[vessel], false)),
