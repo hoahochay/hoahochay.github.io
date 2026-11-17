@@ -1,6 +1,6 @@
 import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
-import { exchangeGases, headspaceFractions, ventHeadspace } from './gas';
+import { bubbleAbsorption, exchangeGases, GAS_INDEX, headspaceFractions, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
 import { Mixture, SETTLE_TIME, SolidForm } from './mixture';
 import { solutionColor, turbidity } from './optics';
@@ -58,6 +58,8 @@ export interface Observation {
   gasTotalMol: Record<string, number>;
   /** Phần mol các khí trong khoảng khí phía trên chất lỏng (phần còn lại là không khí) */
   headspace: Record<string, number>;
+  /** Khí đi vào qua ống dẫn, mL/s (kể cả không khí bị đẩy sang) */
+  inletRateML: number;
   /** Nồng độ các chất tan (M), bỏ qua lượng vết */
   dissolved: Record<string, number>;
   boiling: boolean;
@@ -85,6 +87,17 @@ export class Vessel {
   readonly gasTotal = new Map<string, number>();
   /** Tổng khí đã bay ra khỏi miệng dụng cụ, mol */
   readonly gasEscaped = new Map<string, number>();
+  /** Ống dẫn khí: nút kín miệng dụng cụ này, dẫn khí sang dụng cụ khác */
+  outlet: Vessel | null = null;
+  /** Úp ngược miệng xuống (để thu khí nhẹ) */
+  inverted = false;
+  /** Tốc độ khí đi vào từ ống dẫn, mol/s (làm mượt, để vẽ bọt khí ở đầu ống) */
+  inletRate = 0;
+  /** Khí nhận từ ống dẫn, chờ đưa vào ở bước kế tiếp */
+  private inGas = new Map<string, number>();
+  private inTotal = 0;
+  private inAbsorb = new Map<string, number>();
+  private inletAcc = 0;
 
   constructor(
     readonly spec: VesselSpec = VESSELS.testTube,
@@ -167,11 +180,21 @@ export class Vessel {
   private process(dt: number): void {
     const m = this.mix;
     if (m.volumeL <= 1e-7) {
-      if (dt > 0 && m.headspace.size) this.vent(dt, new Map());
+      for (const [id, n] of this.inAbsorb) this.inGas.set(id, (this.inGas.get(id) ?? 0) + n);
+      this.inAbsorb.clear();
+      if (dt > 0 && (m.headspace.size || this.inTotal > 0 || this.inletRate > 1e-12)) this.vent(dt, new Map());
       return;
     }
-    const H0 = enthalpy(m);
-    const A0 = hydrogenAtoms(m);
+    let H0 = enthalpy(m);
+    let A0 = hydrogenAtoms(m);
+    // Khí sục qua dung dịch từ ống dẫn: phần bị hấp thụ tan vào (tính cả nhiệt hòa tan)
+    for (const [id, n] of this.inAbsorb) {
+      const g = GAS_INDEX.get(id)!;
+      H0 += n * species(id).dHf * 1000;
+      A0 += n * species(id).hCount;
+      m.add(g.dissolved!.species, n);
+    }
+    this.inAbsorb.clear();
     if (dt > 0) {
       runKinetics(m, dt, this.reactions);
       runDissolution(m, dt);
@@ -203,9 +226,40 @@ export class Vessel {
   }
 
   private vent(dt: number, inflow: Map<string, number>): void {
-    for (const [id, n] of ventHeadspace(this.mix, this.spec, dt, inflow)) {
-      this.gasEscaped.set(id, (this.gasEscaped.get(id) ?? 0) + n);
+    let total = 0;
+    for (const n of inflow.values()) total += n;
+    for (const [id, n] of this.inGas) inflow.set(id, (inflow.get(id) ?? 0) + n);
+    total += this.inTotal;
+    this.inGas.clear();
+    this.inTotal = 0;
+    const sealed = this.outlet !== null;
+    const out = ventHeadspace(this.mix, this.spec, dt, inflow, { inflowTotal: total, sealed, inverted: this.inverted });
+    if (this.outlet) {
+      // Dụng cụ nút kín: mọi khí bị đẩy ra (lúc đầu chủ yếu là không khí) đi qua ống dẫn
+      this.outlet.receiveGas(out, Math.max(total, [...out.values()].reduce((a, b) => a + b, 0)));
+    } else {
+      for (const [id, n] of out) this.gasEscaped.set(id, (this.gasEscaped.get(id) ?? 0) + n);
     }
+    const dtEff = dt > 0 ? dt : 0.05;
+    this.inletRate += (this.inletAcc / dtEff - this.inletRate) * Math.min(1, dtEff / 0.5);
+    this.inletAcc = 0;
+  }
+
+  /**
+   * Nhận khí từ ống dẫn của dụng cụ khác. `total` gồm cả không khí đi kèm.
+   * Đầu ống ngập trong chất lỏng: khí sục qua, khí tan được (CO2, NH3) bị hấp thụ một phần.
+   */
+  receiveGas(gases: Map<string, number>, total: number): void {
+    if (total <= 0) return;
+    this.inletAcc += total;
+    let left = total;
+    for (const [id, n] of gases) {
+      const absorbed = this.inverted ? 0 : n * bubbleAbsorption(this.mix, id, n / total);
+      if (absorbed > 0) this.inAbsorb.set(id, (this.inAbsorb.get(id) ?? 0) + absorbed);
+      if (n - absorbed > 0) this.inGas.set(id, (this.inGas.get(id) ?? 0) + n - absorbed);
+      left -= absorbed;
+    }
+    this.inTotal += left;
   }
 
   step(dt: number): this {
@@ -284,6 +338,7 @@ export class Vessel {
       gasRateML,
       gasTotalMol: Object.fromEntries(this.gasTotal),
       headspace: headspaceFractions(m, this.spec),
+      inletRateML: this.inletRate * molarVolumeML,
       dissolved,
       boiling: this.boiling,
     };

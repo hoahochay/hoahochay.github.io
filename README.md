@@ -58,6 +58,9 @@ Mỗi bước thời gian, `Vessel.step(dt)` thực hiện:
 đẩy không khí ra khỏi ống; khí thoát dần qua miệng (khí nhẹ như H₂, NH₃ thoát nhanh, CO₂ nặng
 đọng lại lâu). CO₂ và NH₃ trao đổi với dung dịch theo định luật Henry. Phép thử que đóm và giấy quỳ ẩm
 được suy ra từ thành phần khoảng khí: quỳ ẩm được tính như một lớp nước mỏng cân bằng với khí.
+Ống dẫn khí (`vessel.outlet`) nút kín dụng cụ phát khí: khí bị đẩy sang dụng cụ nhận (lúc đầu là không khí).
+Sục qua dung dịch thì khí tan (CO₂, NH₃) bị hấp thụ một phần, nên CO₂ làm nước vôi trong vẩn đục rồi trong lại.
+Ống úp ngược (`vessel.inverted`) giữ khí nhẹ (H₂) và để khí nặng (CO₂) rơi ra.
 
 **Màu** (`optics.ts`): định luật Beer–Lambert theo 3 kênh R/G/B. Màu đậm hay nhạt phụ thuộc
 nồng độ và độ dày lớp chất lỏng; chất chỉ thị đổi màu theo pH.
@@ -92,6 +95,7 @@ khớp với video thí nghiệm thật.
   pKa thủy phân của Cu²⁺ là **giá trị hiệu dụng** (6,0) để bù cho điều này (xem `systems.ts`).
 - Hằng số tốc độ được **hiệu chỉnh theo thời gian quan sát**, không phải số đo động học chuẩn.
 - ΔfH° của CuOH⁺ là giá trị ước lượng.
+- Nước vôi trong trong kho là loại pha loãng (0,005M): với mô hình lý tưởng, nước vôi bão hòa (0,02M) không trong lại hoàn toàn khi sục CO₂ dư.
 - CO₂ của không khí không hòa tan vào dung dịch (nước cất có pH 7, thực tế ≈ 5,6); chỉ dùng khi tính màu quỳ ẩm.
 - Hỗn hợp được coi là luôn khuấy đều (chưa có khuếch tán theo vùng).
 - Chưa có: phức chất (Al(OH)₄⁻, [Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺), oxi hóa–khử trong dung dịch

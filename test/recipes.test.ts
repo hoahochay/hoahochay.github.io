@@ -26,7 +26,7 @@ function runRecipe(r: Recipe): RunResult {
   const probes: string[] = [];
   /** Chạy mô phỏng thêm một khoảng (như lúc dụng cụ thử đang được đưa vào) */
   const run = (seconds: number) => {
-    for (let t = 0; t < seconds; t += 0.05) for (const v of vessels) if (v.mix.moles.size) v.step(0.05);
+    for (let t = 0; t < seconds; t += 0.05) for (const v of vessels) v.step(0.05);
   };
   r.steps.forEach((s, idx) => {
     switch (s.kind) {
@@ -47,7 +47,7 @@ function runRecipe(r: Recipe): RunResult {
         let met = false;
         while (t < s.seconds) {
           if (s.until?.(state)) { met = true; break; }
-          for (const v of vessels) if (v.mix.moles.size) v.step(dt);
+          for (const v of vessels) v.step(dt);
           t += dt;
         }
         if (s.until && !met && !s.until(state)) timedOut.push(idx);
@@ -58,6 +58,13 @@ function runRecipe(r: Recipe): RunResult {
         break;
       case 'stir':
         vessels[s.vessel].stir();
+        break;
+      case 'connect':
+        if (s.dst !== null) vessels[s.src].outlet = vessels[s.dst];
+        else vessels[s.src].outlet = null;
+        break;
+      case 'invert':
+        vessels[s.vessel].inverted = !vessels[s.vessel].inverted;
         break;
       case 'probe': {
         const v = vessels[s.vessel];
@@ -156,6 +163,17 @@ describe('Thí nghiệm mẫu', () => {
 
   it('thử NH3: nước cất không đổi màu quỳ, amoniac làm quỳ hóa xanh', () => {
     expect(probesOf('nh3-test')).toEqual(['litmus-neutral', 'litmus-base']);
+  });
+
+  it('CO2 vào nước vôi trong: vẩn đục rồi trong lại', () => {
+    const r = RECIPES.find((x) => x.id === 'co2-limewater')!;
+    const vs = runRecipe(r).vessels;
+    expect(vs[1].mix.get('CaCO3')).toBeLessThan(1e-7);
+    expect(vs[1].observe().pH).toBeLessThan(7);
+  });
+
+  it('thu H2: ống ngửa không còn H2, ống úp giữ được H2', () => {
+    expect(probesOf('h2-collect')).toEqual(['normal', 'pop']);
   });
 
   it('đá vôi + HCl: thoát CO2', () => {

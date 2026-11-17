@@ -8,6 +8,8 @@ export interface LabApi {
   setHeat(vessel: number, on: boolean): void;
   stir(vessel: number): void;
   probe(tool: ToolKind, vessel: number): void;
+  connect(src: number, dst: number | null): void;
+  invert(vessel: number): void;
   focus(vessels: number[] | null): void;
   resetAll(): void;
   setSpeed(s: number): void;
@@ -106,6 +108,10 @@ export class RecipePlayer {
       case 'wait': return s.text ?? 'Quan sát…';
       case 'heat': return s.text ?? (s.on ? 'Đun nóng bằng đèn cồn.' : 'Tắt đèn cồn.');
       case 'stir': return s.text ?? 'Lắc nhẹ cho dung dịch trộn đều.';
+      case 'connect': return s.text ?? (s.dst === null
+        ? 'Tháo ống dẫn khí.'
+        : `Lắp ống dẫn khí từ ${this.lab.vesselName(s.src).toLowerCase()} sang ${this.lab.vesselName(s.dst).toLowerCase()}.`);
+      case 'invert': return s.text ?? `Úp ngược ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
       case 'probe': return s.text ?? `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
       case 'focus': return '';
     }
@@ -153,6 +159,14 @@ export class RecipePlayer {
       case 'stir':
         this.ui.progress(null);
         this.lab.stir(s.vessel);
+        return this.untilIdle(id);
+      case 'connect':
+        this.ui.progress(null);
+        this.lab.connect(s.src, s.dst);
+        return this.untilIdle(id);
+      case 'invert':
+        this.ui.progress(null);
+        this.lab.invert(s.vessel);
         return this.untilIdle(id);
       case 'probe':
         this.ui.progress(null);

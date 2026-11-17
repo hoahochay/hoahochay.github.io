@@ -2,6 +2,8 @@
 import { gramsToMol, makeSolution, RGB, solutionColor, SolidForm } from '../src';
 import type { ToolKind } from './probes';
 
+export type LabTool = ToolKind | 'delivery';
+
 export interface ReagentDef {
   key: string;
   /** Công thức hiển thị trên nhãn */
@@ -34,6 +36,9 @@ export const REAGENTS: ReagentDef[] = [
   reagent('nh3', 'NH₃', '1M', 'dung dịch amoniac', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'natri cacbonat', { Na2CO3: 0.5 }),
   reagent('nacl', 'NaCl', '0,1M', 'natri clorua', { NaCl: 0.1 }),
+  // Nước vôi trong bão hòa ≈ 0,02M; dùng loại pha loãng để thấy rõ cả hai giai đoạn đục → trong
+  // (mô hình dung dịch lý tưởng chưa có hệ số hoạt độ, nên đánh giá thấp độ tan của Ca(HCO₃)₂)
+  reagent('limewater', 'Ca(OH)₂', 'loãng', 'nước vôi trong', { 'Ca(OH)2': 0.005 }),
   reagent('h2o2', 'H₂O₂', '3%', 'nước oxi già', { H2O2: 0.88 }, { amber: true }),
   reagent('agno3', 'AgNO₃', '0,1M', 'bạc nitrat', { AgNO3: 0.1 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'đồng(II) sunfat', { CuSO4: 0.5 }),
@@ -93,7 +98,7 @@ export interface ChemEntry {
   max: number;
   reagent?: ReagentDef;
   solid?: SolidItem;
-  tool?: ToolKind;
+  tool?: LabTool;
   /** Chuỗi đã chuẩn hóa để tìm kiếm */
   search: string;
 }
@@ -131,6 +136,7 @@ export const CHEMICALS: ChemEntry[] = [
     ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxi o2'],
     ['splint_burn', 'burning', 'Que đóm đang cháy', 'Thử khí H₂, CO₂', 'hidro h2 co2 cacbonic chay'],
     ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí axit / bazơ', 'quy tim nh3 amoniac co2 axit bazo'],
+    ['delivery', 'delivery', 'Ống dẫn khí', 'Dẫn khí sang ống khác', 'ong dan khi thu khi suc khi nut cao su'],
   ] as const).map(([key, tool, title, sub, kw]): ChemEntry => ({
     key, kind: 'tool', title, formula: title, sub, unit: '', defaultAmount: 1, step: 1, max: 1, tool,
     search: normalize(`${title} ${sub} ${kw} dung cu thu khi`),

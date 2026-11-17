@@ -10,6 +10,7 @@ import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
 import { setRGB } from './materials';
+import { DeliveryTubeView } from './deliveryTube';
 import { blueFlame, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
@@ -105,6 +106,7 @@ const hud = new Hud({
   onHeat: () => toggleHeat(),
   onEmpty: () => empty(),
   onFocus: () => toggleFocus(),
+  onInvert: () => invert(),
 });
 
 function log(text: string, kind: LogEntry['kind'] = 'action', vessel = selected?.name ?? '') {
@@ -115,6 +117,7 @@ function select(v: VesselView | null) {
   selected?.setSelected(false);
   selected = v;
   v?.setSelected(true);
+  hud.setInverted(v?.vessel.inverted ?? false);
   if (focused && v) focusOn(v);
 }
 
@@ -317,8 +320,15 @@ function probe(kind: ToolKind, view: VesselView) {
     tween(0.3, (t) => p.group.scale.setScalar(t), {
       onStart: () => {
         const m = view.mouthWorld();
-        at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.6 : -0.5, 0));
-        above = at.clone().add(new THREE.Vector3(0, 4, 0));
+        if (view.vessel.inverted) {
+          // Ống úp ngược: đưa dụng cụ thử từ phía dưới lên miệng ống
+          if (!isPaper) p.holdFromBelow();
+          at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.8 : -0.35, 0));
+          above = at.clone().add(new THREE.Vector3(0, -0.5, 6));
+        } else {
+          at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.6 : -0.5, 0));
+          above = at.clone().add(new THREE.Vector3(0, 4, 0));
+        }
         p.group.position.copy(above);
         p.group.scale.setScalar(0.001);
         addTemp(p.group);
@@ -359,10 +369,94 @@ function probe(kind: ToolKind, view: VesselView) {
   );
 }
 
+// ── Ống dẫn khí ──────────────────────────────────────────────────────────
+const tubes = new Map<VesselView, DeliveryTubeView>();
+/** Đang chờ người dùng bấm vào dụng cụ nhận khí */
+let connectFrom: VesselView | null = null;
+
+function disconnect(v: VesselView, quiet = false) {
+  for (const [src, t] of [...tubes]) {
+    if (src !== v && t.dst !== v) continue;
+    src.vessel.outlet = null;
+    scene.remove(t.group);
+    t.dispose();
+    tubes.delete(src);
+    if (!quiet) log(`Tháo ống dẫn khí sang ${t.dst.name.toLowerCase()}`, 'action', src.name);
+  }
+}
+
+function connect(src: VesselView, dst: VesselView) {
+  connectFrom = null;
+  hud.hint(null);
+  if (src === dst) return;
+  if (dst.vessel.outlet || tubes.has(dst)) {
+    log(`${dst.name} đang dẫn khí đi nơi khác, không nhận khí được.`, 'warning', dst.name);
+    return;
+  }
+  disconnect(src, true);
+  for (const [s, t] of tubes) if (t.dst === dst) disconnect(s);
+  const t = new DeliveryTubeView(src, dst);
+  tubes.set(src, t);
+  scene.add(t.group);
+  src.vessel.outlet = dst.vessel;
+  const into = dst.vessel.inverted ? 'luồn vào miệng' : dst.vessel.mix.volumeL > 0 ? 'nhúng ngập trong dung dịch của' : 'đặt sát đáy';
+  log(`Đậy nút, lắp ống dẫn khí ${into} ${dst.name.toLowerCase()}`, 'action', src.name);
+}
+
+function startConnect(view: VesselView) {
+  if (tubes.has(view) || [...tubes.values()].some((t) => t.dst === view)) return disconnect(view);
+  if (view.vessel.inverted) {
+    log('Lắp ống dẫn vào ống phát khí (đang để ngửa).', 'warning', view.name);
+    return;
+  }
+  select(view);
+  connectFrom = view;
+  hud.hint(`Bấm vào ống nghiệm hoặc cốc sẽ nhận khí từ ${view.name.toLowerCase()} (Esc để hủy)`);
+}
+
+// ── Úp ngược ống nghiệm (để thu khí nhẹ) ─────────────────────────────────
+function restPose(v: VesselView): THREE.Vector3 {
+  return v.vessel.inverted ? v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height + 2.2, 0)) : v.home.clone();
+}
+
+function invert(v = requireSelected(), quiet = false) {
+  if (!v) return;
+  if (v.kind.type !== 'tube') return log('Chỉ úp ngược được ống nghiệm.', 'warning', v.name);
+  if (!v.vessel.inverted && v.vessel.mix.volumeL > 5e-5) return log('Hãy đổ hết chất lỏng trước khi úp ngược ống.', 'warning', v.name);
+  if (heatingView === v) return log('Không úp ống đang đun.', 'warning', v.name);
+  if (v.vessel.outlet) return log('Ống đang được nút để phát khí, không úp được.', 'warning', v.name);
+  const toInverted = !v.vessel.inverted;
+  let from = new THREE.Vector3();
+  let dest = new THREE.Vector3();
+  animator.run(
+    tween(0.9, (t) => {
+      v.group.position.lerpVectors(from, dest, t);
+      v.group.position.y += Math.sin(Math.PI * t) * 3;
+      v.group.rotation.z = Math.PI * (toInverted ? t : 1 - t);
+      tubes.forEach((tb) => tb.update());
+    }, {
+      onStart: () => {
+        from = v.group.position.clone();
+        v.vessel.inverted = toInverted;
+        dest = restPose(v);
+      },
+    }),
+    call(() => {
+      if (!quiet) log(toInverted ? 'Úp ngược ống nghiệm (miệng hướng xuống)' : 'Lật ngửa ống nghiệm', 'action', v.name);
+      hud.setInverted(selected?.vessel.inverted ?? false);
+    }),
+  );
+}
+
 function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
+  if (entry.tool === 'delivery') return startConnect(view);
   if (entry.tool) {
     select(view);
     return probe(entry.tool, view);
+  }
+  if (view.vessel.inverted) {
+    log('Ống đang úp ngược, hãy lật ngửa trước khi cho hóa chất vào.', 'warning', view.name);
+    return;
   }
   if (!(amount > 0)) {
     log('Lượng phải lớn hơn 0.', 'warning', view.name);
@@ -397,13 +491,14 @@ function stopHeat() {
   log('Tắt đèn cồn', 'action', v.name);
   animator.run(
     call(() => (stand.clamp.visible = stand.tripod.visible = false)),
-    moveVessel(v, () => v.home),
+    moveVessel(v, () => restPose(v)),
     call(() => (v.heating = false)),
   );
 }
 
 function startHeat(v: VesselView) {
   if (heatingView === v) return;
+  if (v.vessel.inverted) return log('Không đun ống đang úp ngược.', 'warning', v.name);
   if (heatingView) stopHeat();
   heatingView = v;
   v.heating = true;
@@ -442,7 +537,9 @@ function stir(v = requireSelected()) {
 function empty() {
   const v = requireSelected();
   if (!v) return;
+  if (v.vessel.inverted) return invert(v);
   if (heatingView === v) toggleHeat();
+  disconnect(v);
   animator.run(
     tween(0.5, (t) => (v.group.rotation.z = -1.9 * t)),
     call(() => {
@@ -521,6 +618,12 @@ renderer.domElement.addEventListener('pointerdown', (e) => (downAt = { x: e.clie
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
   const o = pickAt(e.clientX, e.clientY);
+  if (connectFrom) {
+    if (o?.userData.kind === 'vessel' && o.userData.view !== connectFrom) return connect(connectFrom, o.userData.view);
+    connectFrom = null;
+    hud.hint(null);
+    return;
+  }
   if (o?.userData.kind === 'vessel') select(o.userData.view);
   else if (o?.userData.kind === 'lamp') toggleHeat();
 });
@@ -545,6 +648,10 @@ window.addEventListener('resize', () => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement) return;
+  if (e.key === 'Escape' && connectFrom) {
+    connectFrom = null;
+    hud.hint(null);
+  }
   const n = Number(e.key);
   if (n >= 1 && n <= views.length) select(views[n - 1]);
   if (e.key === ' ') {
@@ -581,6 +688,9 @@ function resetAll() {
   lamp.setLit(false);
   hud.setHeating(false);
   stand.clamp.visible = stand.tripod.visible = false;
+  for (const v of views) disconnect(v, true);
+  connectFrom = null;
+  hud.hint(null);
   for (const v of views) {
     v.reset();
     v.heating = false;
@@ -596,6 +706,8 @@ const player = new RecipePlayer({
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
   probe: (tool, vessel) => probe(tool, views[vessel]),
+  connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], views[dst])),
+  invert: (vessel) => invert(views[vessel]),
   focus: (vs) => focusMany(vs ? vs.map((i) => views[i]) : null),
   resetAll,
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
@@ -649,7 +761,7 @@ function frame() {
     simAcc += dt * speed;
     let n = 0;
     while (simAcc >= step && n < 60) {
-      for (const v of views) if (v.vessel.mix.moles.size > 0) v.vessel.step(step);
+      for (const v of views) v.vessel.step(step);
       simAcc -= step;
       simTime += step;
       n++;
@@ -664,6 +776,7 @@ function frame() {
     for (const e of tracker.check(v, o)) hud.log({ ...e, t: simTime });
     if (v === selected) selObs = o;
   }
+  for (const t of tubes.values()) t.update();
   hud.panel(selected, selObs, realTime);
   hud.setTime(simTime);
   lamp.update(dt);

@@ -29,6 +29,7 @@ export const COMPOUNDS: Record<string, Compound> = {
   FeCl3: { name: 'sắt(III) clorua', ions: { 'Fe^3+': 1, 'Cl-': 3 } },
   MgCl2: { name: 'magie clorua', ions: { 'Mg^2+': 1, 'Cl-': 2 } },
   CaCl2: { name: 'canxi clorua', ions: { 'Ca^2+': 1, 'Cl-': 2 } },
+  'Ca(OH)2': { name: 'nước vôi trong', ions: { 'Ca^2+': 1, 'OH-': 2 } },
   BaCl2: { name: 'bari clorua', ions: { 'Ba^2+': 1, 'Cl-': 2 } },
   Na2SO4: { name: 'natri sunfat', ions: { 'Na+': 2, 'SO4^2-': 1 } },
   Na2CO3: { name: 'natri cacbonat', ions: { 'Na+': 2, 'CO3^2-': 1 } },

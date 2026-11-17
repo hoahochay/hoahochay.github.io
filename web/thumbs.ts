@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ChemEntry } from './catalog';
+import { deliveryTubeModel } from './deliveryTube';
 import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 
@@ -23,7 +24,9 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
 
   for (const e of entries) {
     let obj: THREE.Object3D;
-    if (e.tool) {
+    if (e.tool === 'delivery') {
+      obj = deliveryTubeModel();
+    } else if (e.tool) {
       const p = new ProbeView(e.tool);
       p.update(0.016);
       obj = p.group;

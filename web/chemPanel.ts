@@ -12,7 +12,7 @@ const GROUPS: { kind: ChemEntry['kind']; title: string }[] = [
   { kind: 'solution', title: 'Dung dịch' },
   { kind: 'solid', title: 'Chất rắn' },
   { kind: 'indicator', title: 'Chất chỉ thị' },
-  { kind: 'tool', title: 'Dụng cụ thử khí' },
+  { kind: 'tool', title: 'Dụng cụ' },
 ];
 
 const DRAG_THRESHOLD = 5;

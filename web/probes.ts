@@ -17,6 +17,7 @@ export class ProbeView {
   private readonly flame?: THREE.Group;
   private readonly glow?: THREE.Sprite;
   private readonly paper?: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
+  private readonly body?: THREE.Group;
   private mode: FlameMode = 'none';
   private flameScale = 0;
   private t = Math.random() * 10;
@@ -47,6 +48,7 @@ export class ProbeView {
     const body = new THREE.Group();
     body.add(stick, charred);
     body.rotation.z = TILT;
+    this.body = body;
     this.group.add(body, this.tip);
 
     this.ember = new THREE.Mesh(
@@ -76,6 +78,11 @@ export class ProbeView {
   setFlame(mode: FlameMode, instant = false): void {
     this.mode = mode;
     if (instant) this.flameScale = mode === 'normal' ? 1 : mode === 'bright' ? 1.7 : 0;
+  }
+
+  /** Cầm que hướng xuống (đưa từ dưới lên miệng ống đang úp); ngọn lửa vẫn bốc lên */
+  holdFromBelow(): void {
+    if (this.body) this.body.rotation.z = Math.PI - TILT;
   }
 
   setPaperColor(c: RGB): void {

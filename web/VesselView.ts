@@ -170,6 +170,17 @@ export class VesselView {
     return this.group.localToWorld(new THREE.Vector3(0, Math.max(this.liquidH, 0.2), 0));
   }
 
+  /** Đầu ống dẫn khí khi lắp vào dụng cụ này (tọa độ cục bộ) */
+  inletLocal(): THREE.Vector3 {
+    const h = this.kind.profile.height;
+    if (this.vessel.inverted) return new THREE.Vector3(0, h - 3, 0);
+    return new THREE.Vector3(this.kind.type === 'tube' ? 0.2 : 0.8, this.kind.type === 'tube' ? 0.6 : 0.5, 0);
+  }
+
+  inletWorld(): THREE.Vector3 {
+    return this.group.localToWorld(this.inletLocal());
+  }
+
   setSelected(on: boolean): void {
     this.selected = on;
     this.updateRing();
@@ -346,17 +357,22 @@ export class VesselView {
 
   private updateBubbles(o: Observation, dt: number, speed: number): void {
     const gasML = Object.values(o.gasRateML).reduce((a, b) => a + b, 0);
-    let rate = Math.min(160, gasML * Math.max(1, speed) * BUBBLES_PER_ML);
+    // Khí sục vào từ ống dẫn: bọt to hơn, xuất phát từ đầu ống
+    const inML = this.liquidH > this.inletLocal().y + 0.2 ? o.inletRateML : 0;
+    let rate = Math.min(160, (gasML + inML * 0.4) * Math.max(1, speed) * BUBBLES_PER_ML);
     if (o.boiling) rate += 70;
     if (this.liquidH < 0.15) rate = 0;
     this.bubbleAcc += rate * dt;
     while (this.bubbleAcc >= 1 && this.bubbles.length < MAX_BUBBLES) {
       this.bubbleAcc -= 1;
-      const big = o.boiling && Math.random() < 0.5;
+      const fromInlet = inML > 0 && Math.random() * (gasML + inML * 0.4) < inML * 0.4;
+      const big = (o.boiling && Math.random() < 0.5) || fromInlet;
       this.bubbles.push({
-        p: this.bubbleSource(),
+        p: fromInlet
+          ? this.inletLocal().add(new THREE.Vector3((Math.random() - 0.5) * 0.1, 0.1, (Math.random() - 0.5) * 0.1))
+          : this.bubbleSource(),
         v: 3 + Math.random() * 4,
-        s: (big ? 0.12 + Math.random() * 0.12 : 0.03 + Math.random() * 0.06) * Math.min(1.4, this.kind.solidScale),
+        s: (big ? 0.1 + Math.random() * 0.1 : 0.03 + Math.random() * 0.06) * Math.min(1.4, this.kind.solidScale),
         phase: Math.random() * 10,
       });
     }

@@ -11,6 +11,7 @@ export interface HudHandlers {
   onHeat(): void;
   onEmpty(): void;
   onFocus(): void;
+  onInvert(): void;
 }
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -49,6 +50,7 @@ export class Hud {
     $('#btn-heat').onclick = () => h.onHeat();
     $('#btn-empty').onclick = () => h.onEmpty();
     $('#btn-focus').onclick = () => h.onFocus();
+    $('#btn-invert').onclick = () => h.onInvert();
   }
 
   setSpeed(s: number): void {
@@ -58,6 +60,17 @@ export class Hud {
 
   setHeating(on: boolean): void {
     $('#btn-heat').textContent = on ? '🔥 Tắt đèn' : '🔥 Đun';
+  }
+
+  setInverted(on: boolean): void {
+    $('#btn-invert').textContent = on ? '🔃 Lật ngửa' : '🔃 Úp ống';
+  }
+
+  /** Dòng nhắc nổi giữa màn hình (null: ẩn) */
+  hint(text: string | null): void {
+    const el = $('#hint');
+    el.classList.toggle('hidden', !text);
+    if (text) el.textContent = text;
   }
 
   setTime(t: number): void {

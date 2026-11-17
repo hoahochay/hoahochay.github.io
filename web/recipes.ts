@@ -20,6 +20,8 @@ export type Step =
   | { kind: 'heat'; vessel: number; on: boolean; text?: string }
   | { kind: 'stir'; vessel: number; text?: string }
   | { kind: 'probe'; tool: ToolKind; vessel: number; text?: string }
+  | { kind: 'connect'; src: number; dst: number | null; text?: string }
+  | { kind: 'invert'; vessel: number; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
 
 export interface Recipe {
@@ -38,6 +40,8 @@ const add = (chem: string, amount: number, vessel: number, text?: string): Step 
 const wait = (seconds: number, o: { speed?: number; text?: string; until?: (lab: LabState) => boolean } = {}): Step => ({ kind: 'wait', seconds, ...o });
 const heat = (vessel: number, on: boolean, text?: string): Step => ({ kind: 'heat', vessel, on, text });
 const stir = (vessel: number, text?: string): Step => ({ kind: 'stir', vessel, text });
+const connect = (src: number, dst: number | null, text?: string): Step => ({ kind: 'connect', src, dst, text });
+const invert = (vessel: number, text?: string): Step => ({ kind: 'invert', vessel, text });
 const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 'probe', tool, vessel, text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
@@ -375,6 +379,59 @@ export const RECIPES: Recipe[] = [
       phenomena: ['Giấy quỳ ẩm ở miệng ống nước cất không đổi màu', 'Giấy quỳ ẩm ở miệng ống amoniac chuyển xanh'],
       equations: ['NH₃ + H₂O ⇌ NH₄⁺ + OH⁻'],
       explain: 'NH₃ là khí tan rất nhiều trong nước và dễ bay hơi khỏi dung dịch. Khi gặp nước trên giấy quỳ, NH₃ nhận H⁺ của nước tạo OH⁻ nên có tính bazơ, làm quỳ tím hóa xanh. Đây là cách nhận biết khí amoniac.',
+    },
+  },
+  {
+    id: 'co2-limewater',
+    title: 'Dẫn khí CO₂ vào nước vôi trong',
+    level: 'Lớp 9', topic: 'Chất khí',
+    summary: 'Nước vôi trong vẩn đục rồi trong trở lại khi sục CO₂ dư.',
+    steps: [
+      focus(TUBE1, TUBE2),
+      add('limewater', 5, TUBE2, 'Ống 2: nước vôi trong Ca(OH)₂.'),
+      add('hcl', 5, TUBE1, 'Ống 1: axit clohiđric để điều chế CO₂.'),
+      add('caco3', 0.5, TUBE1),
+      connect(TUBE1, TUBE2, 'Đậy nút ống 1, nhúng đầu ống dẫn khí ngập trong nước vôi trong.'),
+      wait(6, { text: 'Lúc đầu chỉ có không khí trong ống 1 bị đẩy sang, nước vôi vẫn trong.' }),
+      wait(14, { text: 'Khi CO₂ tới, nước vôi trong vẩn đục: CaCO₃ kết tủa trắng.' }),
+      say('CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O'),
+      wait(150, {
+        speed: 5, text: 'Tiếp tục sục CO₂ dư: kết tủa tan dần, dung dịch trong trở lại.',
+        until: (l) => l.mix(TUBE2).get('CaCO3') < 1e-7,
+      }),
+      connect(TUBE1, null),
+      say('CaCO₃ tan trong nước có CO₂ tạo canxi hiđrocacbonat Ca(HCO₃)₂ tan được.'),
+    ],
+    result: {
+      phenomena: ['Đầu ống dẫn sủi bọt khí trong nước vôi', 'Nước vôi trong vẩn đục (kết tủa trắng)', 'Sục CO₂ dư một lúc thì dung dịch trong trở lại'],
+      equations: ['CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑', 'CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O', 'CaCO₃ + CO₂ + H₂O → Ca(HCO₃)₂'],
+      explain: 'Nước vôi trong dùng để nhận biết CO₂. Khi CO₂ dư, kết tủa CaCO₃ tan thành Ca(HCO₃)₂. Đây cũng là cách nước mưa có CO₂ hòa tan đá vôi, tạo nên hang động và thạch nhũ.',
+    },
+  },
+  {
+    id: 'h2-collect',
+    title: 'Thu khí hiđro: ngửa ống hay úp ống?',
+    level: 'Lớp 8', topic: 'Chất khí',
+    summary: 'So sánh thu H₂ vào ống để ngửa và ống úp ngược, rồi thử bằng que đóm.',
+    steps: [
+      focus(TUBE1, TUBE2, TUBE3),
+      invert(TUBE3, 'Úp ngược ống 3, miệng ống hướng xuống.'),
+      add('hcl', 5, TUBE1),
+      add('mg_strip', 0.05, TUBE1),
+      connect(TUBE1, TUBE2, 'Đậy nút ống 1, dẫn khí vào ống 2 để ngửa.'),
+      wait(15, { text: 'Khí hiđro đi vào ống 2 nhưng nhẹ nên bốc lên, thoát ra khỏi miệng ống.' }),
+      connect(TUBE1, TUBE3, 'Chuyển ống dẫn sang ống 3 đang úp ngược.'),
+      wait(20, { text: 'Hiđro nhẹ hơn không khí, dồn lên đáy ống 3 và đẩy không khí ra qua miệng ống phía dưới.' }),
+      connect(TUBE1, null),
+      probe('burning', TUBE2, 'Thử ống 2 (để ngửa) bằng que đóm đang cháy.'),
+      say('Không có tiếng nổ: hiđro trong ống ngửa đã bay đi hết.'),
+      probe('burning', TUBE3, 'Thử ống 3 (úp ngược): đưa que đóm lên miệng ống.'),
+      say('Nổ "bụp": ống úp ngược đã giữ được khí hiđro.'),
+    ],
+    result: {
+      phenomena: ['Ống để ngửa: que đóm cháy bình thường, không có hiện tượng', 'Ống úp ngược: có tiếng nổ nhỏ "bụp"'],
+      equations: ['Mg + 2HCl → MgCl₂ + H₂↑', '2H₂ + O₂ —t°→ 2H₂O'],
+      explain: 'Hiđro nhẹ hơn không khí rất nhiều (2 so với 29) nên phải thu bằng cách úp ngược ống (đẩy không khí). Ngược lại, khí nặng hơn không khí như CO₂, O₂ được thu bằng cách để ngửa bình.',
     },
   },
 ];
