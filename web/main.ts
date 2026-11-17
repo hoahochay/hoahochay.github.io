@@ -660,10 +660,18 @@ function camTo(pos: THREE.Vector3, target: THREE.Vector3) {
   camAnim = { t: 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: pos, toT: target };
 }
 
+/**
+ * Đặt camera nhìn vào điểm `c` từ khoảng cách `dist`. Hạ điểm nhìn xuống một chút để dụng cụ nằm
+ * ở nửa trên màn hình, không bị khung thuyết minh của thí nghiệm mẫu ở phía dưới che.
+ */
+function lookAt(c: THREE.Vector3, dist: number) {
+  const target = c.clone().add(new THREE.Vector3(0, -dist * 0.14, 0));
+  camTo(target.clone().add(new THREE.Vector3(0, dist * 0.32, dist)), target);
+}
+
 function focusOn(v: VesselView) {
   const c = v.group.position.clone().add(new THREE.Vector3(0, v.kind.profile.height * 0.45, 0));
-  const dist = v.kind.type === 'tube' ? 17 : 22;
-  camTo(c.clone().add(new THREE.Vector3(0, dist * 0.3, dist)), c);
+  lookAt(c, v.kind.type === 'tube' ? 25 : 31);
 }
 
 /** Nhìn gần một nhóm dụng cụ (null: về góc nhìn toàn cảnh) */
@@ -680,9 +688,7 @@ function focusMany(vs: VesselView[] | null) {
   focused = false;
   const box = new THREE.Box3();
   for (const v of vs) box.expandByPoint(v.home).expandByPoint(v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height, 0)));
-  const c = box.getCenter(new THREE.Vector3());
-  const dist = 16 + box.getSize(new THREE.Vector3()).x * 1.2;
-  camTo(c.clone().add(new THREE.Vector3(0, dist * 0.3, dist)), c);
+  lookAt(box.getCenter(new THREE.Vector3()), 24 + box.getSize(new THREE.Vector3()).x * 1.3);
 }
 
 function toggleFocus() {
