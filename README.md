@@ -54,6 +54,11 @@ Mỗi bước thời gian, `Vessel.step(dt)` thực hiện:
 (ΔH tính từ ΔfH°), tốc độ đổi theo Arrhenius. Vì vậy thí nghiệm "mưa vàng" PbI₂
 (tan khi nóng, kết tinh khi nguội) xảy ra mà không cần viết code riêng.
 
+**Pha khí** (`gas.ts`, `gasTests.ts`): mỗi dụng cụ có khoảng khí phía trên mặt chất lỏng. Bọt khí
+đẩy không khí ra khỏi ống; khí thoát dần qua miệng (khí nhẹ như H₂, NH₃ thoát nhanh, CO₂ nặng
+đọng lại lâu). CO₂ và NH₃ trao đổi với dung dịch theo định luật Henry. Phép thử que đóm và giấy quỳ ẩm
+được suy ra từ thành phần khoảng khí: quỳ ẩm được tính như một lớp nước mỏng cân bằng với khí.
+
 **Màu** (`optics.ts`): định luật Beer–Lambert theo 3 kênh R/G/B. Màu đậm hay nhạt phụ thuộc
 nồng độ và độ dày lớp chất lỏng; chất chỉ thị đổi màu theo pH.
 
@@ -87,6 +92,7 @@ khớp với video thí nghiệm thật.
   pKa thủy phân của Cu²⁺ là **giá trị hiệu dụng** (6,0) để bù cho điều này (xem `systems.ts`).
 - Hằng số tốc độ được **hiệu chỉnh theo thời gian quan sát**, không phải số đo động học chuẩn.
 - ΔfH° của CuOH⁺ là giá trị ước lượng.
+- CO₂ của không khí không hòa tan vào dung dịch (nước cất có pH 7, thực tế ≈ 5,6); chỉ dùng khi tính màu quỳ ẩm.
 - Hỗn hợp được coi là luôn khuấy đều (chưa có khuếch tán theo vùng).
 - Chưa có: phức chất (Al(OH)₄⁻, [Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺), oxi hóa–khử trong dung dịch
   (KMnO₄, Fe²⁺ → Fe³⁺ do không khí), khí tan lại, phản ứng cháy, chất hữu cơ.

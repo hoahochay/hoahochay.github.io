@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { indicatorDrops, makeSolution } from '../src';
+import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
@@ -10,7 +10,9 @@ import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
 import { setRGB } from './materials';
+import { blueFlame, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
+import { playPop } from './sound';
 import './style.css';
 import { renderThumbnails } from './thumbs';
 import { BEAKER, TUBE, VesselView } from './VesselView';
@@ -248,7 +250,120 @@ function dropSolid(item: SolidItem, grams: number, view: VesselView) {
   );
 }
 
+// ── Thử khí ở miệng dụng cụ ──────────────────────────────────────────────
+const TOOL_NAME: Record<ToolKind, string> = {
+  glowing: 'que đóm còn tàn đỏ',
+  burning: 'que đóm đang cháy',
+  litmus: 'giấy quỳ tím ẩm',
+};
+
+function probe(kind: ToolKind, view: VesselView) {
+  const p = new ProbeView(kind);
+  const isPaper = kind === 'litmus';
+  const holdTime = isPaper ? 5 : 3;
+  let above = new THREE.Vector3();
+  let at = new THREE.Vector3();
+  let paper: RGB = [0.56, 0.32, 0.62];
+  let decided = false;
+  let elapsed = 0;
+  const fx: { obj: THREE.Object3D; life: number; age: number; update: (o: THREE.Object3D, t: number) => void }[] = [];
+  const effect = (obj: THREE.Object3D, life: number, update: (o: THREE.Object3D, t: number) => void) => {
+    obj.position.copy(view.mouthWorld());
+    addTemp(obj);
+    fx.push({ obj, life, age: 0, update });
+  };
+
+  const decide = () => {
+    decided = true;
+    const v = view.vessel;
+    if (kind === 'glowing') {
+      if (testGlowingSplint(v) === 'relight') {
+        p.setFlame('bright');
+        log('Que đóm bùng cháy trở lại → khí thoát ra là oxi (O₂)', 'phenomenon', view.name);
+      } else log('Que đóm vẫn chỉ còn tàn đỏ, không bùng cháy → không giàu oxi', 'phenomenon', view.name);
+      return;
+    }
+    switch (testBurningSplint(v)) {
+      case 'pop':
+        playPop();
+        effect(popFlash(), 0.35, (o, t) => { o.scale.setScalar(1 + t * 5); (o as THREE.Sprite).material.opacity = 1 - t; });
+        log('Có tiếng nổ nhỏ "bụp" → khí hiđro (H₂) lẫn không khí', 'phenomenon', view.name);
+        break;
+      case 'burns-at-mouth':
+        effect(blueFlame(), holdTime, (o, t) => { o.scale.setScalar(Math.min(1, t * 8) * (1 - t * 0.5)); });
+        log('Khí cháy ở miệng ống với ngọn lửa xanh nhạt → khí hiđro (H₂)', 'phenomenon', view.name);
+        break;
+      case 'brighter':
+        p.setFlame('bright');
+        log('Que đóm cháy sáng mạnh hơn → khí giàu oxi', 'phenomenon', view.name);
+        break;
+      case 'extinguished':
+        p.setFlame('none');
+        for (let i = 0; i < 3; i++) {
+          effect(smokePuff(), 1.6 + i * 0.3, (o, t) => {
+            o.position.y += 0.03;
+            o.scale.setScalar(0.4 + t * 1.6);
+            (o as THREE.Sprite).material.opacity = 0.45 * (1 - t);
+          });
+        }
+        log('Que đóm tắt → khí không duy trì sự cháy (như CO₂)', 'phenomenon', view.name);
+        break;
+      default:
+        log('Que đóm vẫn cháy bình thường, không có hiện tượng', 'phenomenon', view.name);
+    }
+  };
+
+  animator.run(
+    tween(0.3, (t) => p.group.scale.setScalar(t), {
+      onStart: () => {
+        const m = view.mouthWorld();
+        at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.6 : -0.5, 0));
+        above = at.clone().add(new THREE.Vector3(0, 4, 0));
+        p.group.position.copy(above);
+        p.group.scale.setScalar(0.001);
+        addTemp(p.group);
+        log(`Đưa ${TOOL_NAME[kind]} vào miệng ống`, 'action', view.name);
+      },
+    }),
+    tween(0.5, (t) => p.group.position.lerpVectors(above, at, t)),
+    (dt) => {
+      elapsed += dt;
+      p.update(dt);
+      if (isPaper) {
+        const target = litmusColor(litmusPH(view.vessel));
+        const k = Math.min(1, dt / 1.2);
+        paper = paper.map((c, i) => c + (target[i] - c) * k) as RGB;
+        p.setPaperColor(paper);
+      } else if (!decided && elapsed > 0.35) decide();
+      for (const f of fx) {
+        f.age += dt;
+        f.update(f.obj, Math.min(1, f.age / f.life));
+        if (f.age >= f.life) removeTemp(f.obj);
+      }
+      if (elapsed < holdTime) return false;
+      if (isPaper) {
+        const verdict = litmusVerdict(litmusPH(view.vessel));
+        log(verdict === 'base' ? 'Giấy quỳ ẩm chuyển màu xanh → khí có tính bazơ (như NH₃)'
+          : verdict === 'acid' ? 'Giấy quỳ ẩm chuyển màu đỏ → khí có tính axit (như CO₂)'
+            : 'Giấy quỳ ẩm không đổi màu', 'phenomenon', view.name);
+      }
+      for (const f of fx) removeTemp(f.obj);
+      return true;
+    },
+    tween(0.4, (t) => {
+      p.update(1 / 60);
+      p.group.position.lerpVectors(at, above, t);
+      p.group.scale.setScalar(Math.max(0.001, 1 - t));
+    }),
+    call(() => removeTemp(p.group)),
+  );
+}
+
 function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
+  if (entry.tool) {
+    select(view);
+    return probe(entry.tool, view);
+  }
   if (!(amount > 0)) {
     log('Lượng phải lớn hơn 0.', 'warning', view.name);
     return;
@@ -480,6 +595,7 @@ const player = new RecipePlayer({
   add: (chem, amount, vessel) => dropEntry(CHEMICALS.find((c) => c.key === chem)!, amount, views[vessel]),
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
+  probe: (tool, vessel) => probe(tool, views[vessel]),
   focus: (vs) => focusMany(vs ? vs.map((i) => views[i]) : null),
   resetAll,
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },

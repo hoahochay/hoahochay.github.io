@@ -1,5 +1,6 @@
 import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
+import { exchangeGases, headspaceFractions, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
 import { Mixture, SETTLE_TIME, SolidForm } from './mixture';
 import { solutionColor, turbidity } from './optics';
@@ -15,14 +16,18 @@ export interface VesselSpec {
   /** Đường kính trong ≈ độ dày lớp chất lỏng ánh sáng đi qua, cm */
   pathLengthCm: number;
   capacityL: number;
+  /** Thể tích trong toàn bộ (cả khoảng khí), L */
+  volumeL: number;
+  /** Diện tích miệng, cm² */
+  mouthAreaCm2: number;
 }
 
 export const VESSELS = {
-  testTube: { name: 'Ống nghiệm', glassHeatCapacity: 12, pathLengthCm: 1.5, capacityL: 0.025 },
-  beaker100: { name: 'Cốc 100 mL', glassHeatCapacity: 45, pathLengthCm: 5, capacityL: 0.1 },
-  beaker250: { name: 'Cốc 250 mL', glassHeatCapacity: 90, pathLengthCm: 7, capacityL: 0.25 },
+  testTube: { name: 'Ống nghiệm', glassHeatCapacity: 12, pathLengthCm: 1.5, capacityL: 0.025, volumeL: 0.026, mouthAreaCm2: 1.77 },
+  beaker100: { name: 'Cốc 100 mL', glassHeatCapacity: 45, pathLengthCm: 5, capacityL: 0.1, volumeL: 0.15, mouthAreaCm2: 21.2 },
+  beaker250: { name: 'Cốc 250 mL', glassHeatCapacity: 90, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.35, mouthAreaCm2: 38.5 },
   /** Cốc xốp cách nhiệt, dùng cho thí nghiệm đo nhiệt */
-  foamCup: { name: 'Cốc xốp', glassHeatCapacity: 0, pathLengthCm: 7, capacityL: 0.25 },
+  foamCup: { name: 'Cốc xốp', glassHeatCapacity: 0, pathLengthCm: 7, capacityL: 0.25, volumeL: 0.3, mouthAreaCm2: 38.5 },
 } satisfies Record<string, VesselSpec>;
 
 export interface SolidObservation {
@@ -49,8 +54,10 @@ export interface Observation {
   solids: SolidObservation[];
   /** Tốc độ thoát khí, mL/s (ở nhiệt độ hiện tại, 1 atm) */
   gasRateML: Record<string, number>;
-  /** Tổng lượng khí đã thoát ra, mol */
+  /** Tổng lượng khí đã thoát ra khỏi dung dịch, mol */
   gasTotalMol: Record<string, number>;
+  /** Phần mol các khí trong khoảng khí phía trên chất lỏng (phần còn lại là không khí) */
+  headspace: Record<string, number>;
   /** Nồng độ các chất tan (M), bỏ qua lượng vết */
   dissolved: Record<string, number>;
   boiling: boolean;
@@ -74,7 +81,10 @@ export class Vessel {
   roomK = T25;
   boiling = false;
   readonly gasRate = new Map<string, number>();
+  /** Tổng khí đã thoát khỏi dung dịch (bọt khí), mol */
   readonly gasTotal = new Map<string, number>();
+  /** Tổng khí đã bay ra khỏi miệng dụng cụ, mol */
+  readonly gasEscaped = new Map<string, number>();
 
   constructor(
     readonly spec: VesselSpec = VESSELS.testTube,
@@ -156,12 +166,16 @@ export class Vessel {
   /** Một bước mô phỏng hóa học. dt = 0: chỉ cân bằng tức thời (vd. ngay sau khi trộn). */
   private process(dt: number): void {
     const m = this.mix;
-    if (m.volumeL <= 1e-7) return;
+    if (m.volumeL <= 1e-7) {
+      if (dt > 0 && m.headspace.size) this.vent(dt, new Map());
+      return;
+    }
     const H0 = enthalpy(m);
     const A0 = hydrogenAtoms(m);
     if (dt > 0) {
       runKinetics(m, dt, this.reactions);
       runDissolution(m, dt);
+      exchangeGases(m, this.spec, dt);
     }
     equilibrate(m);
     // Bảo toàn nguyên tố H: phần chênh lệch là nước sinh ra hoặc bị tiêu thụ
@@ -169,18 +183,28 @@ export class Vessel {
     // Định luật Hess: nhiệt tỏa ra = H_trước − H_sau
     m.tempK += (H0 - enthalpy(m)) / this.heatCapacity();
 
+    // Bọt khí: khí sinh ra trong dung dịch đi vào khoảng khí phía trên
     const tau = 0.5; // làm mượt tốc độ thoát khí để hiển thị
     const dtEff = dt > 0 ? dt : 0.05;
+    const inflow = new Map<string, number>();
     for (const id of GAS_IDS) {
       const n = m.get(id);
       if (n > 0) {
         m.set(id, 0);
+        inflow.set(id, n);
         this.gasTotal.set(id, (this.gasTotal.get(id) ?? 0) + n);
       }
       const prev = this.gasRate.get(id) ?? 0;
       const next = prev + (n / dtEff - prev) * Math.min(1, dtEff / tau);
       if (next > 1e-12) this.gasRate.set(id, next);
       else this.gasRate.delete(id);
+    }
+    if (dt > 0 || inflow.size) this.vent(dt, inflow);
+  }
+
+  private vent(dt: number, inflow: Map<string, number>): void {
+    for (const [id, n] of ventHeadspace(this.mix, this.spec, dt, inflow)) {
+      this.gasEscaped.set(id, (this.gasEscaped.get(id) ?? 0) + n);
     }
   }
 
@@ -259,6 +283,7 @@ export class Vessel {
       solids,
       gasRateML,
       gasTotalMol: Object.fromEntries(this.gasTotal),
+      headspace: headspaceFractions(m, this.spec),
       dissolved,
       boiling: this.boiling,
     };

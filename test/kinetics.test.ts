@@ -139,7 +139,7 @@ describe('Các phản ứng khác', () => {
 describe('Bảo toàn', () => {
   it('bảo toàn nguyên tố H (kể cả nước và khí đã thoát)', () => {
     const v = mgInAcid('strip');
-    const total = () => hydrogenAtoms(v.mix) + 2 * v.mix.get('H2O') + 2 * (v.gasTotal.get('H2') ?? 0);
+    const total = () => hydrogenAtoms(v.mix) + 2 * v.mix.get('H2O') + 2 * (v.gasEscaped.get('H2') ?? 0);
     const a0 = total();
     v.run(60);
     expect(total()).toBeCloseTo(a0, 8);

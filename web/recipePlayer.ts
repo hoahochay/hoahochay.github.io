@@ -1,4 +1,5 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
+import type { ToolKind } from './probes';
 import { LabState, Recipe, RECIPES, Step } from './recipes';
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
@@ -6,6 +7,7 @@ export interface LabApi {
   add(chem: string, amount: number, vessel: number): void;
   setHeat(vessel: number, on: boolean): void;
   stir(vessel: number): void;
+  probe(tool: ToolKind, vessel: number): void;
   focus(vessels: number[] | null): void;
   resetAll(): void;
   setSpeed(s: number): void;
@@ -17,6 +19,12 @@ export interface LabApi {
 }
 
 class Abort extends Error {}
+
+const PROBE_NAME: Record<ToolKind, string> = {
+  glowing: 'que đóm còn tàn đỏ',
+  burning: 'que đóm đang cháy',
+  litmus: 'mẩu giấy quỳ tím ẩm',
+};
 
 const FAST = 60;
 const frame = () => new Promise<number>((r) => requestAnimationFrame(r));
@@ -98,6 +106,7 @@ export class RecipePlayer {
       case 'wait': return s.text ?? 'Quan sát…';
       case 'heat': return s.text ?? (s.on ? 'Đun nóng bằng đèn cồn.' : 'Tắt đèn cồn.');
       case 'stir': return s.text ?? 'Lắc nhẹ cho dung dịch trộn đều.';
+      case 'probe': return s.text ?? `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
       case 'focus': return '';
     }
   }
@@ -144,6 +153,10 @@ export class RecipePlayer {
       case 'stir':
         this.ui.progress(null);
         this.lab.stir(s.vessel);
+        return this.untilIdle(id);
+      case 'probe':
+        this.ui.progress(null);
+        this.lab.probe(s.tool, s.vessel);
         return this.untilIdle(id);
       case 'wait': {
         const speed = s.speed ?? 1;

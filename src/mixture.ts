@@ -31,6 +31,8 @@ export class Mixture {
   readonly saturation = new Map<string, number>();
   /** [H+] sau lần cân bằng gần nhất */
   h = 1e-7;
+  /** Khí trong khoảng trống phía trên chất lỏng, mol (không tính không khí) */
+  readonly headspace = new Map<string, number>();
 
   get(id: string): number {
     return this.moles.get(id) ?? 0;
@@ -93,6 +95,7 @@ export class Mixture {
     for (const [id, f] of this.formFactor) m.formFactor.set(id, f);
     for (const [id, s] of this.suspended) m.suspended.set(id, s);
     for (const [id, s] of this.saturation) m.saturation.set(id, s);
+    for (const [id, n] of this.headspace) m.headspace.set(id, n);
     m.volumeL = this.volumeL;
     m.tempK = this.tempK;
     m.h = this.h;

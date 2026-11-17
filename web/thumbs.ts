@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ChemEntry } from './catalog';
+import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 
 export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, string> {
@@ -21,7 +22,13 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
 
   for (const e of entries) {
-    const obj = e.solid ? dishModel(e.solid) : new BottleView(e.reagent!).group;
+    let obj: THREE.Object3D;
+    if (e.tool) {
+      const p = new ProbeView(e.tool);
+      p.update(0.016);
+      obj = p.group;
+      obj.rotation.z = e.tool === 'litmus' ? -0.5 : -0.9;
+    } else obj = e.solid ? dishModel(e.solid) : new BottleView(e.reagent!).group;
     scene.add(obj);
     const box = new THREE.Box3().setFromObject(obj);
     const center = box.getCenter(new THREE.Vector3());

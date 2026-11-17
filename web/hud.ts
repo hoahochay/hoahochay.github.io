@@ -117,6 +117,11 @@ export class Hud {
         return `<span class="chip">${pretty(id)} <b>${rate > 0.005 ? rate.toFixed(2) + ' mL/s' : 'đã dừng'}</b> · tổng ${totalML.toFixed(1)} mL</span>`;
       })
       .join('');
+    const head = Object.entries(o.headspace)
+      .filter(([, x]) => x > 0.005)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, x]) => `<span class="chip">${pretty(id)} <b>${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%</b></span>`)
+      .join('');
     const rx = activeReactions(view);
     el.innerHTML = `
       <div class="title">${view.name}</div>
@@ -130,6 +135,7 @@ export class Hud {
       ${dissolved ? `<div class="sec">Chất tan</div><div class="chips">${dissolved}</div>` : ''}
       ${solids ? `<div class="sec">Chất rắn</div><div class="chips">${solids}</div>` : ''}
       ${gases ? `<div class="sec">Khí thoát ra</div><div class="chips">${gases}</div>` : ''}
+      ${head ? `<div class="sec">Khí ở miệng ống</div><div class="chips">${head}<span class="chip muted">còn lại: không khí</span></div>` : ''}
       ${rx.length ? `<div class="sec">Phản ứng đang xảy ra</div>${rx.map((r) => `<div class="eq">${r}</div>`).join('')}` : ''}
       `}`;
   }

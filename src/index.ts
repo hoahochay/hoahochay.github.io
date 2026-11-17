@@ -9,3 +9,5 @@ export * from './reactions';
 export * from './reagents';
 export * from './optics';
 export * from './vessel';
+export * from './gas';
+export * from './gasTests';

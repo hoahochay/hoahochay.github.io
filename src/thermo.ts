@@ -6,13 +6,15 @@ import { species } from './species';
 export function enthalpy(mix: Mixture): number {
   let h = 0;
   for (const [id, n] of mix.moles) h += n * species(id).dHf * 1000;
+  for (const [id, n] of mix.headspace) h += n * species(id).dHf * 1000;
   return h;
 }
 
-/** Tổng số nguyên tử H, không tính nước. Dùng để suy ra lượng nước sinh ra/mất đi. */
+/** Tổng số nguyên tử H (kể cả khoảng khí), không tính nước. Dùng để suy ra lượng nước sinh ra/mất đi. */
 export function hydrogenAtoms(mix: Mixture): number {
   let a = 0;
   for (const [id, n] of mix.moles) if (id !== 'H2O') a += n * species(id).hCount;
+  for (const [id, n] of mix.headspace) a += n * species(id).hCount;
   return a;
 }
 

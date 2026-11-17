@@ -1,5 +1,6 @@
 /** Danh mục hóa chất trên kệ và chất rắn trên khay */
 import { gramsToMol, makeSolution, RGB, solutionColor, SolidForm } from '../src';
+import type { ToolKind } from './probes';
 
 export interface ReagentDef {
   key: string;
@@ -82,7 +83,7 @@ export function solidMol(item: SolidItem, grams: number): number {
 /** Một mục trong kho hóa chất (ô tìm kiếm) */
 export interface ChemEntry {
   key: string;
-  kind: 'solution' | 'indicator' | 'solid';
+  kind: 'solution' | 'indicator' | 'solid' | 'tool';
   title: string;
   formula: string;
   sub: string;
@@ -92,6 +93,7 @@ export interface ChemEntry {
   max: number;
   reagent?: ReagentDef;
   solid?: SolidItem;
+  tool?: ToolKind;
   /** Chuỗi đã chuẩn hóa để tìm kiếm */
   search: string;
 }
@@ -124,6 +126,14 @@ export const CHEMICALS: ChemEntry[] = [
     key: i.key, kind: 'solid', title: i.label, formula: SOLID_FORMULA[i.id] ?? i.id, sub: 'chất rắn',
     unit: 'g', defaultAmount: i.grams, step: 0.05, max: 10,
     solid: i, search: normalize(`${i.label} ${SOLID_FORMULA[i.id] ?? i.id} ${i.id} chat ran kim loai`),
+  })),
+  ...([
+    ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxi o2'],
+    ['splint_burn', 'burning', 'Que đóm đang cháy', 'Thử khí H₂, CO₂', 'hidro h2 co2 cacbonic chay'],
+    ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí axit / bazơ', 'quy tim nh3 amoniac co2 axit bazo'],
+  ] as const).map(([key, tool, title, sub, kw]): ChemEntry => ({
+    key, kind: 'tool', title, formula: title, sub, unit: '', defaultAmount: 1, step: 1, max: 1, tool,
+    search: normalize(`${title} ${sub} ${kw} dung cu thu khi`),
   })),
 ];
 

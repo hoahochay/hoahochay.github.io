@@ -113,6 +113,7 @@ sp('PbI2', 'chì(II) iođua', 's', 0, 0, -175.48, 461.0, { color: [0.98, 0.84, 0
 sp('H2', 'khí hiđro', 'g', 0, 2, 0, 2.016);
 sp('O2', 'khí oxi', 'g', 0, 0, 0, 32.0);
 sp('CO2', 'khí cacbonic', 'g', 0, 0, -393.51, 44.01);
+sp('NH3(g)', 'khí amoniac', 'g', 0, 3, -45.94, 17.03);
 
 export const SPECIES: Readonly<Record<string, SpeciesDef>> = Object.fromEntries(
   list.map((s) => [s.id, s]),
@@ -135,6 +136,7 @@ const SUP: Record<string, string> = {
 /** 'SO4^2-' → 'SO₄²⁻', 'Cu(OH)2' → 'Cu(OH)₂' */
 export function pretty(id: string): string {
   if (SPECIES[id]?.indicator) return SPECIES[id].name;
+  id = id.replace('(g)', '');
   const m = /^(.*?)(?:\^(\d*[+-])|([+-]))$/.exec(id);
   const base = m ? m[1] : id;
   const charge = m ? (m[2] ?? m[3]) : '';

@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { indicatorDrops, makeSolution, Vessel, VESSELS } from '../src';
+import { indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
 import { BEAKER, LabState, Recipe, RECIPES } from '../web/recipes';
 
@@ -11,6 +11,8 @@ interface RunResult {
   vessels: Vessel[];
   /** Các bước `wait` có `until` nhưng hết giờ mà điều kiện chưa đạt */
   timedOut: number[];
+  /** Kết quả các lần thử khí, theo thứ tự */
+  probes: string[];
 }
 
 function runRecipe(r: Recipe): RunResult {
@@ -21,6 +23,11 @@ function runRecipe(r: Recipe): RunResult {
     tempC: (i) => vessels[i].mix.tempK - 273.15,
   };
   const timedOut: number[] = [];
+  const probes: string[] = [];
+  /** Chạy mô phỏng thêm một khoảng (như lúc dụng cụ thử đang được đưa vào) */
+  const run = (seconds: number) => {
+    for (let t = 0; t < seconds; t += 0.05) for (const v of vessels) if (v.mix.moles.size) v.step(0.05);
+  };
   r.steps.forEach((s, idx) => {
     switch (s.kind) {
       case 'add': {
@@ -52,9 +59,20 @@ function runRecipe(r: Recipe): RunResult {
       case 'stir':
         vessels[s.vessel].stir();
         break;
+      case 'probe': {
+        const v = vessels[s.vessel];
+        run(1.2); // thời gian đưa que / giấy tới miệng ống
+        if (s.tool === 'glowing') probes.push(testGlowingSplint(v));
+        else if (s.tool === 'burning') probes.push(testBurningSplint(v));
+        else {
+          run(5);
+          probes.push('litmus-' + litmusVerdict(litmusPH(v)));
+        }
+        break;
+      }
     }
   });
-  return { vessels, timedOut };
+  return { vessels, timedOut, probes };
 }
 
 describe('Thí nghiệm mẫu', () => {
@@ -120,6 +138,24 @@ describe('Thí nghiệm mẫu', () => {
     expect(run('chloride-test')[0].mix.get('AgCl')).toBeGreaterThan(0);
     expect(run('sulfate-test')[1].mix.get('BaSO4')).toBeGreaterThan(0);
     expect(run('feoh3')[2].mix.get('Fe(OH)3')).toBeGreaterThan(0);
+  });
+
+  const probesOf = (id: string) => runRecipe(RECIPES.find((r) => r.id === id)!).probes;
+
+  it('thử O2: không khí → không bùng cháy; ống có MnO2 → bùng cháy', () => {
+    expect(probesOf('o2-test')).toEqual(['none', 'relight']);
+  });
+
+  it('thử H2: nổ "bụp" khi đang sủi bọt, hết hiện tượng khi H2 bay đi', () => {
+    expect(probesOf('h2-test')).toEqual(['pop', 'normal']);
+  });
+
+  it('thử CO2: que đóm tắt, quỳ ẩm hóa đỏ', () => {
+    expect(probesOf('co2-test')).toEqual(['extinguished', 'litmus-acid']);
+  });
+
+  it('thử NH3: nước cất không đổi màu quỳ, amoniac làm quỳ hóa xanh', () => {
+    expect(probesOf('nh3-test')).toEqual(['litmus-neutral', 'litmus-base']);
   });
 
   it('đá vôi + HCl: thoát CO2', () => {

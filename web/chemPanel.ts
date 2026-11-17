@@ -12,6 +12,7 @@ const GROUPS: { kind: ChemEntry['kind']; title: string }[] = [
   { kind: 'solution', title: 'Dung dịch' },
   { kind: 'solid', title: 'Chất rắn' },
   { kind: 'indicator', title: 'Chất chỉ thị' },
+  { kind: 'tool', title: 'Dụng cụ thử khí' },
 ];
 
 const DRAG_THRESHOLD = 5;
@@ -54,13 +55,14 @@ export class ChemPanel {
           <div class="chem" data-key="${e.key}" title="Kéo vào ống nghiệm hoặc cốc">
             <img src="${this.thumbs.get(e.key) ?? ''}" alt="" draggable="false" />
             <div class="meta">
-              <div class="f">${e.formula} <small>${e.sub}</small></div>
-              <div class="n">${e.title}</div>
+              ${e.kind === 'tool'
+                ? `<div class="f">${e.title}</div><div class="n">${e.sub}</div>`
+                : `<div class="f">${e.formula} <small>${e.sub}</small></div><div class="n">${e.title}</div>`}
             </div>
-            <label class="amt">
+            ${e.kind === 'tool' ? '<span></span>' : `<label class="amt">
               <input type="number" min="${e.step}" max="${e.max}" step="${e.step}" value="${this.amounts.get(e.key)}" />
               <span>${e.unit}</span>
-            </label>
+            </label>`}
           </div>`;
       }
     }
@@ -70,12 +72,12 @@ export class ChemPanel {
 
   private bind(el: HTMLElement): void {
     const entry = this.entries.find((e) => e.key === el.dataset.key)!;
-    const input = el.querySelector('input')!;
-    input.addEventListener('input', () => {
+    const input = el.querySelector('input');
+    input?.addEventListener('input', () => {
       const v = Number(input.value);
       if (v > 0) this.amounts.set(entry.key, Math.min(entry.max, v));
     });
-    input.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    input?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
 
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
@@ -120,7 +122,7 @@ export class ChemPanel {
     const g = document.createElement('div');
     g.className = 'chem-ghost';
     g.innerHTML = `<img src="${this.thumbs.get(entry.key) ?? ''}" alt="" />
-      <span>${this.amounts.get(entry.key)} ${entry.unit} ${entry.formula}</span>`;
+      <span>${entry.kind === 'tool' ? entry.title : `${this.amounts.get(entry.key)} ${entry.unit} ${entry.formula}`}</span>`;
     document.body.appendChild(g);
     return g;
   }

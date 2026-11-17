@@ -3,6 +3,7 @@
  * Ống nghiệm đánh số 0–3, cốc là 4.
  */
 import { Mixture } from '../src';
+import type { ToolKind } from './probes';
 
 export const TUBE1 = 0, TUBE2 = 1, TUBE3 = 2, TUBE4 = 3, BEAKER = 4;
 
@@ -18,6 +19,7 @@ export type Step =
   | { kind: 'wait'; seconds: number; speed?: number; text?: string; until?: (lab: LabState) => boolean }
   | { kind: 'heat'; vessel: number; on: boolean; text?: string }
   | { kind: 'stir'; vessel: number; text?: string }
+  | { kind: 'probe'; tool: ToolKind; vessel: number; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
 
 export interface Recipe {
@@ -36,6 +38,7 @@ const add = (chem: string, amount: number, vessel: number, text?: string): Step 
 const wait = (seconds: number, o: { speed?: number; text?: string; until?: (lab: LabState) => boolean } = {}): Step => ({ kind: 'wait', seconds, ...o });
 const heat = (vessel: number, on: boolean, text?: string): Step => ({ kind: 'heat', vessel, on, text });
 const stir = (vessel: number, text?: string): Step => ({ kind: 'stir', vessel, text });
+const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 'probe', tool, vessel, text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
 export const RECIPES: Recipe[] = [
@@ -284,6 +287,94 @@ export const RECIPES: Recipe[] = [
       phenomena: ['Xuất hiện kết tủa nâu đỏ', 'Dung dịch phía trên gần như không màu'],
       equations: ['FeCl₃ + 3NaOH → Fe(OH)₃↓ + 3NaCl'],
       explain: 'Ion Fe³⁺ tạo với OH⁻ kết tủa Fe(OH)₃ màu nâu đỏ, cực kì ít tan. Đây là phản ứng nhận biết ion Fe³⁺.',
+    },
+  },
+  {
+    id: 'o2-test',
+    title: 'Điều chế và nhận biết khí oxi',
+    level: 'Lớp 8', topic: 'Chất khí',
+    summary: 'Phân hủy H₂O₂ có xúc tác MnO₂, thử khí sinh ra bằng que đóm còn tàn đỏ.',
+    steps: [
+      focus(TUBE1, TUBE2),
+      say('Cả hai ống chứa nước oxi già. Chỉ ống 2 được thêm chất xúc tác MnO₂.'),
+      add('h2o2', 5, TUBE1),
+      add('h2o2', 5, TUBE2),
+      add('mno2', 0.1, TUBE2),
+      wait(8, { text: 'Ống 2 sủi bọt mạnh. Khí oxi dồn đầy phần trên của ống, đẩy không khí ra ngoài.' }),
+      probe('glowing', TUBE1, 'Thử ống 1 trước: đưa que đóm còn tàn đỏ vào miệng ống.'),
+      say('Ống 1 chỉ có không khí (21% oxi): que đóm không bùng cháy.'),
+      probe('glowing', TUBE2, 'Bây giờ thử ống 2.'),
+      say('Que đóm bùng cháy: khí trong ống 2 giàu oxi hơn hẳn không khí.'),
+    ],
+    result: {
+      phenomena: ['Ống có MnO₂ sủi bọt khí mạnh', 'Que đóm còn tàn đỏ bùng cháy ở miệng ống 2', 'Ở ống 1 que đóm không bùng cháy'],
+      equations: ['2H₂O₂ —MnO₂→ 2H₂O + O₂↑'],
+      explain: 'Oxi duy trì sự cháy. Không khí chỉ có khoảng 21% oxi nên không đủ làm tàn đỏ bùng lên; khí oxi gần như nguyên chất thì làm que đóm cháy trở lại. Đây là cách nhận biết khí oxi.',
+    },
+  },
+  {
+    id: 'h2-test',
+    title: 'Nhận biết khí hiđro',
+    level: 'Lớp 8', topic: 'Chất khí',
+    summary: 'Thử khí sinh ra từ Mg + HCl bằng que đóm đang cháy.',
+    steps: [
+      focus(TUBE1),
+      add('hcl', 5, TUBE1),
+      add('mg_strip', 0.05, TUBE1),
+      wait(5, { text: 'Khí hiđro thoát ra, trộn lẫn với không khí ở phần trên ống nghiệm.' }),
+      probe('burning', TUBE1, 'Đưa que đóm đang cháy lại gần miệng ống.'),
+      say('Nghe tiếng nổ nhỏ "bụp": hỗn hợp hiđro và không khí cháy rất nhanh.'),
+      wait(180, { speed: 5, text: 'Chờ phản ứng kết thúc rồi thử lại.', until: (l) => l.mix(TUBE1).get('Mg') < 1e-5 }),
+      wait(10, { text: 'Hiđro rất nhẹ nên bay ra khỏi ống nghiệm chỉ trong vài giây.' }),
+      probe('burning', TUBE1, 'Thử lại bằng que đóm đang cháy.'),
+      say('Không còn tiếng nổ: hiđro đã bay hết khỏi ống nghiệm.'),
+    ],
+    result: {
+      phenomena: ['Khi đang sủi bọt: que đóm cháy gây tiếng nổ nhỏ "bụp"', 'Sau khi hết phản ứng vài giây: không còn hiện tượng'],
+      equations: ['Mg + 2HCl → MgCl₂ + H₂↑', '2H₂ + O₂ —t°→ 2H₂O'],
+      explain: 'Hỗn hợp hiđro với không khí (từ 4% đến 75% H₂) cháy rất nhanh, gây tiếng nổ nhỏ. Hiđro là khí nhẹ nhất nên thoát khỏi miệng ống rất nhanh; vì vậy khi thu khí hiđro phải úp ngược ống nghiệm.',
+    },
+  },
+  {
+    id: 'co2-test',
+    title: 'Khí cacbonic không duy trì sự cháy',
+    level: 'Lớp 9', topic: 'Chất khí',
+    summary: 'Thu CO₂ từ đá vôi và axit, thử bằng que đóm đang cháy và giấy quỳ ẩm.',
+    steps: [
+      focus(TUBE1),
+      add('hcl', 5, TUBE1),
+      add('caco3', 0.5, TUBE1),
+      wait(25, { text: 'CO₂ nặng hơn không khí nên đọng lại, dần chiếm chỗ không khí trong ống.' }),
+      probe('burning', TUBE1, 'Đưa que đóm đang cháy vào miệng ống.'),
+      say('Que đóm tắt: CO₂ không duy trì sự cháy.'),
+      probe('litmus', TUBE1, 'Đưa giấy quỳ tím ẩm vào miệng ống.'),
+      say('Giấy quỳ ẩm ngả sang đỏ: CO₂ tan vào nước trên giấy tạo axit cacbonic yếu.'),
+    ],
+    result: {
+      phenomena: ['Đá vôi sủi bọt khí', 'Que đóm đang cháy bị tắt ở miệng ống', 'Giấy quỳ tím ẩm chuyển sang màu đỏ'],
+      equations: ['CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑', 'CO₂ + H₂O ⇌ H₂CO₃'],
+      explain: 'CO₂ không cháy và không duy trì sự cháy; vì nặng hơn không khí (44 so với 29) nên đọng lại trong ống. CO₂ là oxit axit: tan trong nước tạo H₂CO₃ làm quỳ tím hóa đỏ. Ứng dụng: bình chữa cháy CO₂.',
+    },
+  },
+  {
+    id: 'nh3-test',
+    title: 'Amoniac làm quỳ tím ẩm hóa xanh',
+    level: 'Lớp 11', topic: 'Chất khí',
+    summary: 'Khí NH₃ bay lên từ dung dịch amoniac làm giấy quỳ ẩm đổi màu.',
+    steps: [
+      focus(TUBE3, TUBE4),
+      add('nh3', 5, TUBE3, 'Ống 3: dung dịch amoniac.'),
+      add('water', 5, TUBE4, 'Ống 4: nước cất để so sánh.'),
+      wait(6, { text: 'Amoniac dễ bay hơi: khí NH₃ thoát ra khỏi dung dịch dù không sủi bọt.' }),
+      probe('litmus', TUBE4, 'Đưa giấy quỳ tím ẩm vào miệng ống nước cất.'),
+      say('Giấy quỳ không đổi màu.'),
+      probe('litmus', TUBE3, 'Bây giờ đưa giấy quỳ ẩm vào miệng ống amoniac (không chạm vào dung dịch).'),
+      say('Giấy quỳ chuyển xanh dù không chạm vào dung dịch: khí NH₃ đã tan vào lớp nước trên giấy.'),
+    ],
+    result: {
+      phenomena: ['Giấy quỳ ẩm ở miệng ống nước cất không đổi màu', 'Giấy quỳ ẩm ở miệng ống amoniac chuyển xanh'],
+      equations: ['NH₃ + H₂O ⇌ NH₄⁺ + OH⁻'],
+      explain: 'NH₃ là khí tan rất nhiều trong nước và dễ bay hơi khỏi dung dịch. Khi gặp nước trên giấy quỳ, NH₃ nhận H⁺ của nước tạo OH⁻ nên có tính bazơ, làm quỳ tím hóa xanh. Đây là cách nhận biết khí amoniac.',
     },
   },
 ];

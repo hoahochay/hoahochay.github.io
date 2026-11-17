@@ -6,12 +6,6 @@
  * động học chính xác. Ea lấy gần với giá trị trong tài liệu.
  */
 import { KineticReaction, massAction } from './kinetics';
-import { arrhenius } from './thermo';
-
-/** Độ tan của CO2 trong nước ở 1 atm (M), giảm khi nhiệt độ tăng */
-export function co2Solubility(T: number): number {
-  return 0.034 * Math.exp(2400 * (1 / T - 1 / 298.15));
-}
 
 export const REACTIONS: KineticReaction[] = [
   // ── Kim loại + axit ──────────────────────────────────────────────────
@@ -79,14 +73,4 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 7e-6, Ea: 50000, orders: { H2O2: 1 }, surface: 'MnO2' }),
   },
 
-  // ── CO2 thoát khỏi dung dịch khi quá bão hòa (sủi bọt) ───────────────
-  {
-    id: 'co2_degas', name: 'Khí CO₂ thoát ra',
-    equation: 'H₂CO₃ → CO₂↑ + H₂O',
-    reactants: { H2CO3: 1 }, products: { CO2: 1, H2O: 1 },
-    rate: (ctx) => {
-      const excess = ctx.conc('H2CO3') - co2Solubility(ctx.T);
-      return excess > 0 ? arrhenius(0.3, 15000, ctx.T) * ctx.V * excess : 0;
-    },
-  },
 ];
