@@ -51,6 +51,17 @@ export const REACTIONS: KineticReaction[] = [
     productForm: 'powder',
   },
 
+  // ── Phản ứng giữa hai chất rắn khi đun nóng ─────────────────────────
+  // Ở nhiệt độ phòng không xảy ra; đun đáy ống khoảng 30 s (≈ 250–300 °C) thì phản ứng tự bùng lên
+  // nhờ nhiệt tỏa ra (ΔH ≈ −100 kJ/mol), hỗn hợp nóng đỏ. Ea lớn để ngưỡng bắt đầu rõ ràng.
+  {
+    id: 'fe_s', name: 'Sắt tác dụng với lưu huỳnh',
+    equation: 'Fe + S → FeS',
+    reactants: { Fe: 1, S: 1 }, products: { FeS: 1 },
+    rate: massAction({ k25: 7e-19, Ea: 150000, surface: 'Fe' }),
+    productForm: 'powder',
+  },
+
   // ── Kim loại kiềm + nước ─────────────────────────────────────────────
   {
     id: 'na_water', name: 'Sodium tác dụng với nước',

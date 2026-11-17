@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, Vessel, VESSELS } from '../src';
+import { GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
 import { BEAKER, FLASK, LabState, Recipe, RECIPES, SYRINGE } from '../web/recipes';
 
@@ -89,6 +89,7 @@ function runRecipe(r: Recipe): RunResult {
         run(1.2); // thời gian đưa que / giấy tới miệng ống
         if (s.tool === 'glowing') probes.push(testGlowingSplint(v));
         else if (s.tool === 'burning') probes.push(testBurningSplint(v));
+        else if (s.tool === 'magnet') probes.push('magnet-' + testMagnet(v));
         else {
           run(5);
           probes.push('litmus-' + litmusVerdict(litmusPH(v)));
@@ -121,5 +122,13 @@ describe('Thí nghiệm mẫu', () => {
     expect(v[1].mix.get('BaSO4')).toBe(0);
     expect(v[1].gasTotal.size).toBe(0);
     expect(v[2].mix.get('Cu(OH)2')).toBeGreaterThan(5e-4);
+  });
+
+  it('Bài 2 – sắt + lưu huỳnh: trước khi đun bị nam châm hút, sau khi đun thành FeS', () => {
+    const r = RECIPES.find((x) => x.id === 'sat-luu-huynh')!;
+    const res = runRecipe(r);
+    expect(res.probes).toEqual(['magnet-attracted', 'magnet-none']);
+    expect(res.vessels[1].mix.get('FeS')).toBeGreaterThan(0.012);
+    expect(res.vessels[0].mix.get('FeS')).toBeLessThan(1e-8);
   });
 });

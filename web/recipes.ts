@@ -79,6 +79,40 @@ const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels
 
 export const RECIPES: Recipe[] = [
   {
+    id: 'sat-luu-huynh',
+    title: 'Biến đổi hóa học: sắt tác dụng với lưu huỳnh',
+    lesson: 'khtn8-b2', level: 'basic', page: 12,
+    concepts: ['biến đổi hóa học', 'chất mới', 'phản ứng tỏa nhiệt'],
+    summary: 'Trộn bột sắt với bột lưu huỳnh rồi thử bằng nam châm. Đun nóng hỗn hợp, để nguội và thử lại: nam châm còn hút không?',
+    steps: [
+      say('Trộn bột sắt (màu xám) với bột lưu huỳnh (màu vàng) theo tỉ lệ khối lượng 7 : 4, rồi chia vào hai ống nghiệm (1) và (2).'),
+      focus(TUBE1, TUBE2),
+      add('fe_powder', 0.7, TUBE1, 'Ống (1): cho 0,7 g bột sắt.'),
+      add('s_powder', 0.4, TUBE1, 'Ống (1): thêm 0,4 g bột lưu huỳnh. Hỗn hợp có màu xám vàng.'),
+      add('fe_powder', 0.7, TUBE2, 'Ống (2): cho 0,7 g bột sắt.'),
+      add('s_powder', 0.4, TUBE2, 'Ống (2): thêm 0,4 g bột lưu huỳnh.'),
+      probe('magnet', TUBE1, 'Đưa nam châm lại gần đáy ống (1).'),
+      say('Hỗn hợp bị nam châm hút vì bột sắt vẫn còn nguyên. Khi chỉ trộn lẫn, sắt và lưu huỳnh giữ nguyên tính chất: chưa có chất mới.'),
+      heat(TUBE2, true, 'Đun mạnh đáy ống (2) bằng đèn cồn.'),
+      wait(60, { speed: 2, text: 'Đáy ống nóng dần. Để ý nhiệt độ trên bảng thông tin.', until: (l) => l.mix(TUBE2).get('FeS') > 0.009 }),
+      wait(3, { text: 'Hỗn hợp bùng lên, nóng đỏ rực và lan khắp ống: phản ứng tỏa nhiều nhiệt.' }),
+      heat(TUBE2, false, 'Ngừng đun. Phản ứng vẫn tự tiếp diễn nhờ nhiệt nó tỏa ra.'),
+      wait(15, { text: 'Hỗn hợp vẫn đỏ rực một lúc rồi tối dần, còn lại chất rắn màu đen.' }),
+      wait(900, { speed: 20, text: 'Tua nhanh: để ống (2) nguội.', until: (l) => l.tempC(TUBE2) < 40 }),
+      probe('magnet', TUBE2, 'Đưa nam châm lại gần đáy ống (2).'),
+      say('Chất rắn màu đen không bị nam châm hút: sắt và lưu huỳnh đã biến thành chất mới là iron(II) sulfide. Đây là biến đổi hóa học.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1), chỉ trộn: hỗn hợp xám vàng bị nam châm hút',
+        'Ống (2), khi đun: hỗn hợp bùng cháy đỏ rực, tiếp tục nóng đỏ cả khi đã ngừng đun',
+        'Ống (2), sau khi nguội: chất rắn màu đen, không bị nam châm hút',
+      ],
+      equations: ['Fe + S → FeS'],
+      explain: 'Trộn sắt với lưu huỳnh chỉ là biến đổi vật lí: mỗi chất giữ nguyên tính chất nên sắt vẫn bị nam châm hút. Khi đun nóng, sắt tác dụng với lưu huỳnh tạo thành iron(II) sulfide, một chất mới có màu đen và không bị nam châm hút. Đó là biến đổi hóa học. Phản ứng chỉ cần đun lúc đầu để khơi mào, sau đó tỏa nhiều nhiệt nên tự lan ra cả khối.',
+    },
+  },
+  {
     id: 'dau-hieu-chat-moi',
     title: 'Dấu hiệu nhận biết có chất mới tạo thành',
     lesson: 'khtn8-b2', level: 'basic', page: 14,

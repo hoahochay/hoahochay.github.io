@@ -88,3 +88,11 @@ export function litmusColor(pH: number): RGB {
 export function litmusVerdict(pH: number): 'acid' | 'base' | 'neutral' {
   return pH < 4.8 ? 'acid' : pH > 8.3 ? 'base' : 'neutral';
 }
+
+/** Lượng sắt tự do tối thiểu để thấy rõ bị nam châm hút, g */
+export const MAGNET_MIN_FE_G = 0.02;
+
+/** Đưa nam châm lại gần: sắt tự do bị hút; hợp chất của sắt như FeS thì không */
+export function testMagnet(v: Vessel): 'attracted' | 'none' {
+  return v.mix.get('Fe') * 55.85 >= MAGNET_MIN_FE_G ? 'attracted' : 'none';
+}

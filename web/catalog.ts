@@ -87,6 +87,8 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'li', id: 'Li', label: 'Lithium (mẩu)', grams: 0.02, form: 'granule', shape: 'chunk', floats: true },
   { key: 'k', id: 'K', label: 'Potassium (mẩu)', grams: 0.05, form: 'granule', shape: 'chunk', floats: true, flame: 0xc58cff },
   { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate', grams: 0.5, form: 'granule', shape: 'granule' },
+  { key: 'fe_powder', id: 'Fe', label: 'Bột sắt', aka: 'iron powder', grams: 0.7, form: 'powder', shape: 'powder' },
+  { key: 's_powder', id: 'S', label: 'Bột lưu huỳnh', aka: 'sulfur', grams: 0.4, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
@@ -139,7 +141,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {
@@ -160,6 +162,7 @@ export const CHEMICALS: ChemEntry[] = [
     ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxygen o2'],
     ['splint_burn', 'burning', 'Que đóm đang cháy', 'Thử khí H₂, CO₂', 'hydrogen h2 co2 carbon dioxide chay'],
     ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí acid / base', 'quy tim nh3 ammonia co2 acid base'],
+    ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
     ['delivery', 'delivery', 'Ống dẫn khí', 'Dẫn khí sang ống khác', 'ong dan khi thu khi suc khi nut cao su'],
     ['balance', 'balance', 'Cân điện tử', 'Cân dụng cụ, chính xác 0,01 g', 'can dien tu khoi luong bao toan khoi luong tru bi dung cu do'],
     ['syringe', 'syringe', 'Xi lanh đo khí', 'Đo thể tích khí theo thời gian', 'xi lanh gas syringe do the tich khi toc do phan ung do thi dung cu do'],
@@ -172,6 +175,7 @@ export const CHEMICALS: ChemEntry[] = [
 /** Tên màu kết tủa / chất rắn theo SGK */
 export const SOLID_COLOR_NAME: Record<string, string> = {
   AgCl: 'trắng',
+  FeS: 'đen',
   'Cu(OH)2': 'xanh lơ',
   'Fe(OH)2': 'trắng xanh',
   'Fe(OH)3': 'nâu đỏ',

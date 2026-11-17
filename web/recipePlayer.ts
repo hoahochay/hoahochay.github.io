@@ -31,6 +31,7 @@ const PROBE_NAME: Record<ToolKind, string> = {
   glowing: 'que đóm còn tàn đỏ',
   burning: 'que đóm đang cháy',
   litmus: 'mẩu giấy quỳ tím ẩm',
+  magnet: 'nam châm',
 };
 
 const FAST = 60;
@@ -144,7 +145,9 @@ export class RecipePlayer {
         ? 'Tháo ống dẫn khí.'
         : `Lắp ống dẫn khí từ ${this.lab.vesselName(s.src).toLowerCase()} sang ${this.lab.vesselName(s.dst).toLowerCase()}.`);
       case 'invert': return s.text ?? `Úp ngược ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
-      case 'probe': return s.text ?? `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
+      case 'probe': return s.text ?? (s.tool === 'magnet'
+        ? `Đưa nam châm lại gần đáy ${this.lab.vesselName(s.vessel).toLowerCase()}.`
+        : `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`);
       case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${this.lab.vesselName(s.vessel).toLowerCase()} lên cân điện tử.`);
       case 'tare': return s.text ?? 'Bấm nút trừ bì: cân trở về 0,00 g.';
       case 'focus': return '';

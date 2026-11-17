@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testGlowingSplint } from '../src';
+import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
@@ -293,9 +293,60 @@ const TOOL_NAME: Record<ToolKind, string> = {
   glowing: 'que đóm còn tàn đỏ',
   burning: 'que đóm đang cháy',
   litmus: 'giấy quỳ tím ẩm',
+  magnet: 'nam châm',
 };
 
+/** Đưa nam châm lại gần đáy dụng cụ: sắt tự do (bột sắt, đinh sắt) bị hút; FeS thì không */
+function magnetTest(view: VesselView) {
+  const p = new ProbeView('magnet');
+  const attracted = testMagnet(view.vessel) === 'attracted';
+  let far = new THREE.Vector3(), near = new THREE.Vector3();
+  let base = new THREE.Vector3();
+  const hot = view.vessel.mix.tempK - 273.15 > 60;
+  animator.run(
+    tween(0.3, (t) => p.group.scale.setScalar(Math.max(0.001, 1.4 * t)), {
+      onStart: () => {
+        base = view.group.position.clone();
+        const r = view.kind.profile.radius(0.5);
+        // Đặt ngay trước giá ống nghiệm, ngang lớp chất rắn dưới đáy
+        near = base.clone().add(new THREE.Vector3(0, 0.9, r + 1.6));
+        far = near.clone().add(new THREE.Vector3(0, 0.6, 4.5));
+        p.group.position.copy(far);
+        addTemp(p.group);
+        log('Đưa nam châm lại gần đáy ống', 'action', view.name);
+        if (hot) log('Ống còn nóng: nên để nguội rồi mới thử bằng nam châm.', 'warning', view.name);
+      },
+    }),
+    tween(0.7, (t) => p.group.position.lerpVectors(far, near, t)),
+    // Bị hút: ống (và bột sắt bên trong) bị kéo lệch về phía nam châm
+    tween(0.5, (t) => {
+      if (!attracted) return;
+      view.group.position.copy(base).add(new THREE.Vector3(0, 0, 0.3 * Math.sin(t * Math.PI / 2)));
+      view.group.rotation.x = 0.06 * Math.sin(t * Math.PI / 2);
+    }, {
+      onStart: () => log(attracted
+        ? 'Hỗn hợp bị nam châm hút → trong ống còn sắt (Fe) chưa phản ứng'
+        : 'Chất rắn trong ống không bị nam châm hút → không còn sắt tự do, đã tạo thành chất mới', 'phenomenon', view.name),
+    }),
+    tween(1.2, () => {}),
+    tween(0.5, (t) => {
+      p.group.position.lerpVectors(near, far, t);
+      p.group.scale.setScalar(Math.max(0.001, 1.4 * (1 - t)));
+      if (attracted) {
+        view.group.position.copy(base).add(new THREE.Vector3(0, 0, 0.3 * (1 - t)));
+        view.group.rotation.x = 0.06 * (1 - t);
+      }
+    }),
+    call(() => {
+      view.group.position.copy(base);
+      view.group.rotation.x = 0;
+      removeTemp(p.group);
+    }),
+  );
+}
+
 function probe(kind: ToolKind, view: VesselView) {
+  if (kind === 'magnet') return magnetTest(view);
   const p = new ProbeView(kind);
   const isPaper = kind === 'litmus';
   const holdTime = isPaper ? 5 : 3;

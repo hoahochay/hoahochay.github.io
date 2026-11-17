@@ -28,6 +28,8 @@ const MAX_STEAM = 28;
 const BUBBLES_PER_ML = 25;
 /** Kết tủa mịn: dùng hệ số hình dạng để phân biệt với mẫu chất rắn bỏ vào */
 const FINE = FORM_FACTOR.precipitate;
+/** Bột (và mịn hơn) */
+const POWDER = FORM_FACTOR.powder;
 
 interface Bubble { p: THREE.Vector3; v: number; s: number; phase: number }
 interface Steam { sprite: THREE.Sprite; age: number; life: number; vx: number; vz: number }
@@ -66,6 +68,10 @@ export class VesselView {
   private hovered = false;
   private readonly liquid: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   private readonly sediment: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  /** Quầng sáng khi lớp bột khô nóng đỏ */
+  private readonly hotGlow: THREE.Sprite;
+  /** Ống khô chứa bột: vẽ chung thành một lớp bột trộn dưới đáy */
+  private dryBed = false;
   private readonly ring: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
   private readonly depositHeap: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshStandardMaterial>;
   private readonly solids = new Map<string, SolidVisual>();
@@ -112,6 +118,12 @@ export class VesselView {
     this.sediment = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ roughness: 0.95 }));
     this.sediment.visible = false;
     this.group.add(this.sediment);
+    this.hotGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: steamTex, color: 0xff5a1a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0,
+    }));
+    this.hotGlow.renderOrder = 5;
+    this.hotGlow.visible = false;
+    this.group.add(this.hotGlow);
 
     this.depositHeap = new THREE.Mesh(
       new THREE.CylinderGeometry(0.05, 1, 1, 18).translate(0, 0.5, 0),
@@ -277,14 +289,17 @@ export class VesselView {
   private updateSediment(o: Observation): void {
     let grams = 0;
     const col: RGB = [0, 0, 0];
+    // Ống khô có bột: các loại bột nằm trộn lẫn thành một lớp, màu theo tỉ lệ khối lượng
+    this.dryBed = o.volumeML < 0.05 && o.solids.some((s) => (this.vessel.mix.formFactor.get(s.id) ?? 0) >= POWDER);
     for (const s of o.solids) {
-      if ((this.vessel.mix.formFactor.get(s.id) ?? 0) < FINE) continue;
-      const g = s.grams * (1 - s.suspended);
+      const ff = this.vessel.mix.formFactor.get(s.id) ?? 0;
+      if (ff < (this.dryBed ? POWDER : FINE)) continue;
+      const g = this.dryBed ? s.grams : s.grams * (1 - s.suspended);
       grams += g;
       for (let i = 0; i < 3; i++) col[i] += g * s.color[i];
     }
-    // kết tủa xốp: khoảng 1,5 mL cho mỗi gam
-    const hs = this.vmap.heightFor(grams * 1.5);
+    // kết tủa xốp: khoảng 1,5 mL cho mỗi gam; bột khô nén chặt hơn, khoảng 0,5 mL/g
+    const hs = this.vmap.heightFor(grams * (this.dryBed ? 0.5 : 1.5));
     if (Math.abs(hs - this.sedimentH) > 0.004) {
       this.sedimentH = hs;
       this.sediment.geometry.dispose();
@@ -292,6 +307,18 @@ export class VesselView {
     }
     this.sediment.visible = hs > 0.01;
     if (grams > 0) setRGB(this.sediment.material.color, col.map((x) => x / grams) as RGB);
+    // Nóng đỏ: từ khoảng 450 °C bắt đầu đỏ sẫm, 750 °C đỏ cam
+    const hot = THREE.MathUtils.clamp((o.tempC - 450) / 300, 0, 1);
+    const mat = this.sediment.material;
+    mat.emissive.setRGB(1, 0.28 + 0.2 * hot, 0.05);
+    mat.emissiveIntensity = this.sediment.visible ? hot * 1.6 : 0;
+    this.hotGlow.visible = this.sediment.visible && hot > 0.01;
+    if (this.hotGlow.visible) {
+      const r = this.kind.profile.radius(Math.max(0.1, hs * 0.5));
+      this.hotGlow.position.set(0, hs * 0.5, 0);
+      this.hotGlow.scale.setScalar(r * 5 * (0.8 + 0.4 * hot) * (1 + 0.05 * Math.sin(this.time * 9)));
+      this.hotGlow.material.opacity = 0.75 * hot;
+    }
   }
 
   private updateSolids(o: Observation, dt: number): void {
@@ -300,7 +327,7 @@ export class VesselView {
     let depositG = 0;
     const depositCol: RGB = [0, 0, 0];
     for (const s of o.solids) {
-      if (this.solids.has(s.id) || (mix.formFactor.get(s.id) ?? 0) >= FINE) continue;
+      if (this.solids.has(s.id) || (mix.formFactor.get(s.id) ?? 0) >= (this.dryBed ? POWDER : FINE)) continue;
       depositG += s.grams;
       for (let i = 0; i < 3; i++) depositCol[i] += s.grams * s.color[i];
     }
@@ -309,7 +336,7 @@ export class VesselView {
     let substrate = false;
     for (const v of this.solids.values()) {
       const n = mix.get(v.item.id);
-      v.obj.visible = n > v.mol0 * 1e-3;
+      v.obj.visible = n > v.mol0 * 1e-3 && !(this.dryBed && v.item.shape === 'powder');
       if (!v.obj.visible) continue;
       const k = v.size * Math.max(0.12, Math.cbrt(n / v.mol0));
       v.obj.scale.setScalar(k);

@@ -7,7 +7,7 @@ import { solutionColor, turbidity } from './optics';
 import { REACTIONS } from './reactions';
 import { makeSolution } from './reagents';
 import { GAS_IDS, pretty, RGB, species } from './species';
-import { enthalpy, hydrogenAtoms, liquidHeatCapacity } from './thermo';
+import { enthalpy, hydrogenAtoms, liquidHeatCapacity, solidHeatCapacity } from './thermo';
 
 /** Nơi nhận khí từ ống dẫn: một dụng cụ khác, hoặc xi lanh đo khí */
 export interface GasReceiver {
@@ -115,8 +115,23 @@ export class Vessel implements GasReceiver {
     this.mix.tempK = this.roomK;
   }
 
+  /** Không có chất lỏng: chỉ có chất rắn (hoặc trống) */
+  get dry(): boolean {
+    return this.mix.volumeL <= 1e-7;
+  }
+
   heatCapacity(): number {
-    return liquidHeatCapacity(this.mix) + this.spec.glassHeatCapacity;
+    // Đun khô: ngọn lửa chỉ làm nóng phần đáy ống chứa chất rắn, khoảng 1/4 khối thủy tinh
+    const glass = this.dry ? this.spec.glassHeatCapacity * 0.25 : this.spec.glassHeatCapacity;
+    return liquidHeatCapacity(this.mix) + solidHeatCapacity(this.mix) + glass;
+  }
+
+  /** Nhiệt tỏa ra môi trường, W */
+  private heatLoss(): number {
+    const T = this.mix.tempK, Tr = this.roomK;
+    if (!this.dry) return lossCoefficient(this.mix.volumeL * 1000) * (T - Tr);
+    // Đáy ống khô: đối lưu + bức xạ (đáng kể khi nóng đỏ)
+    return 0.04 * (T - Tr) + 2e-11 * (T ** 4 - Tr ** 4);
   }
 
   /** Đổ một dung dịch (hoặc hỗn hợp lấy từ dụng cụ khác) vào */
@@ -191,6 +206,13 @@ export class Vessel implements GasReceiver {
     if (m.volumeL <= 1e-7) {
       for (const [id, n] of this.inAbsorb) this.inGas.set(id, (this.inGas.get(id) ?? 0) + n);
       this.inAbsorb.clear();
+      // Chất rắn khô: chỉ có phản ứng giữa các chất rắn (phản ứng trong dung dịch tự bằng 0 khi V = 0)
+      if (dt > 0 && m.moles.size) {
+        const H0 = enthalpy(m);
+        runKinetics(m, dt, this.reactions);
+        const C = this.heatCapacity();
+        if (C > 0) m.tempK += (H0 - enthalpy(m)) / C;
+      }
       if (dt > 0 && (m.headspace.size || this.inTotal > 0 || this.inletRate > 1e-12)) this.vent(dt, new Map());
       return;
     }
@@ -276,8 +298,9 @@ export class Vessel implements GasReceiver {
     const m = this.mix;
     const C = this.heatCapacity();
     if (C > 0) {
-      const loss = lossCoefficient(m.volumeL * 1000) * (m.tempK - this.roomK);
-      m.tempK += ((this.heaterW - loss) * dt) / C;
+      m.tempK += ((this.heaterW - this.heatLoss()) * dt) / C;
+      // Bước thời gian lớn khi tua nhanh: không để nguội quá nhiệt độ phòng
+      if (this.heaterW === 0 && m.tempK < this.roomK && this.dry) m.tempK = this.roomK;
     }
     // Sôi: nhiệt dư làm bay hơi nước, dung dịch đặc lại
     this.boiling = false;

@@ -1,9 +1,9 @@
-/** Mô hình 3D các dụng cụ thử khí: que đóm (tàn đỏ / đang cháy), giấy quỳ */
+/** Mô hình 3D các dụng cụ thử: que đóm (tàn đỏ / đang cháy), giấy quỳ, nam châm */
 import * as THREE from 'three';
 import { RGB } from '../src';
 import { setRGB, softCircleTexture } from './materials';
 
-export type ToolKind = 'glowing' | 'burning' | 'litmus';
+export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'magnet';
 export type FlameMode = 'none' | 'ember' | 'normal' | 'bright';
 
 const TILT = 0.45;
@@ -23,6 +23,24 @@ export class ProbeView {
   private t = Math.random() * 10;
 
   constructor(readonly kind: ToolKind) {
+    if (kind === 'magnet') {
+      // Nam châm chữ U: thân đỏ, hai cực bạc, hai cực hướng về phía -z (về phía ống nghiệm)
+      const red = new THREE.MeshStandardMaterial({ color: 0xd8262b, roughness: 0.45, metalness: 0.2 });
+      const steel = new THREE.MeshStandardMaterial({ color: 0xc9cdd3, roughness: 0.3, metalness: 0.8 });
+      const R = 0.75, w = 0.42;
+      const arc = new THREE.Mesh(new THREE.TorusGeometry(R, w / 2, 12, 24, Math.PI), red);
+      arc.rotation.x = -Math.PI / 2;
+      arc.rotation.z = Math.PI;
+      arc.position.z = 1.6;
+      const leg = (x: number) => {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w, w, 1.6).translate(0, 0, 0.8), red);
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.01, w + 0.01, 0.45).translate(0, 0, -0.22), steel);
+        body.position.x = tip.position.x = x;
+        return [body, tip];
+      };
+      this.group.add(arc, ...leg(-R), ...leg(R));
+      return;
+    }
     if (kind === 'litmus') {
       this.paper = new THREE.Mesh(
         new THREE.PlaneGeometry(0.55, 3.4).translate(0, 1.7, 0),

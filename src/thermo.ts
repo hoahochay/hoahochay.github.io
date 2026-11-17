@@ -23,6 +23,19 @@ export function liquidHeatCapacity(mix: Mixture): number {
   return CP_WATER * mix.get('H2O');
 }
 
+/** Nhiệt dung riêng gần đúng của chất rắn, J/(g·K) */
+const CP_SOLID = 0.6;
+
+/** Nhiệt dung của các chất rắn trong hỗn hợp, J/K */
+export function solidHeatCapacity(mix: Mixture): number {
+  let c = 0;
+  for (const [id, n] of mix.moles) {
+    const s = species(id);
+    if (s.phase === 's') c += n * s.molarMass * CP_SOLID;
+  }
+  return c;
+}
+
 /** Hằng số cân bằng ở nhiệt độ T theo phương trình van 't Hoff (ΔH tính bằng kJ/mol) */
 export function vantHoff(K25: number, dH_kJ: number, T: number): number {
   return K25 * Math.exp((-dH_kJ * 1000) / R * (1 / T - 1 / T25));

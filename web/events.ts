@@ -19,6 +19,8 @@ interface State {
   refTemp: number;
   boiling: boolean;
   hadLiquid: boolean;
+  /** Chất rắn khô đang nóng đỏ */
+  glowing: boolean;
 }
 
 /** Tên màu tiếng Việt gần đúng */
@@ -58,7 +60,6 @@ export function precipitationEquation(solidId: string): string {
 export function activeReactions(view: VesselView): string[] {
   const v = view.vessel;
   const mix = v.mix;
-  if (mix.volumeL <= 0) return [];
   const ctx: RateContext = {
     mix, T: mix.tempK, V: mix.volumeL,
     conc: (id) => mix.conc(id),
@@ -86,7 +87,7 @@ export class PhenomenaTracker {
       out.push({ t: o.timeS, vessel: view.name, text, kind: 'phenomenon', ...extra });
     let st = this.state.get(view);
     if (!st) {
-      st = { solids: new Set(), gases: new Set(), refColor: o.solutionColor, refTemp: o.tempC, boiling: false, hadLiquid: false };
+      st = { solids: new Set(), gases: new Set(), refColor: o.solutionColor, refTemp: o.tempC, boiling: false, hadLiquid: false, glowing: false };
       this.state.set(view, st);
     }
     const hasLiquid = o.volumeML > 0.01;
@@ -108,6 +109,12 @@ export class PhenomenaTracker {
         });
       } else if ((id === 'Cu' || id === 'Ag') && !view.hasSolidVisual(id)) {
         log(`Có ${species(id).name} (${name}) bám trên bề mặt kim loại`, { color: species(id).color });
+      } else if (!hasLiquid && !view.hasSolidVisual(id)) {
+        // Phản ứng giữa các chất rắn khi đun (vd. Fe + S → FeS)
+        const r = view.vessel.reactions.find((x) => id in x.products);
+        log(`Tạo thành chất rắn màu ${name ?? colorName(species(id).color ?? [0.5, 0.5, 0.5])} ${pretty(id)}`, {
+          color: species(id).color, equation: r?.equation,
+        });
       }
     }
     for (const id of st.solids) {
@@ -145,6 +152,16 @@ export class PhenomenaTracker {
       } else if (st.refTemp - o.tempC >= 15) {
         log(`Dung dịch nguội dần (${o.tempC.toFixed(0)} °C)`);
         st.refTemp = o.tempC;
+      }
+    }
+    // Chất rắn khô nóng đỏ
+    if (!hasLiquid && o.solids.length) {
+      if (!st.glowing && o.tempC > 450) {
+        st.glowing = true;
+        log(`Hỗn hợp nóng đỏ rực lên (${o.tempC.toFixed(0)} °C)`, { color: [1, 0.35, 0.08] });
+      } else if (st.glowing && o.tempC < 400) {
+        st.glowing = false;
+        log(`Hỗn hợp hết nóng đỏ, nguội dần (${o.tempC.toFixed(0)} °C)`);
       }
     }
     if (o.boiling && !st.boiling) log('Dung dịch sôi, nước bay hơi');
