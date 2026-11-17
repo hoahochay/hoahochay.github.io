@@ -59,11 +59,11 @@ export class Hud {
   }
 
   setHeating(on: boolean): void {
-    $('#btn-heat').textContent = on ? '🔥 Tắt đèn' : '🔥 Đun';
+    $('#btn-heat span').textContent = on ? 'Tắt đèn' : 'Đun';
   }
 
   setInverted(on: boolean): void {
-    $('#btn-invert').textContent = on ? '🔃 Lật ngửa' : '🔃 Úp ống';
+    $('#btn-invert span').textContent = on ? 'Lật ngửa' : 'Úp ống';
   }
 
   /** Dòng nhắc nổi giữa màn hình (null: ẩn) */

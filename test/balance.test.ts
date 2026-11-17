@@ -1,4 +1,4 @@
-/** Cân điện tử: bảo toàn khối lượng (đối chiếu bài RSC "Mass changes in chemical reactions") */
+/** Cân điện tử: bảo toàn khối lượng */
 import { describe, expect, it } from 'vitest';
 import { makeSolution, Vessel, VESSELS } from '../src';
 

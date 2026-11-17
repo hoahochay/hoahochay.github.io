@@ -13,6 +13,8 @@ export interface ReagentDef {
   name: string;
   solutes: Record<string, number>;
   indicator?: 'phenolphthalein' | 'methyl orange';
+  /** Tên khác để ô tìm kiếm hiểu (vd. tên IUPAC của chất ghi tên đời thường) */
+  aka?: string;
   /** Lọ thủy tinh màu nâu (hóa chất nhạy sáng) */
   amber?: boolean;
   /** Màu dung dịch trong lọ */
@@ -40,7 +42,7 @@ export const REAGENTS: ReagentDef[] = [
   // Nước vôi trong bão hòa ≈ 0,02M; dùng loại pha loãng để thấy rõ cả hai giai đoạn đục → trong
   // (mô hình dung dịch lý tưởng chưa có hệ số hoạt độ, nên đánh giá thấp độ tan của Ca(HCO₃)₂)
   reagent('limewater', 'Ca(OH)₂', 'loãng', 'nước vôi trong', { 'Ca(OH)2': 0.005 }),
-  reagent('h2o2', 'H₂O₂', '3%', 'hydrogen peroxide', { H2O2: 0.88 }, { amber: true }),
+  reagent('h2o2', 'H₂O₂', '3%', 'nước oxy già', { H2O2: 0.88 }, { amber: true, aka: 'hydrogen peroxide' }),
   reagent('agno3', 'AgNO₃', '0,1M', 'silver nitrate', { AgNO3: 0.1 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
   reagent('fecl3', 'FeCl₃', '0,1M', 'iron(III) chloride', { FeCl3: 0.1 }),
@@ -63,6 +65,8 @@ export interface SolidItem {
   /** id chất trong engine */
   id: string;
   label: string;
+  /** Tên khác để ô tìm kiếm hiểu */
+  aka?: string;
   /** Khối lượng mặc định, g */
   grams: number;
   form: SolidForm;
@@ -76,14 +80,14 @@ export interface SolidItem {
 export const SOLID_ITEMS: SolidItem[] = [
   { key: 'mg_strip', id: 'Mg', label: 'Magnesium (dải)', grams: 0.05, form: 'strip', shape: 'ribbon' },
   { key: 'mg_powder', id: 'Mg', label: 'Magnesium (bột)', grams: 0.05, form: 'powder', shape: 'powder' },
-  { key: 'zn', id: 'Zn', label: 'Zinc (viên)', grams: 0.5, form: 'granule', shape: 'granule' },
-  { key: 'fe', id: 'Fe', label: 'Iron (đinh sắt)', grams: 2, form: 'strip', shape: 'nail' },
-  { key: 'cu', id: 'Cu', label: 'Copper (dây đồng)', grams: 1, form: 'strip', shape: 'wire' },
+  { key: 'zn', id: 'Zn', label: 'Kẽm viên', aka: 'zinc', grams: 0.5, form: 'granule', shape: 'granule' },
+  { key: 'fe', id: 'Fe', label: 'Đinh sắt', aka: 'iron', grams: 2, form: 'strip', shape: 'nail' },
+  { key: 'cu', id: 'Cu', label: 'Dây đồng', aka: 'copper', grams: 1, form: 'strip', shape: 'wire' },
   { key: 'na', id: 'Na', label: 'Sodium (mẩu)', grams: 0.1, form: 'granule', shape: 'chunk', floats: true },
   { key: 'li', id: 'Li', label: 'Lithium (mẩu)', grams: 0.02, form: 'granule', shape: 'chunk', floats: true },
   { key: 'k', id: 'K', label: 'Potassium (mẩu)', grams: 0.05, form: 'granule', shape: 'chunk', floats: true, flame: 0xc58cff },
-  { key: 'caco3', id: 'CaCO3', label: 'Calcium carbonate (đá vôi)', grams: 0.5, form: 'granule', shape: 'granule' },
-  { key: 'mno2', id: 'MnO2', label: 'Manganese(IV) oxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
+  { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate', grams: 0.5, form: 'granule', shape: 'granule' },
+  { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
 export function solidMol(item: SolidItem, grams: number): number {
@@ -144,13 +148,13 @@ export const CHEMICALS: ChemEntry[] = [
     return {
       key: r.key, kind: ind ? 'indicator' : 'solution', title, formula: r.formula, sub: r.conc,
       unit: ind ? 'giọt' : 'mL', defaultAmount: ind ? 2 : 2, step: ind ? 1 : 0.5, max: ind ? 20 : 100,
-      reagent: r, search: searchText(`${title} ${r.formula} ${r.conc} ${ind ? 'chi thi' : 'dung dich'}`),
+      reagent: r, search: searchText(`${title} ${r.aka ?? ''} ${r.formula} ${r.conc} ${ind ? 'chi thi' : 'dung dich'}`),
     };
   }),
   ...SOLID_ITEMS.map((i): ChemEntry => ({
     key: i.key, kind: 'solid', title: i.label, formula: SOLID_FORMULA[i.id] ?? i.id, sub: 'chất rắn',
     unit: 'g', defaultAmount: i.grams, step: 0.05, max: 10,
-    solid: i, search: searchText(`${i.label} ${SOLID_FORMULA[i.id] ?? i.id} ${i.id} chat ran kim loai`),
+    solid: i, search: searchText(`${i.label} ${i.aka ?? ''} ${SOLID_FORMULA[i.id] ?? i.id} ${i.id} chat ran kim loai`),
   })),
   ...([
     ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxygen o2'],

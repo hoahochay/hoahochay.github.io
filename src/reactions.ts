@@ -16,13 +16,13 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 2.8e-5, Ea: 40000, orders: { 'H+': 1 }, surface: 'Mg' }),
   },
   {
-    id: 'zn_acid', name: 'Zinc tác dụng với acid',
+    id: 'zn_acid', name: 'Kẽm tác dụng với acid',
     equation: 'Zn + 2H⁺ → Zn²⁺ + H₂↑',
     reactants: { Zn: 1, 'H+': 2 }, products: { 'Zn^2+': 1, H2: 1 },
     rate: massAction({ k25: 1.2e-5, Ea: 45000, orders: { 'H+': 1 }, surface: 'Zn' }),
   },
   {
-    id: 'fe_acid', name: 'Iron tác dụng với acid',
+    id: 'fe_acid', name: 'Sắt tác dụng với acid',
     equation: 'Fe + 2H⁺ → Fe²⁺ + H₂↑',
     reactants: { Fe: 1, 'H+': 2 }, products: { 'Fe^2+': 1, H2: 1 },
     rate: massAction({ k25: 4e-7, Ea: 50000, orders: { 'H+': 1 }, surface: 'Fe' }),
@@ -30,21 +30,21 @@ export const REACTIONS: KineticReaction[] = [
 
   // ── Kim loại mạnh đẩy kim loại yếu ra khỏi dung dịch muối ───────────
   {
-    id: 'fe_cu', name: 'Iron đẩy copper',
+    id: 'fe_cu', name: 'Sắt đẩy đồng',
     equation: 'Fe + Cu²⁺ → Fe²⁺ + Cu↓',
     reactants: { Fe: 1, 'Cu^2+': 1 }, products: { 'Fe^2+': 1, Cu: 1 },
     rate: massAction({ k25: 5e-7, Ea: 30000, orders: { 'Cu^2+': 1 }, surface: 'Fe' }),
     productForm: 'granule',
   },
   {
-    id: 'zn_cu', name: 'Zinc đẩy copper',
+    id: 'zn_cu', name: 'Kẽm đẩy đồng',
     equation: 'Zn + Cu²⁺ → Zn²⁺ + Cu↓',
     reactants: { Zn: 1, 'Cu^2+': 1 }, products: { 'Zn^2+': 1, Cu: 1 },
     rate: massAction({ k25: 1.5e-6, Ea: 30000, orders: { 'Cu^2+': 1 }, surface: 'Zn' }),
     productForm: 'granule',
   },
   {
-    id: 'cu_ag', name: 'Copper đẩy silver ("cây silver")',
+    id: 'cu_ag', name: 'Đồng đẩy bạc ("cây bạc")',
     equation: 'Cu + 2Ag⁺ → Cu²⁺ + 2Ag↓',
     reactants: { Cu: 1, 'Ag+': 2 }, products: { 'Cu^2+': 1, Ag: 2 },
     rate: massAction({ k25: 1e-6, Ea: 30000, orders: { 'Ag+': 1 }, surface: 'Cu' }),

@@ -56,19 +56,19 @@ sp('K+', 'ion potassium', 'aq', 1, 0, -252.38, 39.1);
 sp('Cl-', 'ion chloride', 'aq', -1, 0, -167.16, 35.45);
 sp('I-', 'ion iodide', 'aq', -1, 0, -55.19, 126.9);
 sp('NO3-', 'ion nitrate', 'aq', -1, 0, -205.0, 62.0);
-sp('Ag+', 'ion silver', 'aq', 1, 0, 105.58, 107.87);
-sp('Fe^2+', 'ion iron(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
+sp('Ag+', 'ion bạc', 'aq', 1, 0, 105.58, 107.87);
+sp('Fe^2+', 'ion sắt(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
 sp('Mg^2+', 'ion magnesium', 'aq', 2, 0, -466.85, 24.305);
-sp('Zn^2+', 'ion zinc', 'aq', 2, 0, -153.89, 65.38);
+sp('Zn^2+', 'ion kẽm', 'aq', 2, 0, -153.89, 65.38);
 sp('Ca^2+', 'ion calcium', 'aq', 2, 0, -542.83, 40.08);
 sp('Ba^2+', 'ion barium', 'aq', 2, 0, -537.64, 137.33);
-sp('Pb^2+', 'ion lead(II)', 'aq', 2, 0, -1.7, 207.2);
+sp('Pb^2+', 'ion chì(II)', 'aq', 2, 0, -1.7, 207.2);
 
 // ── Các hệ acid–base (xem systems.ts) ────────────────────────────────────
-sp('Cu^2+', 'ion copper(II)', 'aq', 2, 0, 64.77, 63.55, { epsilon: [12, 3, 0.3] });
+sp('Cu^2+', 'ion đồng(II)', 'aq', 2, 0, 64.77, 63.55, { epsilon: [12, 3, 0.3] });
 // ΔfH của CuOH+ là giá trị ước lượng (ΔH thủy phân ≈ +40 kJ/mol)
 sp('CuOH+', 'ion CuOH+', 'aq', 1, 1, -181.0, 80.55, { epsilon: [12, 3, 0.3] });
-sp('Fe^3+', 'ion iron(III)', 'aq', 3, 0, -48.5, 55.85, { epsilon: [0.4, 2.5, 20] });
+sp('Fe^3+', 'ion sắt(III)', 'aq', 3, 0, -48.5, 55.85, { epsilon: [0.4, 2.5, 20] });
 sp('FeOH^2+', 'ion FeOH2+', 'aq', 2, 1, -290.8, 72.85, { epsilon: [0.5, 6, 40] });
 sp('HSO4-', 'ion hydrogensulfate', 'aq', -1, 1, -887.34, 97.07);
 sp('SO4^2-', 'ion sulfate', 'aq', -2, 0, -909.27, 96.06);
@@ -96,11 +96,11 @@ sp('Na', 'sodium', 's', 0, 0, 0, 22.99, { color: [0.82, 0.82, 0.8] });
 sp('Li', 'lithium', 's', 0, 0, 0, 6.94, { color: [0.75, 0.75, 0.76] });
 sp('K', 'potassium', 's', 0, 0, 0, 39.1, { color: [0.8, 0.8, 0.82] });
 sp('Mg', 'magnesium', 's', 0, 0, 0, 24.305, { color: [0.78, 0.78, 0.78] });
-sp('Zn', 'zinc', 's', 0, 0, 0, 65.38, { color: [0.62, 0.64, 0.67] });
-sp('Fe', 'iron', 's', 0, 0, 0, 55.85, { color: [0.4, 0.4, 0.42] });
-sp('Cu', 'copper', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
-sp('Ag', 'silver', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
-sp('MnO2', 'manganese(IV) oxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
+sp('Zn', 'kẽm', 's', 0, 0, 0, 65.38, { color: [0.62, 0.64, 0.67] });
+sp('Fe', 'sắt', 's', 0, 0, 0, 55.85, { color: [0.4, 0.4, 0.42] });
+sp('Cu', 'đồng', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
+sp('Ag', 'bạc', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
+sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
 
 // Kết tủa (Ksp xem systems.ts)
 sp('AgCl', 'silver chloride', 's', 0, 0, -127.07, 143.32, { color: WHITE });

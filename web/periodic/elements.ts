@@ -18,6 +18,8 @@ export interface Element {
   name: string;
   /** Tên theo IUPAC */
   iupac: string;
+  /** Tên hiển thị theo SGK: tiếng Việt với các nguyên tố quen thuộc, còn lại theo IUPAC */
+  display: string;
   /** Khối lượng nguyên tử; `massIsotope` = true nếu là số khối đồng vị bền nhất */
   mass: number;
   massIsotope: boolean;
@@ -185,18 +187,18 @@ const ABOUT: Record<string, string> = {
   Ca: 'Có trong xương, răng, vỏ sò, đá vôi (CaCO₃) và vôi (CaO). Nước có nhiều ion Ca²⁺ là nước cứng.',
   Cr: 'Kim loại rất cứng, sáng bóng. Dùng mạ chống gỉ và chế tạo thép không gỉ (inox).',
   Mn: 'Thành phần quan trọng của thép. Hợp chất KMnO₄ (thuốc tím) dùng sát trùng.',
-  Fe: 'Kim loại được dùng nhiều nhất. Gang và thép là hợp kim của iron với carbon. Có trong hemoglobin của máu.',
+  Fe: 'Kim loại được dùng nhiều nhất. Gang và thép là hợp kim của sắt với carbon. Có trong hemoglobin của máu.',
   Cu: 'Kim loại màu đỏ, dẫn điện rất tốt: làm dây điện. Hợp kim đồng thau (Cu–Zn), đồng thiếc dùng đúc tượng, trống đồng.',
-  Zn: 'Dùng mạ lên iron để chống gỉ (tôn zinc), làm vỏ pin. Là vi chất cần thiết cho cơ thể.',
+  Zn: 'Dùng mạ lên sắt để chống gỉ (tôn kẽm), làm vỏ pin. Là vi chất cần thiết cho cơ thể.',
   Br: 'Một trong hai nguyên tố ở thể lỏng ở nhiệt độ phòng (cùng thủy ngân). Chất lỏng màu nâu đỏ, dễ bay hơi, độc.',
   Ag: 'Kim loại dẫn điện tốt nhất. Làm đồ trang sức, tráng gương; ion Ag⁺ có tính diệt khuẩn.',
-  Sn: 'Kim loại mềm, không gỉ: mạ lên iron làm sắt tây (vỏ hộp), làm thiếc hàn mạch điện.',
+  Sn: 'Kim loại mềm, không gỉ: mạ lên sắt làm sắt tây (vỏ hộp), làm thiếc hàn mạch điện.',
   I: 'Chất rắn màu tím đen, thăng hoa khi đun. Cần cho tuyến giáp: muối i-ốt phòng bệnh bướu cổ; cồn i-ốt sát trùng vết thương.',
   Ba: 'Kim loại kiềm thổ. BaSO₄ không tan, dùng làm "thuốc cản quang" khi chụp X-quang dạ dày.',
   W: 'Kim loại có nhiệt độ nóng chảy cao nhất (3422 °C): làm dây tóc bóng đèn sợi đốt.',
   Pt: 'Kim loại quý rất bền, không bị gỉ. Dùng làm trang sức và chất xúc tác trong bộ lọc khí thải ô tô.',
   Au: 'Kim loại quý màu vàng, dẻo nhất: 1 g vàng dát mỏng được tấm rộng khoảng 1 m². Không bị oxi hóa trong không khí.',
-  Hg: 'Kim loại duy nhất ở thể lỏng ở nhiệt độ phòng. Hơi thủy ngân rất độc; nhiệt kế thủy ngân khi vỡ cần thu gom bằng bột sulfur.',
+  Hg: 'Kim loại duy nhất ở thể lỏng ở nhiệt độ phòng. Hơi thủy ngân rất độc; nhiệt kế thủy ngân khi vỡ cần thu gom bằng bột lưu huỳnh.',
   Pb: 'Kim loại nặng, mềm, độc. Dùng làm ắc quy, tấm chắn tia phóng xạ.',
   U: 'Nguyên tố phóng xạ. Urani-235 là nhiên liệu cho nhà máy điện hạt nhân.',
 };
@@ -287,12 +289,15 @@ function category(z: number, group: number | null, period: number): Category {
   return 'post';
 }
 
+/** Các nguyên tố SGK (chương trình 2018) giữ tên tiếng Việt */
+const SGK_VIETNAMESE = new Set(['Au', 'Ag', 'Cu', 'Pb', 'Fe', 'Al', 'Zn', 'S', 'Sn', 'Hg']);
+
 export const ELEMENTS: Element[] = RAW.trim().split('\n').map((line) => {
   const [z, symbol, name, iupac, mass, en, state, mp, year, ox] = line.split('|');
   const Z = Number(z);
   const pos = position(Z);
   return {
-    z: Z, symbol, name, iupac,
+    z: Z, symbol, name, iupac, display: SGK_VIETNAMESE.has(symbol) ? name : iupac,
     mass: Number(mass),
     massIsotope: Z >= 84 && ![90, 91, 92].includes(Z) || Z === 43 || Z === 61,
     electronegativity: en ? Number(en) : null,

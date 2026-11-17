@@ -1,8 +1,8 @@
-/** Xi lanh đo khí, đối chiếu với bài RSC "The rate of reaction of magnesium with hydrochloric acid" */
+/** Xi lanh đo khí: 0,04 g Mg + 50 mL HCl 1 M cho khoảng 40 mL H2 */
 import { describe, expect, it } from 'vitest';
 import { GasSyringe, Vessel, VESSELS } from '../src';
 
-function rscRun(seconds: number) {
+function mgRun(seconds: number) {
   const flask = new Vessel(VESSELS.flask100);
   flask.addSolution({ HCl: 1 }, 0.05);
   const T0 = flask.mix.tempK;
@@ -21,7 +21,7 @@ function rscRun(seconds: number) {
 
 describe('Xi lanh đo khí', () => {
   it('3 cm Mg (0,04 g) + 50 mL HCl 1M cho khoảng 40 mL khí', () => {
-    const { syr } = rscRun(240);
+    const { syr } = mgRun(240);
     expect(syr.volumeML).toBeGreaterThan(36);
     expect(syr.volumeML).toBeLessThan(44);
     // Khí đẩy sang là hỗn hợp: không khí trong bình đi trước, H2 trộn dần vào
@@ -29,7 +29,7 @@ describe('Xi lanh đo khí', () => {
   });
 
   it('đồ thị dốc nhất lúc đầu rồi nằm ngang', () => {
-    const { readings } = rscRun(240);
+    const { readings } = mgRun(240);
     const d = readings.slice(1).map((v, i) => v - readings[i]);
     expect(d[0]).toBeGreaterThan(d[3]);
     expect(d[3]).toBeGreaterThan(d[8] - 1e-9);
@@ -37,7 +37,7 @@ describe('Xi lanh đo khí', () => {
   });
 
   it('nhiệt độ chỉ tăng vài độ', () => {
-    const { dT } = rscRun(240);
+    const { dT } = mgRun(240);
     expect(dT).toBeGreaterThan(1.5);
     expect(dT).toBeLessThan(5);
   });

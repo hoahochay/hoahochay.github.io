@@ -1,7 +1,7 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
 import { copyText, shareUrl } from './router';
-import { LabState, Level, LEVELS, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
+import { LabState, LESSONS, LessonId, Level, LEVEL_GRADES, LEVELS, Recipe, RECIPES, Step } from './recipes';
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
 export interface LabApi {
@@ -290,15 +290,16 @@ class RecipeUi {
 
   private renderList(): void {
     const shown = RECIPES.filter((r) => this.levelFilter === 'all' || r.level === this.levelFilter);
-    const topics = (Object.keys(TOPICS) as TopicId[]).filter((t) => shown.some((r) => r.topic === t));
+    const lessons = (Object.keys(LESSONS) as LessonId[]).filter((t) => shown.some((r) => r.lesson === t));
     const chip = (v: Level | 'all', label: string) =>
-      `<button class="r-lv${this.levelFilter === v ? ' on' : ''}" data-lv="${v}">${label}</button>`;
+      `<button class="r-lv${this.levelFilter === v ? ' on' : ''}" data-lv="${v}"${v === 'all' ? '' : ` title="${LEVEL_GRADES[v]}"`}>${label}</button>`;
     this.listRoot.innerHTML =
-      `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Nội dung dựa trên các bài thực hành của RSC Education.</div>
-      <div class="r-levels">${chip('all', 'Tất cả')}${(Object.keys(LEVELS) as Level[]).map((l) => chip(l, LEVELS[l])).join('')}</div>` +
-      topics.map((t) => `
-        <div class="r-topic">${TOPICS[t]}</div>` +
-        shown.filter((r) => r.topic === t).map((r) => `
+      `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Các thí nghiệm theo sách giáo khoa, xếp theo bài học.</div>
+      <div class="r-levels">${chip('all', 'Tất cả')}${(Object.keys(LEVELS) as Level[]).map((l) => chip(l, `${LEVELS[l]} · ${LEVEL_GRADES[l]}`)).join('')}</div>` +
+      (shown.length ? '' : '<div class="chem-hint">Chưa có thí nghiệm nào ở mức này.</div>') +
+      lessons.map((t) => `
+        <div class="r-topic">${LESSONS[t]}</div>` +
+        shown.filter((r) => r.lesson === t).map((r) => `
         <div class="recipe" data-id="${r.id}">
           <div class="r-title">${r.title}</div>
           <div class="r-tags"><span class="lv-${r.level}">${LEVELS[r.level]}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
@@ -306,7 +307,7 @@ class RecipeUi {
           <div class="r-foot">
             <button class="r-play">▶ Xem thí nghiệm</button>
             <button class="r-share" title="Sao chép link tới thí nghiệm này">🔗</button>
-            <a class="r-src" href="${r.source.url}" target="_blank" rel="noopener" title="${r.source.title}">Nguồn RSC ↗</a>
+            ${r.page ? `<span class="r-src">SGK tr. ${r.page}</span>` : ''}
           </div>
         </div>`).join('')).join('');
     this.listRoot.querySelectorAll<HTMLButtonElement>('.r-lv').forEach((b) => {

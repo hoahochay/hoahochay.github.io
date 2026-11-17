@@ -52,13 +52,13 @@ const HTML = `
       </section>
       <section>
         <h3>▶ Thí nghiệm mẫu</h3>
-        <p>Tab <b>Thí nghiệm mẫu</b> có các bài dựa trên RSC Education, xếp theo chủ đề và lọc theo mức độ. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
+        <p>Tab <b>Thí nghiệm mẫu</b> có các thí nghiệm theo sách giáo khoa, xếp theo bài học và lọc theo mức độ (Cơ bản: lớp 8–9, Trung cấp: lớp 10–11, Nâng cao: lớp 12). Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
       </section>
       <section>
         <h3>📱 Trên điện thoại</h3>
         <ul>
-          <li>Một ngón kéo: xoay. Hai ngón: di chuyển và phóng to.</li>
-          <li>Nút <b>🧪 Kho</b> và <b>ℹ️ Thông tin</b> ở thanh dưới cùng mở kho hóa chất và bảng thông tin.</li>
+          <li>Một ngón vuốt: di chuyển. Hai ngón: chụm/mở để phóng to, xoay hai ngón để đổi góc nhìn.</li>
+          <li>Nút <b>🧪 Kho</b> và <b>ℹ️ Thông tin</b> ở thanh dưới cùng mở kho hóa chất và bảng thông tin; mọi nút thao tác đều nằm ở thanh này.</li>
           <li>Chạm vào hóa chất để chọn, kho tự đóng lại, rồi chạm vào dụng cụ.</li>
         </ul>
       </section>

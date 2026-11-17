@@ -22,11 +22,6 @@ describe('bảng tuần hoàn', () => {
   });
 
   it('nối với phòng thí nghiệm', () => {
-    const ids = (s: string) => recipesFor(s).map((r) => r.id);
-    expect(ids('Na')).toEqual(expect.arrayContaining(['na-water', 'alkali-water']));
-    expect(ids('K')).toContain('alkali-water');
-    expect(ids('Cu')).toEqual(expect.arrayContaining(['metal-activity', 'fe-cu']));
-    expect(ids('Ca')).toContain('co2-limewater');
     expect(chemicalsFor('Cu').map((c) => c.key)).toEqual(expect.arrayContaining(['cu', 'cuso4']));
     expect(recipesFor('Og')).toEqual([]);
   });

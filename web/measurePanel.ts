@@ -1,6 +1,6 @@
 /**
  * Bảng đo của một dụng cụ đo (xi lanh đo khí, cân điện tử…): số đọc hiện tại, tốc độ thay đổi,
- * đồ thị theo thời gian và bảng số đo mỗi 10 s, như cách ghi kết quả trong các bài RSC.
+ * đồ thị theo thời gian và bảng số đo mỗi 10 s.
  */
 
 interface Sample { t: number; v: number }

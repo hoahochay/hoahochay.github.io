@@ -182,6 +182,7 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 }
 .group { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .group.actions { flex-direction: row; gap: 6px; }
+.group.actions button i { font-style: normal; margin-right: 4px; }
 .seg { display: flex; gap: 3px; }
 #clock { color: var(--ink); font-variant-numeric: tabular-nums; }
 
@@ -412,16 +413,25 @@ kbd {
   #mainnav button span::after { content: attr(data-short); font-size: 13px; }
   #mainnav .nav-help span::after { content: ''; }
 
+  /* Thanh dưới: hàng 1 thời gian + tốc độ, hàng 2 tất cả nút thao tác (biểu tượng trên, chữ dưới) */
   #toolbar {
     left: 0; right: 0; bottom: 0; transform: none; max-width: none; border-radius: 14px 14px 0 0;
-    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; gap: 10px; padding: 8px 10px;
+    flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px;
+    padding: 6px 4px max(6px, env(safe-area-inset-bottom));
   }
-  #toolbar .group { flex-shrink: 0; }
-  #toolbar button { white-space: nowrap; }
+  #toolbar .group:first-child { flex-direction: row; align-items: center; justify-content: space-between; padding: 0 4px; }
+  #speed button { padding: 4px 9px; }
+  #toolbar .group.actions { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  #toolbar .group.actions button {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 5px 0; font-size: 10px; letter-spacing: -0.2px; line-height: 1.15; white-space: nowrap; overflow: hidden;
+  }
+  #toolbar .group.actions button i { margin: 0; font-size: 17px; line-height: 1.2; }
+  #toolbar .group.actions button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
   /* Hai ngăn kéo: kho / thí nghiệm mẫu, và thông tin dụng cụ */
   #left, #panel {
-    top: auto !important; left: 0; right: 0; bottom: 64px; width: auto !important;
+    top: auto !important; left: 0; right: 0; bottom: var(--tb-h, 110px); width: auto !important;
     max-height: 52vh !important; min-height: 0; border-radius: 14px 14px 0 0; display: none;
   }
   body.sheet-chem #left { display: flex; }
@@ -429,7 +439,7 @@ kbd {
   #left .collapse { display: none; }
   #left.collapsed .pane { display: block !important; }
 
-  #recipe-bar { left: 8px; right: 8px; bottom: 72px; transform: none; width: auto; padding: 8px 10px 10px; }
+  #recipe-bar { left: 8px; right: 8px; bottom: calc(var(--tb-h, 110px) + 8px); transform: none; width: auto; padding: 8px 10px 10px; }
   body.sheet-chem #recipe-bar, body.sheet-info #recipe-bar { display: none; }
   #recipe-result { width: calc(100vw - 16px); max-height: calc(100vh - 140px); }
 

@@ -2,7 +2,7 @@
 import { normalize } from '../catalog';
 import { CATEGORY_INFO, Category, COMMON, Element, ELEMENTS, groupName, STATE_NAME } from './elements';
 import { chemicalsFor, recipesFor } from './labLinks';
-import { LEVELS, TOPICS } from '../recipes';
+import { LESSONS, LEVELS } from '../recipes';
 
 export interface TableLinks {
   openChemical(key: string): void;
@@ -143,10 +143,10 @@ export class PeriodicTable {
     html += `<div class="pt-ref" style="grid-column:4;grid-row:8">89–103</div>`;
     for (const e of ELEMENTS) {
       html += `
-        <button class="pt-cell" data-z="${e.z}" style="grid-column:${e.col + 1};grid-row:${e.row + 1}" title="${e.iupac}${e.name !== e.iupac ? ` (${e.name})` : ''}">
+        <button class="pt-cell" data-z="${e.z}" style="grid-column:${e.col + 1};grid-row:${e.row + 1}" title="${e.display}${e.display !== e.iupac ? ` (${e.iupac})` : e.name !== e.iupac ? ` (${e.name})` : ''}">
           <span class="z">${e.z}</span>
           <span class="sym">${e.symbol}</span>
-          <span class="nm">${e.iupac}</span>
+          <span class="nm">${e.display}</span>
           <span class="val"></span>
         </button>`;
     }
@@ -265,8 +265,8 @@ export class PeriodicTable {
           <span class="m">${e.massIsotope ? `[${e.mass}]` : fmtNum(e.mass, 3)}</span>
         </div>
         <div>
-          <div class="pc-name">${e.iupac}</div>
-          ${e.name.toLowerCase() !== e.iupac.toLowerCase() ? `<div class="pc-iupac">Tên tiếng Việt cũ: ${e.name}</div>` : ''}
+          <div class="pc-name">${e.display}</div>
+          ${e.display !== e.iupac ? `<div class="pc-iupac">Tên IUPAC: ${e.iupac}</div>` : e.name.toLowerCase() !== e.iupac.toLowerCase() ? `<div class="pc-iupac">Tên tiếng Việt cũ: ${e.name}</div>` : ''}
           <div class="pc-tags">
             <span>${CATEGORY_INFO[e.category].name}${predicted ? ' (dự đoán)' : ''}</span>
             ${e.synthetic ? '<span>Nhân tạo</span>' : ''}
@@ -277,7 +277,7 @@ export class PeriodicTable {
       <table class="pc-props">
         ${row('Vị trí', `Ô ${e.z}, chu kỳ ${e.period}, nhóm ${groupName(e.group)}${e.group ? ` (nhóm ${e.group})` : ''}`)}
         ${row('Cấu hình electron', `<span class="cfg">${e.config}</span>${predicted ? ' <i>(dự đoán)</i>' : ''}`)}
-        ${row('Khối lượng nguyên tử', e.massIsotope ? `${e.mass} (số khối copper vị bền nhất)` : fmtNum(e.mass, 4))}
+        ${row('Khối lượng nguyên tử', e.massIsotope ? `${e.mass} (số khối đồng vị bền nhất)` : fmtNum(e.mass, 4))}
         ${row('Độ âm điện', e.electronegativity !== null ? fmtNum(e.electronegativity) : '')}
         ${row('Số oxi hóa thường gặp', e.oxidation)}
         ${row('Trạng thái ở 25 °C', e.state ? STATE_NAME[e.state] : '')}
@@ -286,9 +286,9 @@ export class PeriodicTable {
       </table>
       ${e.about ? `<p class="pc-about">${e.about}</p>` : ''}
       ${recipes.length ? `
-        <div class="sec">Thí nghiệm mẫu có ${e.iupac.toLowerCase()}</div>
+        <div class="sec">Thí nghiệm mẫu có ${e.display.toLowerCase()}</div>
         <div class="pc-recipes">${recipes.map((r) => `
-          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${LEVELS[r.level]} · ${TOPICS[r.topic]}</small></button>`).join('')}
+          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${LEVELS[r.level]} · ${LESSONS[r.lesson]}</small></button>`).join('')}
         </div>` : ''}
       ${chems.length ? `
         <div class="sec">Hóa chất có trong kho</div>
@@ -323,7 +323,7 @@ function bohrSvg(e: Element): string {
   const R = 74;
   const r0 = 15;
   const step = (R - r0) / n;
-  let s = `<svg viewBox="-80 -80 160 160" class="bohr" role="img" aria-label="Sơ đồ các lớp electron của ${e.iupac}">`;
+  let s = `<svg viewBox="-80 -80 160 160" class="bohr" role="img" aria-label="Sơ đồ các lớp electron của ${e.display}">`;
   s += `<circle r="${r0}" class="nuc"/><text class="nuc-t" y="4">+${e.z}</text>`;
   e.shells.forEach((count, i) => {
     const r = r0 + step * (i + 1);

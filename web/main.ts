@@ -56,6 +56,8 @@ controls.target.copy(HOME_CAM.target);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 8;
+// Màn hình cảm ứng: một ngón vuốt để di chuyển, hai ngón để phóng to và xoay
+controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
 controls.maxDistance = 120;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a68, 1.1));
@@ -1059,6 +1061,14 @@ const ptable = new PeriodicTable(ptableRoot, {
 // ── Điện thoại: kho và bảng thông tin là hai ngăn kéo, mỗi lúc mở một ngăn ──
 const phone = window.matchMedia('(max-width: 700px)');
 type Sheet = 'chem' | 'info' | null;
+// Chiều cao thanh công cụ dưới cùng (điện thoại: 2 hàng) để ngăn kéo và thanh thí nghiệm nằm ngay phía trên
+{
+  const tb = document.getElementById('toolbar')!;
+  const setH = () => document.documentElement.style.setProperty('--tb-h', `${tb.offsetHeight}px`);
+  new ResizeObserver(setH).observe(tb);
+  setH();
+}
+
 function setSheet(sh: Sheet) {
   document.body.classList.toggle('sheet-chem', sh === 'chem');
   document.body.classList.toggle('sheet-info', sh === 'info');
