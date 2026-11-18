@@ -50,6 +50,14 @@ export class ChemPanel {
     this.render();
   }
 
+  /** Đưa mọi lượng về mặc định, xóa ô tìm kiếm, bỏ chọn */
+  reset(): void {
+    for (const e of this.entries) this.amounts.set(e.key, e.defaultAmount);
+    this.search.value = '';
+    this.arm(null);
+    this.render();
+  }
+
   /** Mở kho tại một hóa chất: xóa ô tìm kiếm, cuộn tới và nhấp nháy để học sinh dễ thấy */
   reveal(key: string): void {
     this.search.value = '';

@@ -64,6 +64,7 @@ function helpHtml(phone: boolean): string {
         <ul>
           <li><b>${pick('Kéo', 'Dùng một ngón kéo')} ống nghiệm, cốc, bình</b> trên bàn: thả vào <b>đèn cồn</b> để đun, thả lên <b>cân</b> để cân, thả lên <b>dụng cụ chứa khác</b> để đổ hết chất lỏng sang đó, thả chỗ khác để cất về chỗ cũ.</li>
           <li><b>Khuấy</b>, <b>Đun</b> (hoặc ${pick('bấm', 'chạm')} vào đèn cồn), <b>Đổ bỏ</b>, <b>Úp ống</b> (để thu khí nhẹ như H₂), <b>Nhìn gần</b>: tác dụng lên dụng cụ đang chọn.</li>
+          <li><b>↺ Làm lại</b> (${pick('bấm', 'chạm')} hai lần): xóa sạch phòng thí nghiệm, gồm dụng cụ, hóa chất, nhật ký, đồng hồ và lượng đã nhập trong kho.</li>
           <li>Kéo mẩu kim loại (dải magnesium, dây đồng, đinh sắt…) thả vào <b>đèn cồn</b>: kẹp sắt sẽ giữ mẫu đốt trên ngọn lửa. Dùng <b>nam châm</b> để thử xem trong ống còn sắt không.</li>
           <li>Tốc độ thời gian <b>1×</b> đến <b>60×</b> để tua nhanh phản ứng chậm; ${pick('<kbd>Space</kbd>', 'nút <b>⏸</b>')} tạm dừng / chạy tiếp.</li>
         </ul>

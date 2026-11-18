@@ -1417,7 +1417,7 @@ const player = new RecipePlayer({
   empty: (vessel) => { select(views[vessel]); empty(); },
   pour: (src, dst) => void pourVessel(views[src], views[dst]),
   focus: (vs) => panTo(vs ? vs.map((i) => views[i]) : null),
-  resetAll,
+  resetAll: () => clearLab(),
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
   simTime: () => simTime,
   busy: () => animator.busy,
@@ -1546,6 +1546,50 @@ function applyRoute(r: Route) {
 }
 window.addEventListener('hashchange', () => applyRoute(parseHash(location.hash)));
 
+// ── Nút "Làm lại": xóa sạch toàn bộ phòng thí nghiệm ─────────────────────
+/**
+ * Đưa phòng thí nghiệm về như lúc mới mở: dụng cụ, nhật ký, đồng hồ 0:00, tốc độ 1×, góc nhìn,
+ * lượng trong kho. Dùng cho nút Làm lại, trước khi ghi và trước khi chạy một thí nghiệm.
+ */
+function clearLab() {
+  resetAll();
+  simTime = 0;
+  hud.setTime(0);
+  speed = 1;
+  hud.setSpeed(1);
+  select(null);
+  chemPanel.reset();
+  goHome();
+}
+
+// Bấm hai lần để tránh lỡ tay (không dùng hộp thoại confirm của trình duyệt)
+{
+  const btn = document.getElementById('btn-reset')!;
+  const label = btn.querySelector('span')!;
+  let armedUntil = 0;
+  let timer = 0;
+  const disarm = () => {
+    armedUntil = 0;
+    btn.classList.remove('armed');
+    label.textContent = 'Làm lại';
+  };
+  btn.onclick = () => {
+    clearTimeout(timer);
+    if (performance.now() > armedUntil) {
+      armedUntil = performance.now() + 3000;
+      btn.classList.add('armed');
+      label.textContent = 'Bấm lần nữa';
+      timer = window.setTimeout(disarm, 3000);
+      return;
+    }
+    disarm();
+    if (recorder.active) cancelRecording('Đã hủy ghi');
+    player.stop();
+    clearLab();
+    player.toast('Đã làm lại phòng thí nghiệm từ đầu');
+  };
+}
+
 // ── Thí nghiệm tự làm: ghi thao tác, chia sẻ bằng link ───────────────────
 let askPending = false;
 const recordBar = new RecordBar({
@@ -1566,9 +1610,7 @@ function updateRecBar() {
 
 function startRecording() {
   if (player.playing) player.stop();
-  resetAll();
-  speed = 1;
-  hud.setSpeed(1);
+  clearLab();
   recorder.start(simTime);
   askPending = false;
   recordBar.show(true);
