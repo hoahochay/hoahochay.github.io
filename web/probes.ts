@@ -3,7 +3,23 @@ import * as THREE from 'three';
 import { RGB } from '../src';
 import { setRGB, softCircleTexture } from './materials';
 
-export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'magnet';
+/** litmus: giấy quỳ ẩm thử khí ở miệng ống; litmus_sol: giấy quỳ thử dung dịch (nhúng đầu mẩu quỳ vào dung dịch) */
+export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'magnet';
+
+/** Màu giấy pH (chất chỉ thị vạn năng) theo bảng màu chuẩn pH 1 – 14 */
+const PH_SCALE: RGB[] = [
+  [0.86, 0.11, 0.15], [0.93, 0.27, 0.16], [0.97, 0.49, 0.16], [0.99, 0.7, 0.18], [0.98, 0.86, 0.22],
+  [0.8, 0.85, 0.25], [0.45, 0.74, 0.28], [0.18, 0.62, 0.38], [0.12, 0.55, 0.55], [0.16, 0.42, 0.7],
+  [0.22, 0.3, 0.7], [0.33, 0.22, 0.62], [0.4, 0.16, 0.52], [0.38, 0.1, 0.42],
+];
+/** Giấy pH khô (chưa thử) */
+export const PH_PAPER_DRY: RGB = [0.97, 0.8, 0.36];
+export function phPaperColor(pH: number): RGB {
+  const x = Math.min(13, Math.max(0, pH - 1));
+  const i = Math.min(12, Math.floor(x));
+  const t = x - i;
+  return PH_SCALE[i].map((c, k) => c + (PH_SCALE[i + 1][k] - c) * t) as RGB;
+}
 export type FlameMode = 'none' | 'ember' | 'normal' | 'bright';
 
 const TILT = 0.45;
@@ -39,6 +55,26 @@ export class ProbeView {
         return [body, tip];
       };
       this.group.add(arc, ...leg(-R), ...leg(R));
+      return;
+    }
+    if (kind === 'litmus_sol' || kind === 'ph_paper') {
+      // Dải giấy quỳ dài, kẹp ở đầu trên; chỉ phần đầu dưới (nhúng vào dung dịch) đổi màu
+      const L = 18, wet = 2.4;
+      const strip = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.4, L - wet).translate(0, wet + (L - wet) / 2, 0),
+        new THREE.MeshStandardMaterial({ color: 0x8f529e, roughness: 0.9, side: THREE.DoubleSide }),
+      );
+      this.paper = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.4, wet).translate(0, wet / 2, 0),
+        new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }),
+      );
+      const clip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.5, 0.25).translate(0, L + 0.1, 0),
+        new THREE.MeshStandardMaterial({ color: 0x3a3d42, metalness: 0.6, roughness: 0.4 }),
+      );
+      if (kind === 'ph_paper') setRGB(strip.material.color, PH_PAPER_DRY);
+      this.group.add(strip, this.paper, clip);
+      this.setPaperColor(kind === 'ph_paper' ? PH_PAPER_DRY : [0.56, 0.32, 0.62]);
       return;
     }
     if (kind === 'litmus') {

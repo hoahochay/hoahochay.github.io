@@ -108,6 +108,8 @@ function runRecipe(r: PlayScript): RunResult {
         if (s.tool === 'glowing') probes.push(testGlowingSplint(v));
         else if (s.tool === 'burning') probes.push(testBurningSplint(v));
         else if (s.tool === 'magnet') probes.push('magnet-' + testMagnet(v));
+        else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
+        else if (s.tool === 'litmus_sol') probes.push('litmus_sol-' + litmusVerdict(v.observe().pH));
         else {
           run(5);
           probes.push('litmus-' + litmusVerdict(litmusPH(v)));
@@ -193,6 +195,83 @@ describe('Thí nghiệm mẫu', () => {
     expect(res.weighings[iPour - 1]).toBeGreaterThan(7);
     expect(res.weighings[iPour]).toBeCloseTo(res.weighings[iPour - 1], 2);
     expect(res.weighings[res.weighings.length - 1]).toBeCloseTo(res.weighings[iPour - 1], 2);
+  });
+
+  it('Bài 7 – nồng độ: sắt trong HCl 1M phản ứng nhiều hơn hẳn trong HCl 0,1M', () => {
+    const v = runRecipe(RECIPES.find((x) => x.id === 'nong-do-toc-do-phan-ung')!).vessels;
+    expect(v[1].mix.get('Fe^2+')).toBeGreaterThan(5 * v[0].mix.get('Fe^2+'));
+    expect(v[0].mix.get('Fe^2+')).toBeGreaterThan(0);
+  });
+
+  it('Bài 7 – nhiệt độ: nước được đun trên 70 °C, viên sủi tan nhanh hơn trong nước nóng', () => {
+    const r = RECIPES.find((x) => x.id === 'nhiet-do-toc-do-phan-ung')!;
+    const res = runRecipe(r);
+    expect(res.timedOut).toEqual([]);
+    const left = (i: number) => res.vessels[i].mix.get('VitC') * 444.15;
+    expect(left(1)).toBeLessThan(0.3 * left(0));
+    expect(left(0)).toBeGreaterThan(0.02);
+  });
+
+  it('Bài 7 – diện tích bề mặt: đá vôi bột phản ứng nhanh hơn đá vôi viên', () => {
+    // So sánh trong 5 giây đầu (về sau acid ở ống bột đã hết nên hai ống gần bằng nhau)
+    const r = RECIPES.find((x) => x.id === 'be-mat-toc-do-phan-ung')!;
+    const steps = r.steps.map((st) => (st.kind === 'wait' ? { ...st, seconds: 5 } : st));
+    const v = runRecipe({ ...r, steps }).vessels;
+    expect(v[0].mix.get('Ca^2+')).toBeGreaterThan(2 * v[1].mix.get('Ca^2+'));
+  });
+
+  it('Bài 7 – xúc tác: MnO2 phân hủy gần hết H2O2, que đóm bùng cháy, MnO2 còn nguyên', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'xuc-tac-toc-do-phan-ung')!);
+    const v = res.vessels;
+    expect(v[1].mix.get('H2O2')).toBeLessThan(0.05 * v[0].mix.get('H2O2'));
+    expect(v[1].mix.get('MnO2') * 86.94).toBeCloseTo(0.1, 3);
+    expect(res.probes).toEqual(['relight']);
+  });
+
+  it('Bài 8 – HCl làm quỳ tím hóa đỏ, tác dụng với sắt và kẽm (kẽm mạnh hơn)', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'tinh-chat-hydrochloric-acid')!);
+    expect(res.probes).toEqual(['litmus_sol-acid']);
+    const v = res.vessels;
+    expect(v[1].mix.get('Fe^2+')).toBeGreaterThan(1e-5);
+    expect(v[2].mix.get('Zn^2+')).toBeGreaterThan(2 * v[1].mix.get('Fe^2+'));
+  });
+
+  it('Bài 9 – base: quỳ hóa xanh; phenolphthalein hồng, nhỏ acid đến khi mất màu', () => {
+    const r = RECIPES.find((x) => x.id === 'tinh-chat-base')!;
+    const res = runRecipe(r);
+    expect(res.probes).toEqual(['litmus_sol-base']);
+    // Sau 0,8 mL acid vẫn còn base (pH > 10, còn hồng); sau 1,1 mL thì acid dư (pH < 7, mất màu)
+    const lastAdd = r.steps.map((s) => s.kind).lastIndexOf('add');
+    const before = r.steps.slice(0, lastAdd);
+    expect(runRecipe({ ...r, steps: before }).vessels[1].observe().pH).toBeGreaterThan(10);
+    expect(res.vessels[1].observe().pH).toBeLessThan(7);
+  });
+
+  it('Bài 9 – giấy pH: số đọc khớp lời thuyết minh', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'xac-dinh-ph')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.probes).toEqual(['ph-7', 'ph-2', 'ph-3', 'ph-9', 'ph-2', 'ph-8']);
+  });
+
+  it('Bài 10 – oxide acid: nước vôi trong vẩn đục rồi trong lại khi dẫn CO2 lâu', () => {
+    const r = RECIPES.find((x) => x.id === 'tinh-chat-oxide-acid')!;
+    const res = runRecipe(r);
+    expect(res.timedOut).toEqual([]);
+    expect(res.vessels[1].mix.get('CaCO3')).toBeLessThan(5e-7);
+  });
+
+  it('Bài 10 – oxide base: CuO tan dần trong H2SO4, dung dịch có ion Cu2+', () => {
+    const v = runRecipe(RECIPES.find((x) => x.id === 'tinh-chat-oxide-base')!).vessels;
+    expect(v[0].mix.conc('Cu^2+')).toBeGreaterThan(0.1);
+    expect(v[0].mix.get('CuO') * 79.55).toBeLessThan(0.06);
+  });
+
+  it('Bài 11 – tính chất muối: Cu bám trên đinh, BaSO4 ở ống 2 và 3, Cu(OH)2 ở ống 4', () => {
+    const v = runRecipe(RECIPES.find((x) => x.id === 'tinh-chat-muoi')!).vessels;
+    expect(v[0].mix.get('Cu') * 63.55).toBeGreaterThan(0.01);
+    expect(v[1].mix.get('BaSO4')).toBeGreaterThan(9e-5);
+    expect(v[2].mix.get('BaSO4')).toBeGreaterThan(9e-5);
+    expect(v[3].mix.get('Cu(OH)2')).toBeGreaterThan(4e-4);
   });
 
   it('mỗi bài học thuộc một bộ sách có trong danh sách', () => {

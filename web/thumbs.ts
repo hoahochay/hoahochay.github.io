@@ -37,7 +37,7 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       p.update(0.016);
       obj = p.group;
       if (e.tool === 'magnet') obj.rotation.set(0.5, 0.6, 0);
-      else obj.rotation.z = e.tool === 'litmus' ? -0.5 : -0.9;
+      else obj.rotation.z = e.tool === 'litmus' || e.tool === 'litmus_sol' || e.tool === 'ph_paper' ? -0.5 : -0.9;
     } else obj = e.solid ? dishModel(e.solid) : new BottleView(e.reagent!).group;
     scene.add(obj);
     const box = new THREE.Box3().setFromObject(obj);

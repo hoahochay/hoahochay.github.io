@@ -33,7 +33,7 @@ const NAME_FORMULA: Record<string, string> = (() => {
   }
   Object.assign(map, {
     'magnesium oxide': 'MgO', 'copper(ii) oxide': 'CuO', 'calcium hydroxide': 'Ca(OH)₂', 'zinc chloride': 'ZnCl₂',
-    'sodium sulfate': 'Na₂SO₄', 'sodium acetate': 'CH₃COONa', 'iron(ii) chloride': 'FeCl₂', 'hydrogen': 'H₂', 'oxygen': 'O₂',
+    'sodium sulfate': 'Na₂SO₄', 'sodium acetate': 'CH₃COONa', 'iron(ii) chloride': 'FeCl₂', 'hydrogen': 'H₂', 'oxygen': 'O₂', 'citric acid': 'C₆H₈O₇', 'calcium hydrogencarbonate': 'Ca(HCO₃)₂',
   });
   return map;
 })();

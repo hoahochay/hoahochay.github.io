@@ -214,9 +214,9 @@ export function solidPiece(item: SolidItem): THREE.Object3D {
 
 function dishSample(item: SolidItem): THREE.Object3D {
   const col = new THREE.Color();
-  const sp = { Mg: [0.78, 0.78, 0.78], Zn: [0.62, 0.64, 0.67], Fe: [0.4, 0.4, 0.42], Cu: [0.72, 0.42, 0.2], Na: [0.82, 0.82, 0.8], Li: [0.75, 0.75, 0.76], K: [0.8, 0.8, 0.84], CaCO3: [0.95, 0.95, 0.93], MnO2: [0.1, 0.1, 0.1], NaHCO3: [0.97, 0.97, 0.96], S: [0.96, 0.84, 0.18], NaCl: [0.97, 0.97, 0.97], CuSO4: [0.2, 0.45, 0.9], starch: [0.97, 0.96, 0.92] }[item.id] ?? [0.8, 0.8, 0.8];
+  const sp = { Mg: [0.78, 0.78, 0.78], Zn: [0.62, 0.64, 0.67], Fe: [0.4, 0.4, 0.42], Cu: [0.72, 0.42, 0.2], Na: [0.82, 0.82, 0.8], Li: [0.75, 0.75, 0.76], K: [0.8, 0.8, 0.84], CaCO3: [0.95, 0.95, 0.93], MnO2: [0.1, 0.1, 0.1], NaHCO3: [0.97, 0.97, 0.96], S: [0.96, 0.84, 0.18], NaCl: [0.97, 0.97, 0.97], CuSO4: [0.2, 0.45, 0.9], starch: [0.97, 0.96, 0.92], VitC: [0.98, 0.93, 0.62], CuO: [0.08, 0.08, 0.09] }[item.id] ?? [0.8, 0.8, 0.8];
   setRGB(col, sp as [number, number, number]);
-  const metallic = !['CaCO3', 'MnO2', 'NaHCO3', 'S', 'NaCl', 'CuSO4', 'starch'].includes(item.id) && item.shape !== 'powder';
+  const metallic = !['CaCO3', 'MnO2', 'NaHCO3', 'S', 'NaCl', 'CuSO4', 'starch', 'VitC', 'CuO'].includes(item.id) && item.shape !== 'powder';
   const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metallic ? 0.75 : 0, roughness: metallic ? 0.35 : 0.9 });
   const g = new THREE.Group();
   const add = (geo: THREE.BufferGeometry, x = 0, z = 0, ry = 0) => {

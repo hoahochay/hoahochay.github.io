@@ -24,9 +24,10 @@ function fmtTime(t: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** Nồng độ mol luôn ghi bằng M (mol/L) như SGK, không dùng mM; giữ 3 chữ số có nghĩa */
 function fmtConc(c: number): string {
-  if (c >= 0.1) return c.toFixed(2) + ' M';
-  if (c >= 1e-3) return (c * 1000).toFixed(1) + ' mM';
+  if (c >= 0.995) return c.toFixed(2) + ' M';
+  if (c >= 0.000995) return c.toPrecision(3).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + ' M';
   return c.toExponential(1) + ' M';
 }
 

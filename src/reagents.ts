@@ -39,6 +39,8 @@ export const COMPOUNDS: Record<string, Compound> = {
   NH4Cl: { name: 'ammonium chloride', ions: { 'NH4+': 1, 'Cl-': 1 } },
   'Pb(NO3)2': { name: 'lead(II) nitrate', ions: { 'Pb^2+': 1, 'NO3-': 2 } },
   H2O2: { name: 'hydrogen peroxide', ions: { H2O2: 1 } },
+  H3Cit: { name: 'citric acid', ions: { H3Cit: 1 } },
+  H2CO3: { name: 'carbonic acid', ions: { H2CO3: 1 } },
   phenolphthalein: { name: 'phenolphthalein', ions: { phenolphthalein: 1 } },
   'methyl orange': { name: 'methyl orange', ions: { 'methyl orange': 1 } },
 };

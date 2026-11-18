@@ -10,6 +10,8 @@ const PROBE_NAME: Record<ToolKind, string> = {
   glowing: 'que đóm còn tàn đỏ',
   burning: 'que đóm đang cháy',
   litmus: 'mẩu giấy quỳ tím ẩm',
+  litmus_sol: 'mẩu giấy quỳ tím',
+  ph_paper: 'mẩu giấy pH',
   magnet: 'nam châm',
 };
 
@@ -27,7 +29,7 @@ const fmt = (x: number) => String(+x.toFixed(2)).replace('.', ',');
 export function chemLabel(key: string, amount: number): string {
   const c = CHEMICALS.find((x) => x.key === key);
   if (!c) throw new Error(`Không có hóa chất "${key}"`);
-  return `${fmt(amount)} ${c.unit} ${c.formula}${c.kind === 'solution' && c.key !== 'water' ? ' ' + c.sub : ''}`;
+  return `${fmt(amount)} ${c.unit} ${c.formula}${c.kind === 'solution' && c.key !== 'water' && c.sub ? ' ' + c.sub : ''}`;
 }
 
 export function describeStep(s: Step): string {
@@ -44,6 +46,7 @@ export function describeStep(s: Step): string {
     case 'invert': return s.text ?? `Úp ngược ${vn(s.vessel)}.`;
     case 'probe': return s.text ?? (s.tool === 'magnet'
       ? `Đưa nam châm lại gần đáy ${vn(s.vessel)}.`
+      : s.tool === 'litmus_sol' || s.tool === 'ph_paper' ? `Nhúng đầu ${PROBE_NAME[s.tool]} vào dung dịch trong ${vn(s.vessel)}.`
       : `Đưa ${PROBE_NAME[s.tool]} vào miệng ${vn(s.vessel)}.`);
     case 'burn': {
       const c = CHEMICALS.find((x) => x.key === s.chem);

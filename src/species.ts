@@ -29,6 +29,8 @@ export interface SpeciesDef {
   molarMass: number;
   /** Chất tan có màu: hệ số hấp thụ mol ε (L/mol/cm) theo R, G, B */
   epsilon?: RGB;
+  /** Tên hiển thị thay cho công thức (chất không có công thức gọn, vd. viên vitamin C sủi) */
+  label?: string;
   /** Chất rắn: màu nhìn thấy (0..1) */
   color?: RGB;
   indicator?: IndicatorDef;
@@ -76,6 +78,11 @@ sp('HSO4-', 'ion hydrogensulfate', 'aq', -1, 1, -887.34, 97.07);
 sp('SO4^2-', 'ion sulfate', 'aq', -2, 0, -909.27, 96.06);
 sp('CH3COOH', 'acetic acid', 'aq', 0, 4, -485.76, 60.05);
 sp('CH3COO-', 'ion acetate', 'aq', -1, 3, -486.01, 59.04);
+// Citric acid C₆H₈O₇ (H₃Cit), acid 3 nấc: thành phần acid của viên sủi
+sp('H3Cit', 'citric acid', 'aq', 0, 8, -1515.1, 192.12);
+sp('H2Cit-', 'ion dihydrogencitrate', 'aq', -1, 7, -1511.3, 191.11);
+sp('HCit^2-', 'ion hydrogencitrate', 'aq', -2, 6, -1509.6, 190.11);
+sp('Cit^3-', 'ion citrate', 'aq', -3, 5, -1508.7, 189.10);
 sp('H2CO3', 'carbonic acid (CO2 tan)', 'aq', 0, 2, -699.65, 62.03);
 sp('HCO3-', 'ion hydrogencarbonate', 'aq', -1, 1, -691.99, 61.02);
 sp('CO3^2-', 'ion carbonate', 'aq', -2, 0, -677.14, 60.01);
@@ -110,8 +117,13 @@ sp('NaCl', 'sodium chloride', 's', 0, 0, -411.2, 58.44, { color: WHITE });
 sp('CuSO4', 'copper(II) sulfate', 's', 0, 0, -856.0, 249.69, { color: [0.2, 0.45, 0.9] });
 // Bột gạo (tinh bột): không tan trong nước lạnh, khuấy lên thì lơ lửng làm đục rồi lắng rất chậm
 sp('starch', 'tinh bột', 's', 0, 10, -960, 162.14, { color: [0.97, 0.96, 0.92], settleTime: 400 });
+// Viên vitamin C sủi: mô hình gọn gồm citric acid + sodium hydrogencarbonate theo tỉ lệ 1 : 3
+// (C₆H₈O₇·3NaHCO₃, 444,15 g/mol). Tan trong nước thì acid gặp HCO₃⁻ sinh khí CO₂ (sủi bọt);
+// tan nhanh hơn trong nước nóng. Bỏ qua vitamin C, đường, hương liệu (không tạo khí).
+sp('VitC', 'viên vitamin C sủi', 's', 0, 11, -4396.2, 444.15, { color: [0.98, 0.93, 0.62], label: 'Vitamin C sủi' });
 sp('S', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.96, 0.84, 0.18] });
 sp('FeS', 'iron(II) sulfide', 's', 0, 0, -100.0, 87.91, { color: [0.13, 0.12, 0.11] });
+sp('CuO', 'copper(II) oxide', 's', 0, 0, -157.3, 79.55, { color: [0.08, 0.08, 0.09] });
 sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
 
 // Kết tủa (Ksp xem systems.ts)
@@ -151,6 +163,7 @@ const SUP: Record<string, string> = {
 /** 'SO4^2-' → 'SO₄²⁻', 'Cu(OH)2' → 'Cu(OH)₂' */
 export function pretty(id: string): string {
   if (SPECIES[id]?.indicator) return SPECIES[id].name;
+  if (SPECIES[id]?.label) return SPECIES[id].label!;
   id = id.replace('(g)', '');
   const m = /^(.*?)(?:\^(\d*[+-])|([+-]))$/.exec(id);
   const base = m ? m[1] : id;

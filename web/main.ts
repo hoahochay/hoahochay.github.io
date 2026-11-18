@@ -12,7 +12,7 @@ import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
 import { setRGB } from './materials';
 import { DeliveryTubeView } from './deliveryTube';
-import { blueFlame, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
+import { blueFlame, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
 import { burnOutcome, burnRefusal, TongsView } from './burn';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
@@ -123,6 +123,8 @@ const isOnBalance = (v: VesselView) => onBalance.includes(v);
  * bên trong, không tính khối lượng dụng cụ thủy tinh.
  */
 const balanceReading = () => Math.round(onBalance.reduce((g, v) => g + contentsMassG(v.vessel.mix), 0) * 100) / 100 + 0;
+/** Viết thường chữ đầu, giữ chữ hoa bên trong ("Viên vitamin C sủi" → "viên vitamin C sủi") */
+const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 const fmtG = (g: number) => g.toFixed(2).replace('.', ',');
 
 /** Ghi thao tác của người dùng thành thí nghiệm tự làm (share.ts) */
@@ -276,7 +278,7 @@ function pour(def: ReagentDef, amount: number, view: VesselView) {
       else view.vessel.add(makeSolution(def.solutes, mL / 1000, view.vessel.roomK));
       const what = def.indicator
         ? `${drops} giọt ${def.formula.toLowerCase()}`
-        : `${fmt(mL)} mL ${def.formula}${def.key === 'water' ? '' : ' ' + def.conc}`;
+        : `${fmt(mL)} mL ${def.formula}${def.key === 'water' || !def.conc ? '' : ' ' + def.conc}`;
       log(`Rót ${what}`, 'action', view.name);
     }),
     tween(0.45, (t) => {
@@ -310,7 +312,7 @@ function dropSolid(item: SolidItem, grams: number, view: VesselView) {
       removeTemp(piece);
       view.vessel.addSolid(item.id, solidMol(item, grams), item.form);
       view.addSolidVisual(item, grams);
-      log(`Cho ${fmt(grams)} g ${item.label.toLowerCase()} vào`, 'action', view.name);
+      log(`Cho ${fmt(grams)} g ${lowerFirst(item.label)} vào`, 'action', view.name);
     }),
   );
 }
@@ -320,6 +322,8 @@ const TOOL_NAME: Record<ToolKind, string> = {
   glowing: 'que đóm còn tàn đỏ',
   burning: 'que đóm đang cháy',
   litmus: 'giấy quỳ tím ẩm',
+  litmus_sol: 'giấy quỳ tím',
+  ph_paper: 'giấy pH',
   magnet: 'nam châm',
 };
 
@@ -372,15 +376,63 @@ function magnetTest(view: VesselView) {
   );
 }
 
-function probe(kind: ToolKind, view: VesselView) {
+// ── Giấy quỳ / giấy pH thử dung dịch: nhúng xong thì để luôn trong dụng cụ, màu đổi theo dung dịch ──
+const dipped = new Map<VesselView, { p: ProbeView; ph: boolean; color: RGB; verdict: string; loggedAt: number }>();
+/** Số đọc trên giấy pH: so màu với bảng màu chuẩn, được số nguyên */
+const phReading = (pH: number) => Math.min(14, Math.max(1, Math.round(pH)));
+const phSays = (pH: number) => `Giấy pH chuyển màu, so với bảng màu chuẩn: pH ≈ ${phReading(pH)}`;
+const LITMUS_SAYS: Record<string, string> = {
+  acid: 'Giấy quỳ tím trong dung dịch chuyển sang màu đỏ → dung dịch có tính acid',
+  base: 'Giấy quỳ tím trong dung dịch chuyển sang màu xanh → dung dịch có tính base',
+  neutral: 'Giấy quỳ trong dung dịch trở lại màu tím → dung dịch trung tính',
+};
+
+/** Lấy mẩu quỳ đang nhúng trong dụng cụ ra (bỏ đi) */
+function removeDipped(v: VesselView) {
+  const d = dipped.get(v);
+  if (!d) return;
+  v.group.remove(d.p.group);
+  dipped.delete(v);
+}
+
+/** Mỗi khung hình: màu quỳ đang nhúng đổi dần theo pH; báo khi đổi sang màu khác */
+function updateDipped(v: VesselView, pH: number, dt: number) {
+  const d = dipped.get(v);
+  if (!d) return;
+  if (v.vessel.mix.volumeL < 1e-5 || !Number.isFinite(pH)) return removeDipped(v);
+  const target = d.ph ? phPaperColor(pH) : litmusColor(pH);
+  const k = Math.min(1, (dt * Math.max(1, speed)) / 1.2);
+  d.color = d.color.map((c, i) => c + (target[i] - c) * k) as RGB;
+  d.p.setPaperColor(d.color);
+  const verdict = d.ph ? String(phReading(pH)) : litmusVerdict(pH);
+  // Giấy pH: chỉ báo khi số đọc đã ổn định một lúc (tránh báo liên tục lúc chất đang tan dần)
+  if (verdict !== d.verdict && (!d.ph || simTime - d.loggedAt > 3)) {
+    d.verdict = verdict;
+    d.loggedAt = simTime;
+    log(d.ph ? phSays(pH) : LITMUS_SAYS[verdict], 'phenomenon', v.name);
+  }
+}
+
+function probe(kind: ToolKind, view: VesselView, queued = false) {
+  const dip = kind === 'litmus_sol' || kind === 'ph_paper';
+  const phPaper = kind === 'ph_paper';
+  // Đang rót hóa chất vào: thử dung dịch sau khi rót xong (lúc đó mới có dung dịch để kiểm tra)
+  if (dip && animator.busy && !queued) {
+    animator.run(call(() => probe(kind, view, true)));
+    return;
+  }
+  if (dip && view.vessel.inverted) return log('Lật ngửa ống trước khi thử dung dịch.', 'warning', view.name);
+  if (dip && view.vessel.mix.volumeL < 1e-5) return log(`Không có dung dịch để thử bằng ${TOOL_NAME[kind]}.`, 'warning', view.name);
   rec({ kind: 'probe', tool: kind, vessel: idx(view) });
   if (kind === 'magnet') return magnetTest(view);
   const p = new ProbeView(kind);
-  const isPaper = kind === 'litmus';
-  const holdTime = isPaper ? 5 : 3;
+  const isPaper = kind === 'litmus' || dip;
+  const holdTime = dip ? 3 : isPaper ? 5 : 3;
+  /** pH mà giấy quỳ "thấy": dung dịch (nhúng vào) hoặc lớp nước trên giấy ẩm cân bằng với khí */
+  const paperPH = () => (dip ? view.vessel.observe().pH : litmusPH(view.vessel));
   let above = new THREE.Vector3();
   let at = new THREE.Vector3();
-  let paper: RGB = [0.56, 0.32, 0.62];
+  let paper: RGB = phPaper ? PH_PAPER_DRY : [0.56, 0.32, 0.62];
   let decided = false;
   let elapsed = 0;
   const fx: { obj: THREE.Object3D; life: number; age: number; update: (o: THREE.Object3D, t: number) => void }[] = [];
@@ -434,7 +486,12 @@ function probe(kind: ToolKind, view: VesselView) {
     tween(0.3, (t) => p.group.scale.setScalar(t), {
       onStart: () => {
         const m = view.mouthWorld();
-        if (view.vessel.inverted) {
+        if (dip) removeDipped(view);
+        if (dip) {
+          // Nhúng đầu dải quỳ ngập khoảng 0,6 dưới mặt dung dịch
+          at = new THREE.Vector3(m.x, Math.max(view.surfaceWorld().y - 0.6, view.group.position.y + 0.15), m.z);
+          above = new THREE.Vector3(m.x, m.y + 4, m.z);
+        } else if (view.vessel.inverted) {
           // Ống úp ngược: đưa dụng cụ thử từ phía dưới lên miệng ống
           if (!isPaper) p.holdFromBelow();
           at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.8 : -0.35, 0));
@@ -446,7 +503,7 @@ function probe(kind: ToolKind, view: VesselView) {
         p.group.position.copy(above);
         p.group.scale.setScalar(0.001);
         addTemp(p.group);
-        log(`Đưa ${TOOL_NAME[kind]} vào miệng ống`, 'action', view.name);
+        log(dip ? `Nhúng đầu mẩu ${TOOL_NAME[kind]} vào dung dịch` : `Đưa ${TOOL_NAME[kind]} vào miệng ống`, 'action', view.name);
       },
     }),
     tween(0.5, (t) => p.group.position.lerpVectors(above, at, t)),
@@ -454,7 +511,7 @@ function probe(kind: ToolKind, view: VesselView) {
       elapsed += dt;
       p.update(dt);
       if (isPaper) {
-        const target = litmusColor(litmusPH(view.vessel));
+        const target = phPaper ? phPaperColor(paperPH()) : litmusColor(paperPH());
         const k = Math.min(1, dt / 1.2);
         paper = paper.map((c, i) => c + (target[i] - c) * k) as RGB;
         p.setPaperColor(paper);
@@ -466,20 +523,33 @@ function probe(kind: ToolKind, view: VesselView) {
       }
       if (elapsed < holdTime) return false;
       if (isPaper) {
-        const verdict = litmusVerdict(litmusPH(view.vessel));
-        log(verdict === 'base' ? 'Giấy quỳ ẩm chuyển màu xanh → khí có tính base (như NH₃)'
+        const verdict = litmusVerdict(paperPH());
+        if (phPaper) log(phSays(paperPH()), 'phenomenon', view.name);
+        else if (dip) log(verdict === 'base' ? 'Giấy quỳ tím chuyển màu xanh → dung dịch có tính base'
+          : verdict === 'acid' ? 'Giấy quỳ tím chuyển màu đỏ → dung dịch có tính acid'
+            : 'Giấy quỳ tím không đổi màu → dung dịch trung tính', 'phenomenon', view.name);
+        else log(verdict === 'base' ? 'Giấy quỳ ẩm chuyển màu xanh → khí có tính base (như NH₃)'
           : verdict === 'acid' ? 'Giấy quỳ ẩm chuyển màu đỏ → khí có tính acid (như CO₂)'
             : 'Giấy quỳ ẩm không đổi màu', 'phenomenon', view.name);
       }
       for (const f of fx) removeTemp(f.obj);
       return true;
     },
-    tween(0.4, (t) => {
-      p.update(1 / 60);
-      p.group.position.lerpVectors(at, above, t);
-      p.group.scale.setScalar(Math.max(0.001, 1 - t));
-    }),
-    call(() => removeTemp(p.group)),
+    ...(dip
+      // Giấy quỳ thử dung dịch: để luôn trong dụng cụ (đi theo dụng cụ khi di chuyển), màu tiếp tục đổi theo dung dịch
+      ? [call(() => {
+        removeTemp(p.group);
+        view.group.attach(p.group);
+        dipped.set(view, { p, ph: phPaper, color: paper, verdict: phPaper ? String(phReading(paperPH())) : litmusVerdict(paperPH()), loggedAt: simTime });
+      })]
+      : [
+        tween(0.4, (t) => {
+          p.update(1 / 60);
+          p.group.position.lerpVectors(at, above, t);
+          p.group.scale.setScalar(Math.max(0.001, 1 - t));
+        }),
+        call(() => removeTemp(p.group)),
+      ]),
   );
 }
 
@@ -495,7 +565,7 @@ function burnInFlame(item: SolidItem) {
   const out = burnOutcome(item.id);
   const tongs = new TongsView(item);
   const g = tongs.group;
-  const name = item.label.toLowerCase();
+  const name = lowerFirst(item.label);
   // Cán kẹp chĩa sang phải và về phía người xem, hơi chếch lên
   g.rotation.set(0, -Math.atan2(0.66, 0.75), 0.3, 'YXZ');
   let inFlame = new THREE.Vector3(), lifted = new THREE.Vector3(), away = new THREE.Vector3();
@@ -669,6 +739,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
   }
   addPending(dst, mL);
   rec({ kind: 'pour', src: idx(src), dst: idx(dst) });
+  removeDipped(src);
   const theta = -1.85;
   const h = src.kind.profile.height;
   let from = new THREE.Vector3();
@@ -808,6 +879,7 @@ function invert(v = requireSelected(), quiet = false) {
   if (v.vessel.outlet) return log('Ống đang được nút để phát khí, không úp được.', 'warning', v.name);
   const toInverted = !v.vessel.inverted;
   rec({ kind: 'invert', vessel: idx(v) });
+  removeDipped(v);
   let from = new THREE.Vector3();
   let dest = new THREE.Vector3();
   animator.run(
@@ -934,6 +1006,7 @@ function empty() {
   if (!v) return;
   if (v.vessel.inverted) return invert(v);
   rec({ kind: 'empty', vessel: idx(v) });
+  removeDipped(v);
   if (heatingView === v) toggleHeat();
   disconnect(v);
   animator.run(
@@ -1389,6 +1462,7 @@ function resetAll() {
   hud.setHeating(false);
   stand.clamp.visible = stand.tripod.visible = false;
   for (const v of views) disconnect(v, true);
+  for (const v of views) removeDipped(v);
   syringeView.reset();
   syringePanel.show(false);
   onBalance = [];
@@ -1693,6 +1767,7 @@ function frame() {
   for (const v of views) {
     const o = v.vessel.observe();
     v.update(o, dt, speed);
+    updateDipped(v, o.pH, dt);
     for (const e of tracker.check(v, o)) hud.log({ ...e, t: simTime });
     if (v === selected) selObs = o;
   }

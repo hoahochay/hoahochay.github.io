@@ -53,6 +53,8 @@ function helpHtml(phone: boolean): string {
         <p>Cũng nằm trong kho, mục <b>Dụng cụ</b>. ${pick('Kéo thả', 'Kéo thả hoặc chạm chọn rồi chạm')} vào dụng cụ chứa:</p>
         <ul>
           <li><b>Que đóm, giấy quỳ ẩm</b>: đưa vào miệng ống để thử khí.</li>
+          <li><b>Giấy quỳ tím</b> (thử dung dịch): thả vào dụng cụ để nhúng đầu mẩu quỳ vào dung dịch; quỳ hóa đỏ với acid, hóa xanh với base. Mẩu quỳ để luôn trong dụng cụ và tiếp tục đổi màu khi dung dịch thay đổi; đổ bỏ dung dịch thì quỳ cũng được bỏ đi.</li>
+          <li><b>Giấy pH</b>: dùng như giấy quỳ, giấy đổi màu theo bảng màu chuẩn pH 1 – 14; nhật ký ghi số pH đọc được.</li>
           <li><b>Ống dẫn khí</b>: thả vào ống phát khí, rồi ${pick('bấm', 'chạm')} vào nơi nhận khí (ống khác, cốc, hoặc xi lanh). Thả lần nữa để tháo.</li>
           <li><b>Xi lanh đo khí</b>: đậy nút dụng cụ và dẫn khí sang xi lanh; bảng đo hiện đồ thị thể tích theo thời gian.</li>
           <li><b>Cân điện tử</b>: đặt dụng cụ lên cân (hoặc chọn dụng cụ rồi ${pick('bấm', 'chạm')} vào cân). Đĩa cân đặt được một cốc / bình, hoặc hai ống nghiệm cùng lúc. Cân chỉ khối lượng các chất bên trong, không tính khối lượng dụng cụ.</li>

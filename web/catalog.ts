@@ -32,6 +32,7 @@ function reagent(
 export const REAGENTS: ReagentDef[] = [
   reagent('water', 'H₂O', 'nước cất', 'nước cất', {}),
   reagent('hcl', 'HCl', '1M', 'hydrochloric acid', { HCl: 1 }),
+  reagent('hcl01', 'HCl', '0,1M', 'hydrochloric acid', { HCl: 0.1 }, { aka: 'hcl loang 0,1m' }),
   reagent('h2so4', 'H₂SO₄', '0,5M', 'sulfuric acid loãng', { H2SO4: 0.5 }),
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
   // Giấm ăn: acetic acid khoảng 5% (≈ 0,83 M)
@@ -44,6 +45,10 @@ export const REAGENTS: ReagentDef[] = [
   // Nước vôi trong bão hòa ≈ 0,02M; dùng loại pha loãng để thấy rõ cả hai giai đoạn đục → trong
   // (mô hình dung dịch lý tưởng chưa có hệ số hoạt độ, nên đánh giá thấp độ tan của Ca(HCO₃)₂)
   reagent('limewater', 'Ca(OH)₂', 'loãng', 'nước vôi trong', { 'Ca(OH)2': 0.005 }),
+  // Đồ dùng hằng ngày (Bài 9 – xác định pH): mô hình gần đúng theo thành phần chính
+  reagent('lemon', 'Nước chanh', '', 'đồ uống, chứa citric acid', { H3Cit: 0.25 }, { aka: 'chanh lemon citric acid nuoc qua', color: [0.97, 0.95, 0.72] }),
+  reagent('soda', 'Nước ngọt có gas', '', 'đồ uống, chứa khí carbon dioxide', { H2CO3: 0.1, H3Cit: 0.01 }, { aka: 'nuoc ngot co ga soda carbonic' }),
+  reagent('dishsoap', 'Nước rửa bát', '', 'chất tẩy rửa dùng trong gia đình', { NaHCO3: 0.01, Na2CO3: 0.0005 }, { aka: 'nuoc rua bat xa phong chat tay rua', color: [0.75, 0.92, 0.7] }),
   reagent('h2o2', 'H₂O₂', '3%', 'nước oxy già', { H2O2: 0.88 }, { amber: true, aka: 'hydrogen peroxide' }),
   reagent('agno3', 'AgNO₃', '0,1M', 'silver nitrate', { AgNO3: 0.1 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
@@ -89,13 +94,16 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'na', id: 'Na', label: 'Sodium (mẩu)', grams: 0.1, form: 'granule', shape: 'chunk', floats: true },
   { key: 'li', id: 'Li', label: 'Lithium (mẩu)', grams: 0.02, form: 'granule', shape: 'chunk', floats: true },
   { key: 'k', id: 'K', label: 'Potassium (mẩu)', grams: 0.05, form: 'granule', shape: 'chunk', floats: true, flame: 0xc58cff },
-  { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate', grams: 0.5, form: 'granule', shape: 'granule' },
+  { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate da voi vien', grams: 0.5, form: 'granule', shape: 'granule' },
+  { key: 'caco3_powder', id: 'CaCO3', label: 'Đá vôi (bột)', aka: 'calcium carbonate da voi bot dap nho', grams: 1, form: 'powder', shape: 'powder' },
   { key: 'fe_powder', id: 'Fe', label: 'Bột sắt', aka: 'iron powder', grams: 0.7, form: 'powder', shape: 'powder' },
   { key: 's_powder', id: 'S', label: 'Bột lưu huỳnh', aka: 'sulfur', grams: 0.4, form: 'powder', shape: 'powder' },
   { key: 'baking_soda', id: 'NaHCO3', label: 'Bột baking soda', aka: 'sodium hydrogencarbonate bot no', grams: 0.2, form: 'powder', shape: 'powder' },
   { key: 'salt', id: 'NaCl', label: 'Muối ăn', aka: 'sodium chloride natri clorua muoi an', grams: 0.75, form: 'powder', shape: 'powder' },
   { key: 'cuso4_solid', id: 'CuSO4', label: 'Copper(II) sulfate (tinh thể)', aka: 'dong sunfat phen xanh cuso4 ran', grams: 0.75, form: 'powder', shape: 'powder' },
   { key: 'rice_flour', id: 'starch', label: 'Bột gạo', aka: 'tinh bot bot san sua bot', grams: 0.75, form: 'powder', shape: 'powder' },
+  { key: 'vitc', id: 'VitC', label: 'Viên vitamin C sủi', aka: 'vitamin c sui vien sui c sui citric acid', grams: 0.25, form: 'granule', shape: 'chunk' },
+  { key: 'cuo', id: 'CuO', label: 'Copper(II) oxide (bột)', aka: 'dong oxit cuo bot den oxide base', grams: 0.08, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
@@ -148,7 +156,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {
@@ -169,6 +177,8 @@ export const CHEMICALS: ChemEntry[] = [
     ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxygen o2'],
     ['splint_burn', 'burning', 'Que đóm đang cháy', 'Thử khí H₂, CO₂', 'hydrogen h2 co2 carbon dioxide chay'],
     ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí acid / base', 'quy tim nh3 ammonia co2 acid base'],
+    ['litmus_sol', 'litmus_sol', 'Giấy quỳ tím', 'Thử dung dịch acid / base', 'quy tim dung dich acid base axit bazo thu mau'],
+    ['ph_paper', 'ph_paper', 'Giấy pH', 'Đo pH dung dịch theo bảng màu', 'giay ph thang ph chi thi van nang do ph'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
     ['delivery', 'delivery', 'Ống dẫn khí', 'Dẫn khí sang ống khác', 'ong dan khi thu khi suc khi nut cao su'],
     ['balance', 'balance', 'Cân điện tử', 'Cân dụng cụ, chính xác 0,01 g', 'can dien tu khoi luong bao toan khoi luong tru bi dung cu do'],
