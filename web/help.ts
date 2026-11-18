@@ -84,7 +84,7 @@ function helpHtml(phone: boolean): string {
       <section>
         <h3>📬 Liên hệ, góp ý</h3>
         <ul>
-          <li>Mã nguồn: <a href="https://github.com/huynq55-v3/chemistry" target="_blank" rel="noopener">github.com/huynq55-v3/chemistry</a></li>
+          <li>Mã nguồn: <a href="https://github.com/hoahochay/hoahochay.github.io" target="_blank" rel="noopener">github.com/hoahochay/hoahochay.github.io</a></li>
           <li>Email: <a href="mailto:huynq23091@gmail.com">huynq23091@gmail.com</a></li>
         </ul>
       </section>
