@@ -147,6 +147,8 @@ export class RecipePlayer {
       }
       this.setSpeed(1);
       this.current = null;
+      // Đưa địa chỉ về danh sách: dán lại đúng link này sẽ chạy lại (trình duyệt bỏ qua link trùng địa chỉ hiện tại)
+      this.onChange(null);
       if (isRecipe(r)) {
         this.ui.finish(r);
         this.voice.speak(r.result.explain);
