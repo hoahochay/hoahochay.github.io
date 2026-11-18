@@ -380,6 +380,7 @@ body.table-mode #measures { display: none !important; }
 .help-body { overflow-y: auto; padding: 4px 20px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 13.5px; line-height: 1.5; }
 .help-body section:first-child { grid-column: 1 / -1; }
 .help-body h3 { font-size: 14px; margin: 12px 0 4px; }
+.help-body a { color: var(--accent); word-break: break-all; }
 .help-body p { margin: 4px 0; }
 .help-body ul, .help-body ol { margin: 4px 0; padding-left: 20px; }
 .help-body li { margin: 2px 0; }
