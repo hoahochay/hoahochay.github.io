@@ -1,3 +1,4 @@
+import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -853,7 +854,7 @@ function safeRect(): { l: number; r: number; t: number; b: number } {
   if (nav) t = Math.max(t, nav.bottom + 8);
   const tb = box('toolbar');
   if (tb) b = Math.min(b, tb.top - 8);
-  if (!window.matchMedia('(max-width: 700px)').matches) {
+  if (!isPhone()) {
     const left = box('left');
     if (left) l = Math.max(l, left.right + 8);
     const panel = box('panel');
@@ -1280,11 +1281,6 @@ const player = new RecipePlayer({
     syringeML: () => syringeView.syringe.volumeML,
     balanceG: balanceReading,
   },
-  vesselName: (i) => (i === SYRINGE ? syringeView.name : views[i].name),
-  chemLabel: (key, amount) => {
-    const c = CHEMICALS.find((x) => x.key === key)!;
-    return `${fmt(amount)} ${c.unit} ${c.formula}${c.kind === 'solution' && c.key !== 'water' ? ' ' + c.sub : ''}`;
-  },
 }, document.getElementById('recipes')!);
 
 // Tab bên trái: kho hóa chất / thí nghiệm mẫu
@@ -1341,7 +1337,7 @@ const ptable = new PeriodicTable(ptableRoot, {
 });
 
 // ── Điện thoại: kho và bảng thông tin là hai ngăn kéo, mỗi lúc mở một ngăn ──
-const phone = window.matchMedia('(max-width: 700px)');
+const phone = phoneQuery;
 type Sheet = 'chem' | 'info' | null;
 // Chiều cao thanh công cụ dưới cùng (điện thoại: 2 hàng) để ngăn kéo và thanh thí nghiệm nằm ngay phía trên
 {

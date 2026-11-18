@@ -1,7 +1,9 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
+import { describeStep } from './narration';
 import { copyText, shareUrl } from './router';
 import { BookId, BOOKS, gradeOf, LabState, LESSONS, LessonId, Recipe, RECIPES, Step } from './recipes';
+import { Narrator } from './voice';
 
 const BOOK_KEY = 'lab-book';
 function savedBook(): BookId {
@@ -32,18 +34,9 @@ export interface LabApi {
   simTime(): number;
   busy(): boolean;
   state: LabState;
-  vesselName(i: number): string;
-  chemLabel(key: string, amount: number): string;
 }
 
 class Abort extends Error {}
-
-const PROBE_NAME: Record<ToolKind, string> = {
-  glowing: 'que đóm còn tàn đỏ',
-  burning: 'que đóm đang cháy',
-  litmus: 'mẩu giấy quỳ tím ẩm',
-  magnet: 'nam châm',
-};
 
 const FAST = 60;
 
@@ -67,6 +60,10 @@ export class RecipePlayer {
   private stepSpeed = 1;
   private current: Recipe | null = null;
   private readonly ui: RecipeUi;
+  /** Giọng đọc lời thuyết minh */
+  readonly voice = new Narrator();
+  /** Bước hiện tại đang được đọc thành tiếng */
+  private spoken = false;
   /** Gọi khi bắt đầu (recipe) hoặc dừng (null) một thí nghiệm, để cập nhật đường dẫn */
   onChange: (r: Recipe | null) => void = () => {};
 
@@ -77,7 +74,13 @@ export class RecipePlayer {
       skip: () => (this.skip = true),
       stop: () => this.stop(),
       share: (r) => this.share(r),
+      voice: () => {
+        this.voice.setEnabled(!this.voice.enabled);
+        this.ui.setVoice(this.voice.enabled);
+      },
+      closed: () => this.voice.stop(),
     });
+    this.ui.setVoice(this.voice.enabled);
   }
 
   /** Thí nghiệm đang chạy */
@@ -97,16 +100,22 @@ export class RecipePlayer {
     this.onChange(r);
     this.lab.resetAll();
     this.setSpeed(1);
+    await this.voice.load();
     try {
       for (let i = 0; i < r.steps.length; i++) {
         const step = r.steps[i];
         this.skip = false;
-        const text = this.describe(step);
+        const text = describeStep(step);
         this.ui.step(i, r.steps.length, text);
+        this.spoken = this.voice.speak(text).spoken;
         const t0 = performance.now();
         await this.exec(step, id);
-        // Bước thao tác (không phải bước chờ có đồng hồ): giữ lời thuyết minh đủ lâu để đọc hết
-        if (step.kind !== 'wait' && step.kind !== 'focus' && step.kind !== 'say') {
+        if (this.spoken) {
+          // Có giọng đọc: chờ đọc hết câu rồi mới sang bước sau
+          await this.untilSpoken(id);
+          await this.hold(step.kind === 'focus' ? 0.2 : 0.5, id);
+        } else if (step.kind !== 'wait' && step.kind !== 'focus' && step.kind !== 'say') {
+          // Bước thao tác (không phải bước chờ có đồng hồ): giữ lời thuyết minh đủ lâu để đọc hết
           const shown = (performance.now() - t0) / 1000;
           await this.hold(Math.max(1.2, readTime(text) - shown), id);
         } else await this.hold(step.kind === 'focus' ? 0.2 : 0.8, id);
@@ -114,6 +123,7 @@ export class RecipePlayer {
       this.setSpeed(1);
       this.current = null;
       this.ui.finish(r);
+      this.voice.speak(r.result.explain);
     } catch (e) {
       if (!(e instanceof Abort)) throw e;
     }
@@ -124,6 +134,7 @@ export class RecipePlayer {
     this.current = null;
     this.paused = false;
     this.setSpeed(1);
+    this.voice.stop();
     this.ui.hide();
     this.onChange(null);
   }
@@ -137,33 +148,13 @@ export class RecipePlayer {
   private togglePause(): void {
     this.paused = !this.paused;
     this.lab.setSpeed(this.paused ? 0 : this.stepSpeed);
+    this.voice.pause(this.paused);
     this.ui.setPaused(this.paused);
   }
 
   private setSpeed(s: number): void {
     this.stepSpeed = s;
     if (!this.paused) this.lab.setSpeed(s);
-  }
-
-  private describe(s: Step): string {
-    switch (s.kind) {
-      case 'say': return s.text;
-      case 'add': return s.text ?? `Cho ${this.lab.chemLabel(s.chem, s.amount)} vào ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
-      case 'wait': return s.text ?? 'Quan sát…';
-      case 'heat': return s.text ?? (s.on ? 'Đun nóng bằng đèn cồn.' : 'Tắt đèn cồn.');
-      case 'stir': return s.text ?? 'Lắc nhẹ cho dung dịch trộn đều.';
-      case 'connect': return s.text ?? (s.dst === null
-        ? 'Tháo ống dẫn khí.'
-        : `Lắp ống dẫn khí từ ${this.lab.vesselName(s.src).toLowerCase()} sang ${this.lab.vesselName(s.dst).toLowerCase()}.`);
-      case 'invert': return s.text ?? `Úp ngược ${this.lab.vesselName(s.vessel).toLowerCase()}.`;
-      case 'probe': return s.text ?? (s.tool === 'magnet'
-        ? `Đưa nam châm lại gần đáy ${this.lab.vesselName(s.vessel).toLowerCase()}.`
-        : `Đưa ${PROBE_NAME[s.tool]} vào miệng ${this.lab.vesselName(s.vessel).toLowerCase()}.`);
-      case 'burn': return s.text ?? `Dùng kẹp sắt giữ ${this.lab.chemLabel(s.chem, 0).replace(/^0 \S* /, '')} đốt trên ngọn lửa đèn cồn.`;
-      case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${this.lab.vesselName(s.vessel).toLowerCase()} lên cân điện tử.`);
-      case 'tare': return s.text ?? 'Bấm nút trừ bì: cân trở về 0,00 g.';
-      case 'focus': return '';
-    }
   }
 
   private check(id: number): void {
@@ -182,6 +173,15 @@ export class RecipePlayer {
     }
   }
 
+  /** Chờ giọng đọc đọc hết câu hiện tại; bấm "bỏ qua" thì ngắt */
+  private async untilSpoken(id: number): Promise<void> {
+    while (this.voice.speaking) {
+      if (this.skip) this.voice.stop();
+      await frame();
+      this.check(id);
+    }
+  }
+
   private async untilIdle(id: number): Promise<void> {
     while (this.lab.busy()) {
       await frame();
@@ -193,7 +193,7 @@ export class RecipePlayer {
     switch (s.kind) {
       case 'say':
         this.ui.progress(null);
-        return this.hold(s.hold ?? readTime(s.text), id);
+        return this.hold(this.spoken ? (s.hold ?? 0) : (s.hold ?? readTime(s.text)), id);
       case 'focus':
         this.lab.focus(s.vessels);
         return this.hold(0.9, id);
@@ -260,6 +260,10 @@ interface UiHandlers {
   skip(): void;
   stop(): void;
   share(r: Recipe): void;
+  /** Bật/tắt giọng đọc */
+  voice(): void;
+  /** Đóng bảng kết luận */
+  closed(): void;
 }
 
 class RecipeUi {
@@ -277,6 +281,7 @@ class RecipeUi {
         <div class="rb-ctrl">
           <button class="rb-pause" title="Tạm dừng / tiếp tục">⏸</button>
           <button class="rb-skip" title="Bỏ qua / tua nhanh bước này">⏭</button>
+          <button class="rb-voice" title="Bật / tắt giọng đọc">🔊</button>
           <button class="rb-share" title="Sao chép link tới thí nghiệm này">🔗</button>
           <button class="rb-stop" title="Dừng thí nghiệm mẫu">✕</button>
         </div>
@@ -286,6 +291,7 @@ class RecipeUi {
     this.q<HTMLButtonElement>('.rb-pause').onclick = () => h.pause();
     this.q<HTMLButtonElement>('.rb-skip').onclick = () => h.skip();
     this.q<HTMLButtonElement>('.rb-stop').onclick = () => h.stop();
+    this.q<HTMLButtonElement>('.rb-voice').onclick = () => h.voice();
     this.q<HTMLButtonElement>('.rb-share').onclick = () => this.current && h.share(this.current);
   }
 
@@ -381,6 +387,16 @@ class RecipeUi {
     }
   }
 
+  private voiceOn = true;
+
+  setVoice(on: boolean): void {
+    this.voiceOn = on;
+    for (const b of document.querySelectorAll<HTMLButtonElement>('.rb-voice, .rr-voice')) {
+      b.textContent = on ? '🔊' : '🔇';
+      b.title = on ? 'Tắt giọng đọc' : 'Bật giọng đọc';
+    }
+  }
+
   setPaused(p: boolean): void {
     this.q('.rb-pause').textContent = p ? '▶' : '⏸';
   }
@@ -402,11 +418,13 @@ class RecipeUi {
       ${r.result.equations.map((e) => `<div class="eq">${e}</div>`).join('<br>')}
       <div class="sec">Giải thích</div>
       <p>${r.result.explain}</p>
-      <div class="rr-actions"><button class="rr-replay">↻ Xem lại</button><button class="rr-ok on">Đóng</button></div>`;
+      <div class="rr-actions"><button class="rr-replay">↻ Xem lại</button><button class="rr-voice" title="Bật / tắt giọng đọc">🔊</button><button class="rr-ok on">Đóng</button></div>`;
     this.result.classList.remove('hidden');
-    const close = () => this.hide();
+    const close = () => { this.h.closed(); this.hide(); };
     this.result.querySelector<HTMLButtonElement>('.rr-close')!.onclick = close;
     this.result.querySelector<HTMLButtonElement>('.rr-ok')!.onclick = close;
     this.result.querySelector<HTMLButtonElement>('.rr-replay')!.onclick = () => this.h.play(r);
+    this.result.querySelector<HTMLButtonElement>('.rr-voice')!.onclick = () => this.h.voice();
+    this.setVoice(this.voiceOn);
   }
 }

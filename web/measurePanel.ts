@@ -2,6 +2,7 @@
  * Bảng đo của một dụng cụ đo (xi lanh đo khí, cân điện tử…): số đọc hiện tại, tốc độ thay đổi,
  * đồ thị theo thời gian và bảng số đo mỗi 10 s.
  */
+import { isPhone } from './layout';
 
 interface Sample { t: number; v: number }
 
@@ -46,7 +47,7 @@ export class MeasurePanel {
   constructor(private readonly o: MeasureOptions) {
     this.root = document.createElement('div');
     // Điện thoại: thu gọn sẵn (chỉ hiện số đọc) để không che cảnh 3D; bấm "–" để mở đồ thị
-    this.root.className = 'measure card hidden' + (window.matchMedia('(max-width: 700px)').matches ? ' mini' : '');
+    this.root.className = 'measure card hidden' + (isPhone() ? ' mini' : '');
     this.root.innerHTML = `
       <div class="g-head">
         <b>${o.title}</b>

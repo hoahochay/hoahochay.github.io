@@ -21,6 +21,8 @@ const GROUPS: { kind: ChemEntry['kind']; title: string }[] = [
 ];
 
 const DRAG_THRESHOLD = 5;
+/** Cảm ứng: giữ ngón tay trên một hóa chất chừng này (ms) thì nhấc lên để kéo */
+const LONG_PRESS_MS = 300;
 
 export class ChemPanel {
   private readonly amounts = new Map<string, number>();
@@ -117,26 +119,51 @@ export class ChemPanel {
       // Chuột: chặn bôi đen chữ. Cảm ứng: để trình duyệt còn cuộn được danh sách (vuốt dọc)
       if (ev.pointerType === 'mouse') ev.preventDefault();
       const start = { x: ev.clientX, y: ev.clientY };
+      const touch = ev.pointerType !== 'mouse';
       let ghost: HTMLElement | null = null;
       let over: unknown | null = null;
+      // Cảm ứng: vuốt dọc là cuộn danh sách; kéo ngang hoặc giữ ngón tay một chút thì nhấc hóa chất lên
+      let scrolling = false;
+      const lift = () => {
+        ghost = this.makeGhost(entry);
+        ghost.style.transform = `translate(${start.x - 28}px, ${start.y - 28}px)`;
+        el.classList.add('dragging');
+        if (touch) {
+          this.touchDragging = true;
+          document.body.classList.add('chem-dragging');
+          navigator.vibrate?.(12);
+        }
+      };
+      const press = touch ? window.setTimeout(() => { if (!ghost && !scrolling) lift(); }, LONG_PRESS_MS) : 0;
 
       const move = (e: PointerEvent) => {
+        if (scrolling) return;
         if (!ghost) {
-          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < DRAG_THRESHOLD) return;
-          ghost = this.makeGhost(entry);
-          el.classList.add('dragging');
+          const dx = e.clientX - start.x, dy = e.clientY - start.y;
+          if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+          if (touch && Math.abs(dy) > Math.abs(dx)) {
+            scrolling = true;
+            clearTimeout(press);
+            return;
+          }
+          clearTimeout(press);
+          lift();
         }
-        ghost.style.transform = `translate(${e.clientX - 28}px, ${e.clientY - 28}px)`;
+        const g = ghost!;
+        g.style.transform = `translate(${e.clientX - 28}px, ${e.clientY - 28}px)`;
         // Chỉ nhận thả khi con trỏ đang ở trên vùng cảnh 3D (không phải trên bảng)
         const onPanel = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.card');
         const t = onPanel ? null : this.target.hitTest(e.clientX, e.clientY);
         if (t !== over) {
           over = t;
           this.target.hover(t);
-          ghost.classList.toggle('ok', !!t);
+          g.classList.toggle('ok', !!t);
         }
       };
       const up = (e: PointerEvent) => {
+        clearTimeout(press);
+        this.touchDragging = false;
+        document.body.classList.remove('chem-dragging');
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', up);
@@ -146,7 +173,7 @@ export class ChemPanel {
         if (ghost && over) {
           this.arm(null);
           this.target.drop(entry, this.amounts.get(entry.key)!, over);
-        } else if (!ghost && e.type === 'pointerup') {
+        } else if (!ghost && !scrolling && e.type === 'pointerup') {
           // Chạm / bấm không kéo: chọn mục này (bấm lần nữa để bỏ chọn)
           this.arm(this.armedKey === entry.key ? null : entry.key);
         }
@@ -155,7 +182,13 @@ export class ChemPanel {
       window.addEventListener('pointerup', up);
       window.addEventListener('pointercancel', up);
     });
+    // Đang kéo bằng ngón tay: không để trình duyệt cuộn danh sách hay mở menu nhấn giữ
+    el.addEventListener('touchmove', (e) => { if (this.touchDragging) e.preventDefault(); }, { passive: false });
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
   }
+
+  /** Đang kéo một hóa chất bằng cảm ứng */
+  private touchDragging = false;
 
   private makeGhost(entry: ChemEntry): HTMLElement {
     const g = document.createElement('div');

@@ -54,14 +54,15 @@ const HTML = `
       </section>
       <section>
         <h3>▶ Thí nghiệm mẫu</h3>
-        <p>Tab <b>Thí nghiệm mẫu</b> có các thí nghiệm theo sách giáo khoa (chọn bộ Kết nối tri thức hoặc Chân trời sáng tạo), xếp theo bài học và lọc theo lớp. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
+        <p>Tab <b>Thí nghiệm mẫu</b> có các thí nghiệm theo sách giáo khoa (chọn bộ Kết nối tri thức hoặc Chân trời sáng tạo), xếp theo bài học và lọc theo lớp. Chương trình tự làm từng bước; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Lời thuyết minh được đọc thành tiếng; bấm 🔊 để tắt hoặc bật giọng đọc. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
       </section>
       <section>
         <h3>📱 Trên điện thoại</h3>
         <ul>
           <li>Một ngón vuốt chỗ trống: di chuyển cảnh; một ngón kéo dụng cụ: cầm dụng cụ đi. Hai ngón: chụm/mở để phóng to, xoay hai ngón để đổi góc nhìn.</li>
           <li>Nút <b>🧪 Kho</b> và <b>ℹ️ Thông tin</b> ở thanh dưới cùng mở kho hóa chất và bảng thông tin; mọi nút thao tác đều nằm ở thanh này.</li>
-          <li>Chạm vào hóa chất để chọn, kho tự đóng lại, rồi chạm vào dụng cụ.</li>
+          <li>Chạm vào hóa chất để chọn, kho tự đóng lại, rồi chạm vào dụng cụ. Hoặc <b>giữ ngón tay</b> trên hóa chất (hay kéo sang ngang) để nhấc lên, rồi kéo thả vào dụng cụ: kho mờ đi để thấy dụng cụ phía sau.</li>
+          <li>Xoay ngang điện thoại để có màn hình rộng hơn: kho mở bên trái, thông tin mở bên phải.</li>
         </ul>
       </section>
       <section>

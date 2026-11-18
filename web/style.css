@@ -121,7 +121,7 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 .chem-empty { color: var(--muted); padding: 16px 4px; text-align: center; }
 .chem {
   display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px;
-  padding: 4px 6px; border-radius: 10px; cursor: grab; user-select: none; touch-action: pan-y;
+  padding: 4px 6px; border-radius: 10px; cursor: grab; user-select: none; touch-action: pan-y; -webkit-touch-callout: none;
   border: 1px solid transparent;
 }
 .chem:hover { background: #f3f6fa; border-color: var(--line); }
@@ -407,7 +407,7 @@ kbd {
 
 /* ── Điện thoại: mỗi lúc chỉ mở một bảng (dạng ngăn kéo từ dưới lên), cảnh 3D luôn thấy được ── */
 .phone-only { display: none; }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-height: 500px) {
   .phone-only { display: inline-flex; }
   #mainnav { left: 8px; right: 8px; top: 8px; transform: none; justify-content: center; }
   #mainnav button { padding: 6px 10px; font-size: 13px; white-space: nowrap; }
@@ -450,3 +450,40 @@ kbd {
   #hint { top: 60px; font-size: 13px; }
   .toast { top: 60px; }
 }
+
+/* ── Điện thoại xoay ngang: màn thấp, nên thanh công cụ một hàng, ngăn kéo mở bên cạnh ── */
+@media (max-height: 500px) and (min-width: 701px) {
+  #mainnav { left: 50%; right: auto; top: 6px; transform: translateX(-50%); padding: 3px; }
+  #mainnav button { padding: 4px 10px; }
+
+  #toolbar {
+    flex-direction: row; align-items: center; gap: 8px;
+    padding: 4px max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+  #toolbar .group:first-child { flex-direction: column; align-items: flex-start; gap: 2px; padding: 0; }
+  #speed button { padding: 3px 8px; }
+  #toolbar .group.actions { flex: 1; }
+  #toolbar .group.actions button { padding: 3px 0; }
+
+  /* Kho mở bên trái, thông tin mở bên phải, cao hết phần trên thanh công cụ */
+  #left, #panel {
+    top: 6px !important; bottom: calc(var(--tb-h, 56px) + 6px); width: min(360px, 46vw) !important;
+    max-height: none !important; border-radius: 12px;
+  }
+  #left { left: max(6px, env(safe-area-inset-left)); right: auto; }
+  #panel { right: max(6px, env(safe-area-inset-right)); left: auto; overflow-y: auto; }
+
+  #recipe-bar { left: 50%; right: auto; width: min(620px, calc(100vw - 16px)); transform: translateX(-50%); padding: 6px 10px 8px; }
+  #recipe-bar .rb-text { font-size: 13px; line-height: 1.35; margin-top: 2px; }
+  #recipe-bar .rb-ctrl button { padding: 2px 8px; }
+  #recipe-bar .rb-progress { height: 14px; }
+  #recipe-bar .rb-text { margin-bottom: 4px; }
+  /* Ngăn kéo cao hết màn hình: ẩn menu chính khi đang mở */
+  body.sheet-chem #mainnav, body.sheet-info #mainnav { display: none; }
+  #recipe-result { width: min(560px, calc(100vw - 16px)); max-height: calc(100vh - 16px); }
+  #measures { top: 48px; max-height: calc(100vh - var(--tb-h, 56px) - 60px); left: auto; width: 320px; right: 8px; }
+  #hint, .toast { top: 46px; }
+}
+
+/* Đang kéo hóa chất trên điện thoại: ngăn kéo mờ đi để thấy và thả vào dụng cụ phía sau */
+body.chem-dragging #left { opacity: 0.12; pointer-events: none; transition: opacity .15s; }

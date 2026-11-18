@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "demo": "tsx demo/demo.ts"
+    "demo": "tsx demo/demo.ts",
+    "tts": "tsx scripts/tts-plan.ts | ${VENV:-../.venv}/bin/python -I scripts/tts.py"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
