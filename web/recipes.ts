@@ -15,7 +15,7 @@ export interface LabState {
   tempC(vessel: number): number;
   /** Số đọc trên xi lanh đo khí, mL */
   syringeML(): number;
-  /** Số đọc trên cân điện tử (đã trừ bì), g */
+  /** Số đọc trên cân điện tử (khối lượng các chất, không tính dụng cụ), g */
   balanceG(): number;
 }
 
@@ -31,7 +31,8 @@ export type Step =
   | { kind: 'connect'; src: number; dst: number | null; text?: string }
   | { kind: 'invert'; vessel: number; text?: string }
   | { kind: 'weigh'; vessel: number | null; text?: string }
-  | { kind: 'tare'; text?: string }
+  /** Đổ hết chất lỏng từ dụng cụ src sang dụng cụ dst */
+  | { kind: 'pour'; src: number; dst: number; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
 
 /** Các bộ SGK có trong ứng dụng */
@@ -85,7 +86,7 @@ const invert = (vessel: number, text?: string): Step => ({ kind: 'invert', vesse
 const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 'probe', tool, vessel, text });
 const burn = (chem: string, text?: string): Step => ({ kind: 'burn', chem, text });
 const weigh = (vessel: number | null, text?: string): Step => ({ kind: 'weigh', vessel, text });
-const tare = (text?: string): Step => ({ kind: 'tare', text });
+const pourInto = (src: number, dst: number, text?: string): Step => ({ kind: 'pour', src, dst, text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
 export const RECIPES: Recipe[] = [
@@ -151,6 +152,103 @@ export const RECIPES: Recipe[] = [
       ],
       equations: ['Zn + 2HCl → ZnCl₂ + H₂↑', 'CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄'],
       explain: 'Phản ứng xảy ra ở ống (1) và ống (3). Khí hydrogen và kết tủa copper(II) hydroxide là những chất mới, khác với các chất ban đầu. Ở ống (2), hydrochloric acid và barium chloride trộn lẫn nhưng không tạo ra chất mới nào.',
+    },
+  },
+  {
+    id: 'nhan-biet-dung-dich',
+    title: 'Nhận biết dung dịch, chất tan và dung môi',
+    lesson: 'khtn8-b4', page: 20,
+    concepts: ['dung dịch', 'chất tan', 'dung môi', 'dung dịch bão hòa'],
+    summary: 'Hòa muối ăn, copper(II) sulfate và bột gạo vào nước. Ống nào là dung dịch? Cho thật nhiều muối thì sao?',
+    steps: [
+      say('Sách làm với 4 cốc, mỗi cốc 20 mL nước. Ở đây dùng 4 ống nghiệm, mỗi ống 5 mL nước, lượng chất cũng giảm đi 4 lần.'),
+      focus(TUBE1, TUBE2, TUBE3, TUBE4),
+      add('water', 5, TUBE1, 'Rót 5 mL nước vào ống (1).'),
+      add('water', 5, TUBE2, 'Rót 5 mL nước vào ống (2).'),
+      add('water', 5, TUBE3, 'Rót 5 mL nước vào ống (3).'),
+      add('water', 5, TUBE4, 'Rót 5 mL nước vào ống (4).'),
+      add('salt', 0.75, TUBE1, 'Ống (1): thêm 0,75 g muối ăn.'),
+      add('cuso4_solid', 0.75, TUBE2, 'Ống (2): thêm 0,75 g copper(II) sulfate.'),
+      add('rice_flour', 0.75, TUBE3, 'Ống (3): thêm 0,75 g bột gạo.'),
+      add('salt', 3, TUBE4, 'Ống (4): thêm 3 g muối ăn, gấp 4 lần ống (1).'),
+      stir(TUBE1, 'Khuấy đều từng ống.'),
+      stir(TUBE2, 'Khuấy đều từng ống.'),
+      stir(TUBE3, 'Khuấy đều từng ống.'),
+      stir(TUBE4, 'Khuấy đều từng ống.'),
+      wait(300, {
+        speed: 6, text: 'Tua nhanh: khuấy khoảng 2 phút rồi để yên.',
+        // Đến khi muối ăn ở ống (1) và copper(II) sulfate ở ống (2) tan hết (còn dưới 1 mg)
+        until: (l) => l.mix(TUBE1).get('NaCl') * 58.44 < 1e-3 && l.mix(TUBE2).get('CuSO4') * 249.69 < 1e-3,
+      }),
+      wait(20, { text: 'Quan sát 4 ống nghiệm.' }),
+      say('Ống (1): muối ăn tan hết, chất lỏng trong suốt, đồng nhất. Ống (2): copper(II) sulfate tan hết, chất lỏng trong suốt, màu xanh lam đều.'),
+      say('Ống (3): chất lỏng đục trắng, không đồng nhất. Để yên một lúc, bột gạo lắng dần xuống đáy.'),
+      say('Ống (4): muối chỉ tan một phần rồi không tan thêm được nữa, đáy ống vẫn còn muối.'),
+      say('Ống (1), (2) và (4) chứa dung dịch, ống (3) thì không. Dung dịch ở ống (4) không hòa tan thêm được muối: đó là dung dịch bão hòa.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1), (2): chất rắn tan hết, thu được chất lỏng trong suốt, đồng nhất; ống (2) có màu xanh lam',
+        'Ống (3): chất lỏng đục, không đồng nhất, để yên thì bột gạo lắng xuống',
+        'Ống (4): muối ăn tan một phần, phần còn lại không tan nằm dưới đáy',
+      ],
+      equations: [],
+      explain: 'Dung dịch là hỗn hợp đồng nhất của chất tan và dung môi. Ở ống (1) và (4), chất tan là muối ăn; ở ống (2), chất tan là copper(II) sulfate; dung môi đều là nước. Bột gạo không tan trong nước, chỉ lơ lửng làm đục rồi lắng xuống, nên ống (3) không phải dung dịch. Ở nhiệt độ phòng, 5 mL nước chỉ hòa tan được khoảng 1,8 g muối ăn, nên khi cho 3 g thì còn dư muối: dung dịch ở ống (4) là dung dịch bão hòa.',
+    },
+  },
+  {
+    id: 'pha-nuoc-muoi-sinh-li',
+    title: 'Pha 100 g dung dịch muối ăn 0,9%',
+    lesson: 'khtn8-b4', page: 22,
+    concepts: ['nồng độ phần trăm', 'pha chế dung dịch', 'cân điện tử'],
+    summary: 'Tính lượng muối ăn và nước cần dùng, cân muối và nước trên cân điện tử để pha nước muối sinh lí 0,9%.',
+    steps: [
+      say('Pha 100 g dung dịch muối ăn 0,9%. Tính trước: khối lượng muối là 100 nhân 0,9 chia 100, bằng 0,9 g; khối lượng nước là 100 trừ 0,9, bằng 99,1 g.'),
+      focus(BEAKER),
+      weigh(BEAKER, 'Đặt cốc 100 mL khô, sạch lên cân điện tử: cân chỉ 0,00 g (cân chỉ tính khối lượng chất trong cốc).'),
+      add('salt', 0.9, BEAKER, 'Cho muối ăn khan vào cốc đến khi cân chỉ 0,90 g.'),
+      add('water', 99.1, BEAKER, 'Rót thêm 99,1 mL nước cất (1 mL nước nặng khoảng 1 g), cân chỉ khoảng 100 g.'),
+      stir(BEAKER, 'Khuấy đều cho muối tan hết.'),
+      wait(180, {
+        speed: 6, text: 'Tua nhanh: muối ăn tan dần.',
+        until: (l) => l.mix(BEAKER).get('NaCl') * 58.44 < 1e-3,
+      }),
+      say('Muối đã tan hết, dung dịch trong suốt, không màu. Ta được 100 g dung dịch muối ăn 0,9%: đây là nồng độ của nước muối sinh lí.'),
+    ],
+    result: {
+      phenomena: [
+        'Cân chỉ 0,90 g sau khi cho muối, khoảng 100 g sau khi rót nước',
+        'Muối ăn tan hết, dung dịch trong suốt, không màu',
+      ],
+      equations: [],
+      explain: 'Nồng độ phần trăm cho biết số gam chất tan có trong 100 g dung dịch: C% = khối lượng chất tan : khối lượng dung dịch × 100%. Muốn có 100 g dung dịch 0,9% thì cần 0,9 g muối ăn và 99,1 g nước. Phải dùng muối khan vì muối ẩm có lẫn nước, cân 0,9 g muối ẩm thì lượng muối thật ít hơn. Dung dịch muối ăn 0,9% có nồng độ gần bằng dịch trong cơ thể, gọi là nước muối sinh lí, dùng để nhỏ mắt, rửa mũi, súc miệng, rửa vết thương.',
+    },
+  },
+  {
+    id: 'bao-toan-khoi-luong',
+    title: 'Định luật bảo toàn khối lượng',
+    lesson: 'khtn8-b5', page: 24,
+    concepts: ['định luật bảo toàn khối lượng', 'kết tủa', 'cân điện tử'],
+    summary: 'Cân hai ống dung dịch barium chloride và sodium sulfate, đổ vào nhau cho phản ứng rồi cân lại. Khối lượng có thay đổi không?',
+    steps: [
+      say('Khi phản ứng hóa học xảy ra, tổng khối lượng các chất có thay đổi không? Sách dùng 2 cốc; ở đây dùng 2 ống nghiệm, đặt cả hai lên cân.'),
+      focus(TUBE1, TUBE2),
+      add('bacl2', 4, TUBE1, 'Ống (1): lấy 4 mL dung dịch barium chloride.'),
+      add('na2so4', 4, TUBE2, 'Ống (2): lấy 4 mL dung dịch sodium sulfate.'),
+      weigh(TUBE1, 'Đặt ống (1) lên cân điện tử.'),
+      weigh(TUBE2, 'Đặt tiếp ống (2) lên cân, cạnh ống (1).'),
+      say('Ghi lại số chỉ của cân: đó là tổng khối lượng hai ống và các chất trước phản ứng.'),
+      pourInto(TUBE1, TUBE2, 'Đổ ống (1) vào ống (2), rồi đặt ống (1) trở lại cân.'),
+      wait(8, { text: 'Ống (2): xuất hiện kết tủa màu trắng.' }),
+      say('Số chỉ của cân không thay đổi: tổng khối lượng các chất sau phản ứng bằng tổng khối lượng các chất trước phản ứng.'),
+    ],
+    result: {
+      phenomena: [
+        'Khi đổ hai dung dịch vào nhau: xuất hiện kết tủa trắng',
+        'Số chỉ của cân trước và sau phản ứng bằng nhau',
+      ],
+      equations: ['BaCl₂ + Na₂SO₄ → BaSO₄↓ + 2NaCl'],
+      explain: 'Barium chloride tác dụng với sodium sulfate tạo thành barium sulfate (kết tủa trắng) và sodium chloride. Trong phản ứng hóa học, chỉ có liên kết giữa các nguyên tử thay đổi, còn số nguyên tử của mỗi nguyên tố giữ nguyên, nên tổng khối lượng các chất tham gia bằng tổng khối lượng các chất sản phẩm. Đó là định luật bảo toàn khối lượng (Lomonosov và Lavoisier). Phản ứng này không có chất khí thoát ra ngoài nên cân không đổi.',
     },
   },
 

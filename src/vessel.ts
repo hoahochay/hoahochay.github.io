@@ -2,7 +2,7 @@ import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
 import { bubbleAbsorption, exchangeGases, GAS_INDEX, headspaceFractions, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
-import { contentsMassG, Mixture, SETTLE_TIME, SolidForm } from './mixture';
+import { contentsMassG, FORM_FACTOR, Mixture, SETTLE_TIME, SETTLE_TIME_COARSE, SolidForm } from './mixture';
 import { solutionColor, turbidity } from './optics';
 import { REACTIONS } from './reactions';
 import { makeSolution } from './reagents';
@@ -311,8 +311,11 @@ export class Vessel implements GasReceiver {
       m.tempK = T_BOIL;
       this.boiling = true;
     }
-    const settle = Math.exp(-dt / SETTLE_TIME);
-    for (const [id, s] of m.suspended) m.suspended.set(id, s * settle);
+    for (const [id, s] of m.suspended) {
+      const tau = species(id).settleTime
+        ?? ((m.formFactor.get(id) ?? 0) >= FORM_FACTOR.precipitate ? SETTLE_TIME : SETTLE_TIME_COARSE);
+      m.suspended.set(id, s * Math.exp(-dt / tau));
+    }
     this.time += dt;
     return this;
   }

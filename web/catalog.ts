@@ -50,6 +50,7 @@ export const REAGENTS: ReagentDef[] = [
   reagent('fecl3', 'FeCl₃', '0,1M', 'iron(III) chloride', { FeCl3: 0.1 }),
   reagent('feso4', 'FeSO₄', '0,1M', 'iron(II) sulfate', { FeSO4: 0.1 }),
   reagent('bacl2', 'BaCl₂', '0,1M', 'barium chloride', { BaCl2: 0.1 }),
+  reagent('na2so4', 'Na₂SO₄', '0,1M', 'sodium sulfate', { Na2SO4: 0.1 }),
   reagent('pbno3', 'Pb(NO₃)₂', '0,01M', 'lead(II) nitrate', { 'Pb(NO3)2': 0.01 }),
   reagent('ki', 'KI', '0,02M', 'potassium iodide', { KI: 0.02 }),
   reagent('phenol', 'Phenolphthalein', 'chỉ thị', 'phenolphthalein', {}, {
@@ -92,6 +93,9 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'fe_powder', id: 'Fe', label: 'Bột sắt', aka: 'iron powder', grams: 0.7, form: 'powder', shape: 'powder' },
   { key: 's_powder', id: 'S', label: 'Bột lưu huỳnh', aka: 'sulfur', grams: 0.4, form: 'powder', shape: 'powder' },
   { key: 'baking_soda', id: 'NaHCO3', label: 'Bột baking soda', aka: 'sodium hydrogencarbonate bot no', grams: 0.2, form: 'powder', shape: 'powder' },
+  { key: 'salt', id: 'NaCl', label: 'Muối ăn', aka: 'sodium chloride natri clorua muoi an', grams: 0.75, form: 'powder', shape: 'powder' },
+  { key: 'cuso4_solid', id: 'CuSO4', label: 'Copper(II) sulfate (tinh thể)', aka: 'dong sunfat phen xanh cuso4 ran', grams: 0.75, form: 'powder', shape: 'powder' },
+  { key: 'rice_flour', id: 'starch', label: 'Bột gạo', aka: 'tinh bot bot san sua bot', grams: 0.75, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
@@ -144,7 +148,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {

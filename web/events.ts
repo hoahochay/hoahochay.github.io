@@ -14,6 +14,8 @@ export interface LogEntry {
 
 interface State {
   solids: Set<string>;
+  /** Muối dễ tan đã báo bão hòa */
+  saturated?: Set<string>;
   gases: Set<string>;
   refColor: RGB;
   refTemp: number;
@@ -120,7 +122,18 @@ export class PhenomenaTracker {
     for (const id of st.solids) {
       if (now.has(id)) continue;
       const fine = (mix.formFactor.get(id) ?? 0) >= FORM_FACTOR.precipitate;
-      log(fine ? `Kết tủa ${pretty(id)} tan hết` : `${capital(species(id).name)} đã phản ứng hết`);
+      // Muối dễ tan cho vào ở dạng rắn (muối ăn, CuSO₄…): tan hết vào nước
+      const soluble = !fine && (SOLID_INDEX.get(id)?.Ksp ?? 0) > 0.1;
+      log(fine ? `Kết tủa ${pretty(id)} tan hết` : soluble ? `${pretty(id)} tan hết trong nước` : `${capital(species(id).name)} đã phản ứng hết`);
+    }
+    // Dung dịch bão hòa: muối dễ tan không tan thêm được, còn dư dưới đáy
+    for (const id of now) {
+      const soluble = (SOLID_INDEX.get(id)?.Ksp ?? 0) > 0.1;
+      if (!soluble || !hasLiquid || st.saturated?.has(id)) continue;
+      if ((mix.saturation.get(id) ?? 0) > 0.98) {
+        (st.saturated ??= new Set()).add(id);
+        log(`${pretty(id)} không tan thêm được, còn dư dưới đáy: dung dịch đã bão hòa`);
+      }
     }
     st.solids = now;
 

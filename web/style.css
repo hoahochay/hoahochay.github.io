@@ -53,6 +53,8 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 .pane { display: flex; flex-direction: column; min-height: 0; }
 .pane.hidden { display: none; }
 #recipes { overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+/* Danh sách dài thì cuộn, không được ép co các mục (nút chọn bộ sách từng bị co còn 2 px) */
+#recipes > * { flex-shrink: 0; }
 .chem-body { display: flex; flex-direction: column; min-height: 0; }
 
 /* Thí nghiệm mẫu */

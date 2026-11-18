@@ -55,14 +55,14 @@ function helpHtml(phone: boolean): string {
           <li><b>Que đóm, giấy quỳ ẩm</b>: đưa vào miệng ống để thử khí.</li>
           <li><b>Ống dẫn khí</b>: thả vào ống phát khí, rồi ${pick('bấm', 'chạm')} vào nơi nhận khí (ống khác, cốc, hoặc xi lanh). Thả lần nữa để tháo.</li>
           <li><b>Xi lanh đo khí</b>: đậy nút dụng cụ và dẫn khí sang xi lanh; bảng đo hiện đồ thị thể tích theo thời gian.</li>
-          <li><b>Cân điện tử</b>: đặt dụng cụ lên cân (hoặc chọn dụng cụ rồi ${pick('bấm', 'chạm')} vào cân). Nút <b>Trừ bì</b> đưa số đọc về 0,00 g.</li>
+          <li><b>Cân điện tử</b>: đặt dụng cụ lên cân (hoặc chọn dụng cụ rồi ${pick('bấm', 'chạm')} vào cân). Đĩa cân đặt được một cốc / bình, hoặc hai ống nghiệm cùng lúc. Cân chỉ khối lượng các chất bên trong, không tính khối lượng dụng cụ.</li>
         </ul>
         <p>Bảng đo có đồ thị, bảng số mỗi 10 giây và nút tải về CSV.</p>
       </section>
       <section>
         <h3>🛠 Thanh công cụ dưới cùng</h3>
         <ul>
-          <li><b>${pick('Kéo', 'Dùng một ngón kéo')} ống nghiệm, cốc, bình</b> trên bàn: thả vào <b>đèn cồn</b> để đun, thả lên <b>cân</b> để cân, thả chỗ khác để cất về chỗ cũ.</li>
+          <li><b>${pick('Kéo', 'Dùng một ngón kéo')} ống nghiệm, cốc, bình</b> trên bàn: thả vào <b>đèn cồn</b> để đun, thả lên <b>cân</b> để cân, thả lên <b>dụng cụ chứa khác</b> để đổ hết chất lỏng sang đó, thả chỗ khác để cất về chỗ cũ.</li>
           <li><b>Khuấy</b>, <b>Đun</b> (hoặc ${pick('bấm', 'chạm')} vào đèn cồn), <b>Đổ bỏ</b>, <b>Úp ống</b> (để thu khí nhẹ như H₂), <b>Nhìn gần</b>: tác dụng lên dụng cụ đang chọn.</li>
           <li>Kéo mẩu kim loại (dải magnesium, dây đồng, đinh sắt…) thả vào <b>đèn cồn</b>: kẹp sắt sẽ giữ mẫu đốt trên ngọn lửa. Dùng <b>nam châm</b> để thử xem trong ống còn sắt không.</li>
           <li>Tốc độ thời gian <b>1×</b> đến <b>60×</b> để tua nhanh phản ứng chậm; ${pick('<kbd>Space</kbd>', 'nút <b>⏸</b>')} tạm dừng / chạy tiếp.</li>

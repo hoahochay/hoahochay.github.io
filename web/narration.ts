@@ -50,7 +50,7 @@ export function describeStep(s: Step): string {
       return s.text ?? `Dùng kẹp sắt giữ ${c?.formula ?? s.chem} đốt trên ngọn lửa đèn cồn.`;
     }
     case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${vn(s.vessel)} lên cân điện tử.`);
-    case 'tare': return s.text ?? 'Bấm nút trừ bì: cân trở về 0,00 g.';
+    case 'pour': return s.text ?? `Đổ ${vn(s.src)} vào ${vn(s.dst)}.`;
     case 'focus': return '';
   }
 }

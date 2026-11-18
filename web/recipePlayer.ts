@@ -24,10 +24,10 @@ export interface LabApi {
   burn(chem: string): void;
   connect(src: number, dst: number | null): void;
   invert(vessel: number): void;
-  /** Đặt dụng cụ lên cân điện tử; null: lấy xuống */
+  /** Đặt dụng cụ lên cân điện tử (tối đa hai ống nghiệm); null: lấy tất cả xuống */
   weigh(vessel: number | null): void;
-  /** Bấm nút trừ bì của cân */
-  tare(): void;
+  /** Đổ hết chất lỏng từ dụng cụ này sang dụng cụ khác */
+  pour(src: number, dst: number): void;
   focus(vessels: number[] | null): void;
   resetAll(): void;
   setSpeed(s: number): void;
@@ -230,9 +230,9 @@ export class RecipePlayer {
         this.ui.progress(null);
         this.lab.weigh(s.vessel);
         return this.untilIdle(id);
-      case 'tare':
+      case 'pour':
         this.ui.progress(null);
-        this.lab.tare();
+        this.lab.pour(s.src, s.dst);
         return this.untilIdle(id);
       case 'probe':
         this.ui.progress(null);
@@ -419,8 +419,8 @@ class RecipeUi {
       <div class="rr-title">${r.title}</div>
       <div class="sec">Hiện tượng</div>
       <ul>${r.result.phenomena.map((p) => `<li>${p}</li>`).join('')}</ul>
-      <div class="sec">Phương trình hóa học</div>
-      ${r.result.equations.map((e) => `<div class="eq">${e}</div>`).join('<br>')}
+      ${r.result.equations.length ? `<div class="sec">Phương trình hóa học</div>
+      ${r.result.equations.map((e) => `<div class="eq">${e}</div>`).join('<br>')}` : ''}
       <div class="sec">Giải thích</div>
       <p>${r.result.explain}</p>
       <div class="rr-actions"><button class="rr-replay">↻ Xem lại</button><button class="rr-voice" title="Bật / tắt giọng đọc">🔊</button><button class="rr-ok on">Đóng</button></div>`;

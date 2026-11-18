@@ -2,7 +2,7 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
@@ -113,11 +113,14 @@ scene.add(syringeView.group);
 const balanceView = new BalanceView();
 balanceView.group.position.set(-11.5, 0, 11.5);
 scene.add(balanceView.group);
-/** Dụng cụ đang nằm trên đĩa cân */
-let onBalance: VesselView | null = null;
-let tareG = 0;
-/** Số đọc của cân (đã trừ bì), làm tròn 0,01 g như cân thật */
-const balanceReading = () => Math.round(((onBalance ? onBalance.vessel.massG() : 0) - tareG) * 100) / 100 + 0;
+/** Dụng cụ đang nằm trên đĩa cân: một cốc / bình, hoặc tối đa hai ống nghiệm */
+let onBalance: VesselView[] = [];
+const isOnBalance = (v: VesselView) => onBalance.includes(v);
+/**
+ * Số đọc của cân, làm tròn 0,01 g như cân thật. Cân luôn tự trừ bì: chỉ tính khối lượng các chất
+ * bên trong, không tính khối lượng dụng cụ thủy tinh.
+ */
+const balanceReading = () => Math.round(onBalance.reduce((g, v) => g + contentsMassG(v.vessel.mix), 0) * 100) / 100 + 0;
 const fmtG = (g: number) => g.toFixed(2).replace('.', ',');
 
 const lamp = new LampView();
@@ -594,24 +597,28 @@ const syringePanel = new MeasurePanel({
 const balancePanel = new MeasurePanel({
   title: 'Cân điện tử', quantity: 'Khối lượng', symbol: 'm', unit: 'g', decimals: 2,
   minSpan: 0.2, fromZero: false, jump: 0.02, csvName: 'can-dien-tu.csv',
-  resetLabel: '⚖ Trừ bì', resetTitle: 'Đưa số đọc về 0,00 g với vật đang đặt trên cân',
   extra: { label: '⬇ Lấy xuống', title: 'Lấy dụng cụ khỏi cân', onClick: () => takeOffBalance() },
-  reset: () => tare(),
 });
 
 function balanceNote(): string {
-  return onBalance ? `đang cân ${onBalance.name.toLowerCase()}` : 'đĩa cân trống';
+  return onBalance.length ? `đang cân ${onBalance.map((v) => v.name.toLowerCase()).join(' và ')}` : 'đĩa cân trống';
 }
 
-/** Đặt dụng cụ lên đĩa cân (bấm lần nữa để lấy xuống) */
+/**
+ * Đặt dụng cụ lên đĩa cân (bấm lần nữa để lấy xuống). Đĩa cân chứa được một cốc / bình,
+ * hoặc hai ống nghiệm đặt cạnh nhau; đặt thêm khi đã đầy thì các dụng cụ cũ được lấy xuống.
+ */
 function placeOnBalance(v: VesselView, toggle = true) {
-  if (onBalance === v) return toggle ? takeOffBalance() : undefined;
+  if (isOnBalance(v)) return toggle ? takeOffBalance(v) : undefined;
   if (heatingView === v) return log('Tắt đèn cồn và lấy dụng cụ khỏi giá đun trước khi cân.', 'warning', v.name);
   if (v.vessel.inverted) return log('Lật ngửa ống trước khi đặt lên cân.', 'warning', v.name);
-  if (onBalance) takeOffBalance(true);
-  onBalance = v;
+  const fits = v.kind.type === 'tube' && onBalance.length < 2 && onBalance.every((o) => o.kind.type === 'tube');
+  if (!fits) takeOffBalance(undefined, true);
+  onBalance.push(v);
   select(v);
   animator.run(
+    // Ống đang nằm trên cân dịch sang một bên nhường chỗ
+    ...onBalance.filter((o) => o !== v).map((o) => moveVessel(o, () => restPose(o), 0.5)),
     moveVessel(v, () => restPose(v)),
     call(() => {
       balancePanel.start(simTime, balanceReading(), balanceNote());
@@ -620,20 +627,87 @@ function placeOnBalance(v: VesselView, toggle = true) {
   );
 }
 
-function takeOffBalance(quiet = false) {
-  const v = onBalance;
-  if (!v) return;
-  onBalance = null;
-  animator.run(moveVessel(v, () => restPose(v)));
-  balancePanel.start(simTime, balanceReading(), balanceNote());
-  if (!quiet) log('Lấy khỏi cân điện tử', 'action', v.name);
+/**
+ * Đổ toàn bộ chất lỏng (kèm kết tủa đang lơ lửng) từ dụng cụ này sang dụng cụ khác.
+ * Dụng cụ nguồn được nhấc lên, nghiêng miệng trên miệng dụng cụ nhận, rồi đặt lại chỗ cũ.
+ */
+function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
+  if (src === dst) return false;
+  // Đang có hoạt ảnh (vd. còn đang rót hóa chất vào): đổ sau khi xong, lúc đó mới kiểm tra
+  if (animator.busy && !queued) {
+    animator.run(call(() => void pourVessel(src, dst, true)));
+    return true;
+  }
+  const why = heatingView === src || heatingView === dst ? 'Tắt đèn cồn trước khi đổ.'
+    : src.vessel.inverted || dst.vessel.inverted ? 'Lật ngửa ống trước khi đổ.'
+    : src.vessel.outlet || dst.vessel.outlet || [...tubes.values()].some((t) => t.dst === src || t.dst === dst) ? 'Tháo ống dẫn khí trước khi đổ.'
+    : src.vessel.mix.volumeL < 1e-5 ? `${src.name} không có chất lỏng để đổ.`
+    : null;
+  if (why) { log(why, 'warning', src.name); return false; }
+  let mL = src.vessel.mix.volumeL * 1000;
+  const room = dst.capacityML - dst.vessel.mix.volumeL * 1000 - pendingML(dst);
+  if (room < 0.05) { log(`${dst.name} đã đầy.`, 'warning', dst.name); return false; }
+  if (mL > room) {
+    mL = room;
+    log(`Chỉ đổ được ${fmt(mL)} mL, ${dst.name.toLowerCase()} sẽ đầy.`, 'warning', src.name);
+  }
+  addPending(dst, mL);
+  const theta = -1.85;
+  const h = src.kind.profile.height;
+  let from = new THREE.Vector3();
+  let tilted = new THREE.Vector3();
+  let moved = 0;
+  const tiltedPos = () => {
+    const m = dst.mouthWorld().add(new THREE.Vector3(0.25 * (dst.kind.type === 'tube' ? 1 : 2), 0.9, 0));
+    return new THREE.Vector3(m.x + h * Math.sin(theta), m.y - h * Math.cos(theta), m.z);
+  };
+  const transfer = (upTo: number) => {
+    const d = upTo - moved;
+    if (d <= 1e-6) return;
+    dst.vessel.add(src.vessel.take(d / 1000));
+    moved = upTo;
+  };
+  select(dst);
+  animator.run(
+    tween(0.7, (t) => {
+      src.group.position.lerpVectors(from, tilted, t);
+      src.group.position.y += Math.sin(Math.PI * t) * 2;
+      src.group.rotation.z = theta * t;
+    }, { onStart: () => { from = src.group.position.clone(); tilted = tiltedPos(); } }),
+    tween(Math.min(2.2, 0.8 + mL * 0.04), (t) => {
+      const mouth = src.mouthWorld();
+      const surf = dst.surfaceWorld();
+      stream.visible = t < 0.97;
+      stream.position.copy(mouth);
+      stream.scale.set(src.kind.type === 'tube' ? 0.8 : 1.4, Math.max(0.1, mouth.y - surf.y), 1);
+      transfer(mL * t);
+    }, {
+      ease: (t) => t,
+      onStart: () => setRGB(stream.material.color, src.vessel.observe().appearance),
+    }),
+    call(() => {
+      stream.visible = false;
+      transfer(mL);
+      addPending(dst, -mL);
+      log(`Đổ ${fmt(mL)} mL sang ${dst.name.toLowerCase()}`, 'action', src.name);
+      log(`Nhận ${fmt(mL)} mL từ ${src.name.toLowerCase()}`, 'action', dst.name);
+    }),
+    tween(0.5, (t) => (src.group.rotation.z = theta * (1 - t))),
+    moveVessel(src, () => restPose(src), 0.7),
+  );
+  return true;
 }
 
-function tare() {
-  tareG += balanceReading();
-  balancePanel.start(simTime, 0, balanceNote());
-  log('Bấm trừ bì: cân trở về 0,00 g', 'action', balanceView.name);
+/** Lấy một dụng cụ (hoặc tất cả) khỏi cân */
+function takeOffBalance(v?: VesselView, quiet = false) {
+  const off = v ? onBalance.filter((o) => o === v) : [...onBalance];
+  if (!off.length) return;
+  onBalance = onBalance.filter((o) => !off.includes(o));
+  animator.run(...off.map((o) => moveVessel(o, () => restPose(o))), ...onBalance.map((o) => moveVessel(o, () => restPose(o), 0.5)));
+  balancePanel.start(simTime, balanceReading(), balanceNote());
+  if (!quiet) for (const o of off) log('Lấy khỏi cân điện tử', 'action', o.name);
 }
+
 /** Đang chờ người dùng bấm vào dụng cụ nhận khí */
 let connectFrom: VesselView | null = null;
 
@@ -697,7 +771,11 @@ function startConnect(view: VesselView) {
 
 // ── Úp ngược ống nghiệm (để thu khí nhẹ) ─────────────────────────────────
 function restPose(v: VesselView): THREE.Vector3 {
-  if (onBalance === v) return balanceView.panTopWorld().add(new THREE.Vector3(0, v.kind.type === 'tube' ? 0.15 : 0.12, 0));
+  if (isOnBalance(v)) {
+    const i = onBalance.indexOf(v);
+    const dx = onBalance.length > 1 ? (i === 0 ? -1.1 : 1.1) : 0;
+    return balanceView.panTopWorld().add(new THREE.Vector3(dx, v.kind.type === 'tube' ? 0.15 : 0.12, 0));
+  }
   return v.vessel.inverted ? v.home.clone().add(new THREE.Vector3(0, v.kind.profile.height + 2.2, 0)) : v.home.clone();
 }
 
@@ -789,7 +867,7 @@ function stopHeat() {
 function startHeat(v: VesselView) {
   if (heatingView === v) return;
   if (v.vessel.inverted) return log('Không đun ống đang úp ngược.', 'warning', v.name);
-  if (onBalance === v) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
+  if (isOnBalance(v)) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
   if (heatingView) stopHeat();
   heatingView = v;
   v.heating = true;
@@ -991,7 +1069,11 @@ function pickAt(x: number, y: number, objects = pickables): THREE.Object3D | nul
 // ── Kéo dụng cụ trên bàn: thả vào đèn cồn để đun, thả lên cân để cân, thả chỗ khác để cất về chỗ cũ ──
 /** Bán kính (theo mặt bàn) quanh đèn cồn / cân mà thả vào thì tính là trúng */
 const DROP_RADIUS = 4.5;
-let drag: { view: VesselView; pointerId: number; started: boolean; lift: number; offset: THREE.Vector3; zone: 'lamp' | 'balance' | null } | null = null;
+let drag: { view: VesselView; pointerId: number; started: boolean; lift: number; offset: THREE.Vector3; zone: DropZone } | null = null;
+/** Chỗ thả dụng cụ đang kéo: đèn cồn, cân, hoặc một dụng cụ chứa khác (để đổ sang) */
+type DropZone = 'lamp' | 'balance' | VesselView | null;
+/** Dụng cụ sẽ nhận chất lỏng nếu thả (được tô sáng) */
+let pourTarget: VesselView | null = null;
 const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const dragHit = new THREE.Vector3();
 
@@ -1003,7 +1085,15 @@ function dragPoint(x: number, y: number): THREE.Vector3 | null {
 }
 
 /** Đích thả: con trỏ nằm trên đèn cồn / cân, hoặc dụng cụ đang kéo ở sát chúng (theo mặt bàn) */
-function dropZone(x: number, y: number, p: THREE.Vector3): 'lamp' | 'balance' | null {
+function dropZone(x: number, y: number, p: THREE.Vector3, v?: VesselView): DropZone {
+  // Thả lên một dụng cụ chứa khác: đổ sang dụng cụ đó
+  // (phải đưa tới sát dụng cụ đó, để kéo ngang qua giá ống nghiệm không bị tính là đổ)
+  const other = pickAt(x, y, views.filter((o) => o !== v).map((o) => o.group));
+  if (other?.userData.kind === 'vessel') {
+    const target = other.userData.view as VesselView;
+    const pos = target.group.position;
+    if (Math.hypot(p.x - pos.x, p.z - pos.z) < 3.5) return target;
+  }
   const o = pickAt(x, y, [lamp.group, stand.group, balanceView.group]);
   if (o?.userData.kind === 'lamp') return 'lamp';
   if (o?.userData.kind === 'balance') return 'balance';
@@ -1021,10 +1111,14 @@ function settle(v: VesselView) {
   }));
 }
 
-function finishDrag(v: VesselView, zone: 'lamp' | 'balance' | null) {
+function finishDrag(v: VesselView, zone: DropZone) {
   hud.hint(null);
-  if (zone === 'lamp') {
-    if (onBalance === v) { onBalance = null; balancePanel.start(simTime, balanceReading(), balanceNote()); }
+  pourTarget?.setHover(false);
+  pourTarget = null;
+  if (zone instanceof VesselView) {
+    if (!pourVessel(v, zone)) settle(v);
+  } else if (zone === 'lamp') {
+    if (isOnBalance(v)) { onBalance = onBalance.filter((o) => o !== v); balancePanel.start(simTime, balanceReading(), balanceNote()); }
     select(v);
     if (heatingView !== v) startHeat(v);
   } else if (zone === 'balance') {
@@ -1037,10 +1131,10 @@ function finishDrag(v: VesselView, zone: 'lamp' | 'balance' | null) {
       hud.setHeating(false);
       log('Tắt đèn cồn', 'action', v.name);
     }
-    if (onBalance !== v) placeOnBalance(v, false);
+    if (!isOnBalance(v)) placeOnBalance(v, false);
   } else {
     if (heatingView === v) stopHeat();
-    else if (onBalance === v) takeOffBalance();
+    else if (isOnBalance(v)) takeOffBalance(v);
   }
   settle(v);
 }
@@ -1076,10 +1170,14 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   const pos = p.setY(0).add(drag.offset);
   v.group.position.set(pos.x, drag.lift, pos.z);
   tubes.forEach((tb) => tb.update());
-  const zone = drag.zone = dropZone(e.clientX, e.clientY, v.group.position);
-  hud.hint(zone === 'lamp' ? `Thả để đun ${v.name.toLowerCase()} bằng đèn cồn`
+  const zone = drag.zone = dropZone(e.clientX, e.clientY, v.group.position, v);
+  pourTarget?.setHover(false);
+  pourTarget = zone instanceof VesselView ? zone : null;
+  pourTarget?.setHover(true);
+  hud.hint(zone instanceof VesselView ? `Thả để đổ ${v.name.toLowerCase()} sang ${zone.name.toLowerCase()}`
+    : zone === 'lamp' ? `Thả để đun ${v.name.toLowerCase()} bằng đèn cồn`
     : zone === 'balance' ? `Thả để đặt ${v.name.toLowerCase()} lên cân điện tử`
-    : 'Thả vào đèn cồn để đun, lên cân để cân; thả chỗ khác để cất về chỗ cũ');
+    : 'Thả vào đèn cồn để đun, lên cân để cân, lên dụng cụ khác để đổ sang; thả chỗ khác để cất về chỗ cũ');
 });
 
 const endDrag = (e: PointerEvent) => {
@@ -1094,6 +1192,8 @@ const endDrag = (e: PointerEvent) => {
 };
 renderer.domElement.addEventListener('pointercancel', (e) => {
   if (drag?.started) { hud.hint(null); settle(drag.view); }
+  pourTarget?.setHover(false);
+  pourTarget = null;
   drag = null;
   controls.enabled = true;
 });
@@ -1123,7 +1223,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   else if (o?.userData.kind === 'lamp') locked() || toggleHeat();
   else if (o?.userData.kind === 'syringe' && !syringePanel.visible && syringeView.syringe.volumeML > 0) syringePanel.show(true);
   else if (o?.userData.kind === 'balance') {
-    if (selected && selected !== onBalance) locked() || placeOnBalance(selected);
+    if (selected && !isOnBalance(selected)) locked() || placeOnBalance(selected);
     else if (!balancePanel.visible) balancePanel.start(simTime, balanceReading(), balanceNote());
   }
 });
@@ -1136,7 +1236,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   const text = u.kind === 'vessel'
     ? `<b>${u.view.name}</b><br>${(u.view.vessel.mix.volumeL * 1000).toFixed(1)} mL`
     : u.kind === 'balance'
-    ? `<b>Cân điện tử</b><br>${fmtG(balanceReading())} g<br><i>${selected && selected !== onBalance ? `Bấm để đặt ${selected.name.toLowerCase()} lên cân` : onBalance ? `Đang cân ${onBalance.name.toLowerCase()}` : 'Chọn một dụng cụ rồi bấm vào cân'}</i>`
+    ? `<b>Cân điện tử</b><br>${fmtG(balanceReading())} g<br><i>${selected && !isOnBalance(selected) ? `Bấm để đặt ${selected.name.toLowerCase()} lên cân` : onBalance.length ? `Đang cân ${onBalance.map((o) => o.name.toLowerCase()).join(" và ")}` : 'Chọn một dụng cụ rồi bấm vào cân'}</i>`
     : u.kind === 'syringe'
     ? `<b>Xi lanh đo khí</b><br>${syringeView.syringe.volumeML.toFixed(1)} / 100 mL<br><i>${[...tubes.values()].some((t) => t.dst === syringeView) ? 'Đang đo' : 'Kéo "Xi lanh đo khí" trong kho thả vào dụng cụ phát khí'}</i>`
     : `<b>Đèn cồn</b><br><i>${heatingView ? 'Bấm để tắt' : 'Bấm để đun dụng cụ đang chọn'}</i>`;
@@ -1259,8 +1359,7 @@ function resetAll() {
   for (const v of views) disconnect(v, true);
   syringeView.reset();
   syringePanel.show(false);
-  onBalance = null;
-  tareG = 0;
+  onBalance = [];
   balancePanel.show(false);
   connectFrom = null;
   hud.hint(null);
@@ -1283,7 +1382,7 @@ const player = new RecipePlayer({
   connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
   invert: (vessel) => invert(views[vessel]),
   weigh: (vessel) => (vessel === null ? takeOffBalance() : placeOnBalance(views[vessel], false)),
-  tare,
+  pour: (src, dst) => void pourVessel(views[src], views[dst]),
   focus: (vs) => panTo(vs ? vs.map((i) => views[i]) : null),
   resetAll,
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
@@ -1486,6 +1585,8 @@ Object.assign(window, {
     add: (key: string, amount: number, vessel = 0) =>
       dropEntry(CHEMICALS.find((c) => c.key === key)!, amount, views[vessel]),
     heat: () => toggleHeat(),
+    pour: (src: number, dst: number) => pourVessel(views[src], views[dst]),
+    weigh: (i: number) => placeOnBalance(views[i], false),
     player,
     recipes: RECIPES,
     setSpeed: (s: number) => { speed = s; hud.setSpeed(s); },

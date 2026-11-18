@@ -30,11 +30,12 @@ export interface MeasureOptions {
   /** Ngưỡng thay đổi coi là đáng ghi ngay */
   jump: number;
   csvName: string;
-  resetLabel: string;
-  resetTitle: string;
+  /** Nút đặt lại số đo (vd. đẩy pít-tông xi lanh về 0); bỏ trống thì không có nút */
+  resetLabel?: string;
+  resetTitle?: string;
   /** Nút phụ (vd. "Lấy xuống" của cân) */
   extra?: { label: string; title: string; onClick(): void };
-  reset(): void;
+  reset?(): void;
 }
 
 export class MeasurePanel {
@@ -60,7 +61,7 @@ export class MeasurePanel {
       <canvas width="620" height="300"></canvas>
       <details class="g-table"><summary>Bảng số đo (mỗi 10 s)</summary><table></table></details>
       <div class="g-actions">
-        <button class="g-reset" title="${o.resetTitle}">${o.resetLabel}</button>
+        ${o.resetLabel ? `<button class="g-reset" title="${o.resetTitle ?? ''}">${o.resetLabel}</button>` : ''}
         ${o.extra ? `<button class="g-extra" title="${o.extra.title}">${o.extra.label}</button>` : ''}
         <button class="g-csv" title="Tải bảng số đo về máy (CSV)">⬇ CSV</button>
       </div>`;
@@ -72,7 +73,8 @@ export class MeasurePanel {
     }
     dock.appendChild(this.root);
     this.canvas = this.root.querySelector('canvas')!;
-    this.root.querySelector<HTMLButtonElement>('.g-reset')!.onclick = () => this.o.reset();
+    const reset = this.root.querySelector<HTMLButtonElement>('.g-reset');
+    if (reset) reset.onclick = () => this.o.reset?.();
     if (o.extra) this.root.querySelector<HTMLButtonElement>('.g-extra')!.onclick = () => o.extra!.onClick();
     this.root.querySelector<HTMLButtonElement>('.g-min')!.onclick = () => this.root.classList.toggle('mini');
     this.root.querySelector<HTMLButtonElement>('.g-csv')!.onclick = () => this.downloadCsv();

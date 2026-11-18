@@ -14,6 +14,8 @@ export const FORM_FACTOR: Record<SolidForm, number> = {
 
 /** Thời gian đặc trưng để kết tủa lắng xuống đáy, s */
 export const SETTLE_TIME = 60;
+/** Hạt to hơn (bột, tinh thể khuấy lên) lắng nhanh hơn kết tủa mịn, s */
+export const SETTLE_TIME_COARSE = 8;
 
 /**
  * Trạng thái hóa học của một dụng cụ chứa: số mol từng chất, thể tích, nhiệt độ.

@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
 import { BEAKER, BOOKS, FLASK, LabState, LESSONS, Recipe, RECIPES, SYRINGE } from '../web/recipes';
 
@@ -21,15 +21,14 @@ function runRecipe(r: Recipe): RunResult {
   const vessels = [0, 1, 2, 3].map(() => new Vessel(VESSELS.testTube));
   vessels.push(new Vessel(VESSELS.beaker100), new Vessel(VESSELS.flask100));
   const syringe = new GasSyringe(100);
-  let onBalance: number | null = null;
-  let tareG = 0;
+  let onBalance: number[] = [];
   /** Số đọc của cân sau mỗi bước, để kiểm tra kết quả */
   const weighings: number[] = [];
   const state: LabState = {
     mix: (i) => vessels[i].mix,
     tempC: (i) => vessels[i].mix.tempK - 273.15,
     syringeML: () => syringe.volumeML,
-    balanceG: () => Math.round(((onBalance !== null ? vessels[onBalance].massG() : 0) - tareG) * 100) / 100,
+    balanceG: () => Math.round(onBalance.reduce((g, i) => g + contentsMassG(vessels[i].mix), 0) * 100) / 100,
   };
   const timedOut: number[] = [];
   const probes: string[] = [];
@@ -79,17 +78,24 @@ function runRecipe(r: Recipe): RunResult {
         vessels[s.vessel].inverted = !vessels[s.vessel].inverted;
         break;
       case 'weigh':
-        onBalance = s.vessel;
+        if (s.vessel === null) onBalance = [];
+        else if (!onBalance.includes(s.vessel)) {
+          const tubes = s.vessel < BEAKER && onBalance.length < 2 && onBalance.every((i) => i < BEAKER);
+          onBalance = tubes ? [...onBalance, s.vessel] : [s.vessel];
+        }
         break;
+      case 'pour': {
+        const src = vessels[s.src], dst = vessels[s.dst];
+        dst.add(src.take(src.mix.volumeL));
+        expect(dst.mix.volumeL * 1000, `${r.id}: tràn ${s.dst}`).toBeLessThanOrEqual(dst.spec.capacityL * 1000);
+        break;
+      }
       case 'burn': {
         const c = CHEMICALS.find((x) => x.key === s.chem);
         if (!c?.solid) throw new Error(`${r.id}: không có chất rắn "${s.chem}"`);
         probes.push('burn-' + c.solid.id);
         break;
       }
-      case 'tare':
-        tareG += state.balanceG();
-        break;
       case 'probe': {
         const v = vessels[s.vessel];
         run(1.2); // thời gian đưa que / giấy tới miệng ống
@@ -146,6 +152,41 @@ describe('Thí nghiệm mẫu', () => {
 
   it('CTST Bài 2 – đốt magnesium', () => {
     expect(runRecipe(RECIPES.find((x) => x.id === 'dot-chay-magnesium')!).probes).toEqual(['burn-Mg']);
+  });
+
+  it('Bài 4 – nhận biết dung dịch: ống 1, 2 tan hết, ống 3 còn bột gạo, ống 4 bão hòa còn dư muối', () => {
+    const v = run('nhan-biet-dung-dich');
+    expect(v[0].mix.get('NaCl') * 58.44).toBeLessThan(1e-3);
+    expect(v[0].mix.get('Na+')).toBeGreaterThan(0.012);
+    expect(v[1].mix.get('CuSO4') * 249.69).toBeLessThan(1e-3);
+    expect(v[1].mix.get('Cu^2+')).toBeGreaterThan(0.002);
+    expect(v[2].mix.get('starch') * 162.14).toBeCloseTo(0.75, 2);
+    const leftG = v[3].mix.get('NaCl') * 58.44;
+    expect(leftG).toBeGreaterThan(0.9);
+    expect(leftG).toBeLessThan(1.6);
+  });
+
+  it('Bài 4 – pha nước muối 0,9%: cốc rỗng 0,00 g, cân chỉ 0,90 g muối, tổng khoảng 100 g, muối tan hết', () => {
+    const r = RECIPES.find((x) => x.id === 'pha-nuoc-muoi-sinh-li')!;
+    const res = runRecipe(r);
+    const iSalt = r.steps.findIndex((s) => s.kind === 'add' && s.chem === 'salt');
+    const iWater = r.steps.findIndex((s) => s.kind === 'add' && s.chem === 'water');
+    expect(res.weighings[iSalt - 1]).toBe(0);
+    expect(res.weighings[iSalt]).toBeCloseTo(0.9, 2);
+    expect(res.weighings[iWater]).toBeGreaterThan(99.5);
+    expect(res.weighings[iWater]).toBeLessThan(100.5);
+    expect(res.vessels[BEAKER].mix.get('NaCl') * 58.44).toBeLessThan(1e-3);
+  });
+
+  it('Bài 5 – bảo toàn khối lượng: có kết tủa BaSO4, số chỉ của cân không đổi', () => {
+    const r = RECIPES.find((x) => x.id === 'bao-toan-khoi-luong')!;
+    const res = runRecipe(r);
+    const iPour = r.steps.findIndex((s) => s.kind === 'pour');
+    expect(res.vessels[1].mix.get('BaSO4')).toBeGreaterThan(3e-4);
+    expect(res.vessels[0].mix.volumeL).toBeLessThan(1e-6);
+    expect(res.weighings[iPour - 1]).toBeGreaterThan(7);
+    expect(res.weighings[iPour]).toBeCloseTo(res.weighings[iPour - 1], 2);
+    expect(res.weighings[res.weighings.length - 1]).toBeCloseTo(res.weighings[iPour - 1], 2);
   });
 
   it('mỗi bài học thuộc một bộ sách có trong danh sách', () => {

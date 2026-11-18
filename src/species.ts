@@ -32,6 +32,8 @@ export interface SpeciesDef {
   /** Chất rắn: màu nhìn thấy (0..1) */
   color?: RGB;
   indicator?: IndicatorDef;
+  /** Chất rắn không tan, lơ lửng: thời gian lắng đặc trưng (s), thay cho giá trị mặc định theo hình dạng */
+  settleTime?: number;
 }
 
 const list: SpeciesDef[] = [];
@@ -102,6 +104,12 @@ sp('Cu', 'đồng', 's', 0, 0, 0, 63.55, { color: [0.72, 0.42, 0.2] });
 sp('Ag', 'bạc', 's', 0, 0, 0, 107.87, { color: [0.75, 0.75, 0.78] });
 // Muối tan được ở dạng rắn (bột baking soda): tan dần khi gặp nước, xem SOLIDS
 sp('NaHCO3', 'sodium hydrogencarbonate', 's', 0, 1, -950.8, 84.01, { color: WHITE });
+// Muối ăn, copper(II) sulfate (tinh thể ngậm nước CuSO₄·5H₂O như ở phòng thí nghiệm trường:
+// khối lượng mol và ΔfH° hiệu dụng theo tinh thể ngậm nước, để hòa tan thu nhiệt nhẹ như thực tế)
+sp('NaCl', 'sodium chloride', 's', 0, 0, -411.2, 58.44, { color: WHITE });
+sp('CuSO4', 'copper(II) sulfate', 's', 0, 0, -856.0, 249.69, { color: [0.2, 0.45, 0.9] });
+// Bột gạo (tinh bột): không tan trong nước lạnh, khuấy lên thì lơ lửng làm đục rồi lắng rất chậm
+sp('starch', 'tinh bột', 's', 0, 10, -960, 162.14, { color: [0.97, 0.96, 0.92], settleTime: 400 });
 sp('S', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.96, 0.84, 0.18] });
 sp('FeS', 'iron(II) sulfide', 's', 0, 0, -100.0, 87.91, { color: [0.13, 0.12, 0.11] });
 sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
