@@ -139,6 +139,11 @@ export class RecipePlayer {
     this.onChange(null);
   }
 
+  /** Thông báo ngắn giữa màn hình */
+  toast(text: string): void {
+    this.ui.toast(text);
+  }
+
   /** Sao chép link tới thí nghiệm để gửi cho người khác */
   private async share(r: Recipe): Promise<void> {
     const ok = await copyText(shareUrl({ view: 'lab', tab: 'recipes', recipe: r.id }));

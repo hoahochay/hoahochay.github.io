@@ -487,3 +487,8 @@ kbd {
 
 /* Đang kéo hóa chất trên điện thoại: ngăn kéo mờ đi để thấy và thả vào dụng cụ phía sau */
 body.chem-dragging #left { opacity: 0.12; pointer-events: none; transition: opacity .15s; }
+
+/* Đang chạy thí nghiệm mẫu: chỉ xem. Làm mờ các nút thao tác và kho hóa chất */
+body.recipe-playing #speed,
+body.recipe-playing #btn-stir, body.recipe-playing #btn-heat, body.recipe-playing #btn-empty, body.recipe-playing #btn-invert,
+body.recipe-playing #chem .chem { opacity: 0.4; }

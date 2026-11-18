@@ -2,18 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { speechText } from '../web/speech';
 
 describe('speechText', () => {
-  it('đánh vần công thức, phương trình và ion', () => {
-    expect(speechText('Zn + 2HCl → ZnCl₂ + H₂↑')).toBe('dét nờ cộng hai hát xê lờ tạo thành dét nờ xê lờ hai cộng hát hai');
-    expect(speechText('kết tủa Cu(OH)₂')).toBe('kết tủa xê u ô hát hai lần');
-    expect(speechText('ion Cu²⁺ và SO₄²⁻')).toBe('ion xê u hai cộng và ét ô bốn hai trừ');
-    expect(speechText('Fe + S → FeS')).toBe('ép e cộng ét tạo thành ép e ét');
+  it('thay tên tiếng Anh bằng công thức, giữ nguyên phần còn lại', () => {
+    expect(speechText('Ống (2): lấy 2 mL dung dịch copper(II) sulfate.')).toBe('Ống 2: lấy 2 mL dung dịch CuSO₄.');
+    expect(speechText('Magnesium cháy tạo thành magnesium oxide.')).toBe('mờ gờ cháy tạo thành MgO.');
+    expect(speechText('khí hydrogen, ion hydroxide, hydrochloric acid')).toBe('khí H₂, ion OH⁻, HCl');
+    expect(speechText('kết tủa copper(II) hydroxide')).toBe('kết tủa Cu(OH)₂');
   });
-  it('không đụng tới chữ tiếng Việt trùng kí hiệu nguyên tố', () => {
-    expect(speechText('Ba ống nghiệm')).toBe('Ba ống nghiệm');
+  it('ngoại lệ Mg: đọc "mờ gờ" khi đứng riêng', () => {
+    expect(speechText('2Mg + O₂ → 2MgO')).toBe('2 mờ gờ + O₂ → 2MgO');
+    expect(speechText('kết tủa Mg(OH)₂')).toBe('kết tủa mờ gờ(OH)₂');
   });
-  it('số thứ tự ống, hóa trị, nồng độ, tỉ lệ', () => {
-    expect(speechText('Ống (1): cho 0,7 g bột sắt.')).toBe('Ống số một: cho 0,7 g bột sắt.');
-    expect(speechText('copper(II) sulfate 0,5M')).toBe('copper hai sulfate 0,5 mol trên lít');
-    expect(speechText('tỉ lệ 7 : 4')).toBe('tỉ lệ 7 trên 4');
+  it('bỏ ngoặc quanh số thứ tự ống', () => {
+    expect(speechText('ở ống (1) và ống (3).')).toBe('ở ống 1 và ống 3.');
+  });
+  it('không đụng tới công thức và chữ tiếng Việt', () => {
+    expect(speechText('Zn + 2HCl → ZnCl₂ + H₂↑')).toBe('Zn + 2HCl → ZnCl₂ + H₂↑');
+    expect(speechText('Bột sắt và bột lưu huỳnh')).toBe('Bột sắt và bột lưu huỳnh');
   });
 });

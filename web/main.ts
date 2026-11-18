@@ -138,13 +138,23 @@ let simTime = 0;
 let simAcc = 0;
 
 const hud = new Hud({
-  onSpeed: (s) => (speed = s),
-  onStir: () => stir(),
-  onHeat: () => toggleHeat(),
-  onEmpty: () => empty(),
+  onSpeed: (s) => (locked() ? hud.setSpeed(speed) : (speed = s)),
+  onStir: () => locked() || stir(),
+  onHeat: () => locked() || toggleHeat(),
+  onEmpty: () => locked() || empty(),
   onFocus: () => toggleFocus(),
-  onInvert: () => invert(),
+  onInvert: () => locked() || invert(),
 });
+
+/**
+ * Đang chạy thí nghiệm mẫu thì phòng thí nghiệm chỉ để xem: không cho thêm hóa chất, đun, đổ…
+ * (vẫn xoay / phóng to cảnh, chọn dụng cụ để xem thông tin). Trả về true và báo nếu đang khóa.
+ */
+function locked(): boolean {
+  if (!player.playing) return false;
+  player.toast('Đang chạy thí nghiệm mẫu: chỉ xem. Bấm ✕ để dừng rồi tự làm.');
+  return true;
+}
 
 function log(text: string, kind: LogEntry['kind'] = 'action', vessel = selected?.name ?? '') {
   hud.log({ t: simTime, vessel, text, kind });
@@ -1097,6 +1107,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const armed = chemPanel.armed;
   if (armed) {
     chemPanel.arm(null);
+    if (o && locked()) return;
     if (o?.userData.kind === 'vessel') dropEntry(armed.entry, armed.amount, o.userData.view);
     else if (o?.userData.kind === 'lamp') dropOnLamp(armed.entry);
     return;
@@ -1109,10 +1120,10 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     return;
   }
   if (o?.userData.kind === 'vessel') select(o.userData.view);
-  else if (o?.userData.kind === 'lamp') toggleHeat();
+  else if (o?.userData.kind === 'lamp') locked() || toggleHeat();
   else if (o?.userData.kind === 'syringe' && !syringePanel.visible && syringeView.syringe.volumeML > 0) syringePanel.show(true);
   else if (o?.userData.kind === 'balance') {
-    if (selected && selected !== onBalance) placeOnBalance(selected);
+    if (selected && selected !== onBalance) locked() || placeOnBalance(selected);
     else if (!balancePanel.visible) balancePanel.start(simTime, balanceReading(), balanceNote());
   }
 });
@@ -1202,6 +1213,8 @@ window.addEventListener('keydown', (e) => {
   const n = Number(e.key);
   if (n >= 1 && n <= views.length) select(views[n - 1]);
   if (e.key === ' ') {
+    e.preventDefault();
+    if (locked()) return;
     speed = speed === 0 ? 1 : 0;
     hud.setSpeed(speed);
     e.preventDefault();
@@ -1222,8 +1235,9 @@ const chemPanel = new ChemPanel(document.getElementById('chem')!, CHEMICALS, ren
     hoverView = t instanceof VesselView ? t : null;
     hoverView?.setHover(true);
   },
-  drop: (entry, amount, t) => (t === lamp ? dropOnLamp(entry) : dropEntry(entry, amount, t as VesselView)),
+  drop: (entry, amount, t) => locked() || (t === lamp ? dropOnLamp(entry) : dropEntry(entry, amount, t as VesselView)),
   armChanged: (entry, amount) => {
+    if (entry && locked()) return chemPanel.arm(null);
     if (entry) revealScene();
     hud.hint(entry
     ? `Bấm vào dụng cụ để ${entry.kind === 'tool' ? `dùng ${entry.title.toLowerCase()}` : `cho ${fmt(amount)} ${entry.unit} ${entry.formula} vào`} (bấm chỗ trống hoặc Esc để hủy)`
@@ -1371,6 +1385,7 @@ function syncRoute() {
     : { view: 'lab', tab: id ? 'recipes' : leftTab, recipe: id ?? undefined });
 }
 player.onChange = (r) => {
+  document.body.classList.toggle('recipe-playing', !!r);
   if (r) revealScene();
   syncRoute();
 };
