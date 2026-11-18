@@ -2,7 +2,7 @@
 import type { ToolKind } from './probes';
 import { describeStep } from './narration';
 import { copyText, shareUrl } from './router';
-import { BookId, BOOKS, gradeOf, LabState, LESSONS, LessonId, Recipe, RECIPES, Step } from './recipes';
+import { BookId, BOOKS, gradeOf, LabState, LESSONS, LessonId, PlayScript, Recipe, RECIPES, Step } from './recipes';
 import { Narrator } from './voice';
 
 const BOOK_KEY = 'lab-book';
@@ -24,8 +24,10 @@ export interface LabApi {
   burn(chem: string): void;
   connect(src: number, dst: number | null): void;
   invert(vessel: number): void;
-  /** Đặt dụng cụ lên cân điện tử (tối đa hai ống nghiệm); null: lấy tất cả xuống */
-  weigh(vessel: number | null): void;
+  /** Đặt dụng cụ lên cân điện tử (tối đa hai ống nghiệm); off: lấy dụng cụ đó xuống; null: lấy tất cả xuống */
+  weigh(vessel: number | null, off?: boolean): void;
+  /** Đổ bỏ, tráng sạch dụng cụ */
+  empty(vessel: number): void;
   /** Đổ hết chất lỏng từ dụng cụ này sang dụng cụ khác */
   pour(src: number, dst: number): void;
   focus(vessels: number[] | null): void;
@@ -45,6 +47,14 @@ function readTime(text: string): number {
   return Math.min(10, Math.max(3, text.length / 15));
 }
 const frame = () => new Promise<number>((r) => requestAnimationFrame(r));
+const isRecipe = (r: PlayScript): r is Recipe => 'lesson' in r;
+/** Bước thao tác thật (không phải lời thuyết minh, chờ, đổi góc nhìn, câu hỏi) */
+const isAction = (s: Step) => !['say', 'wait', 'focus', 'predict'].includes(s.kind);
+
+/** Chống chèn HTML khi hiển thị chữ do người dùng nhập (tiêu đề, câu trả lời) */
+const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+export interface Guess { before: string; guess: string }
 
 function fmtTime(t: number): string {
   const m = Math.floor(t / 60);
@@ -58,14 +68,18 @@ export class RecipePlayer {
   private skip = false;
   /** Tốc độ mô phỏng mà bước hiện tại muốn (khôi phục khi bỏ tạm dừng) */
   private stepSpeed = 1;
-  private current: Recipe | null = null;
+  private current: PlayScript | null = null;
   private readonly ui: RecipeUi;
+  /** Câu trả lời của người xem ở các bước "đoán xem" */
+  private guesses: Guess[] = [];
   /** Giọng đọc lời thuyết minh */
   readonly voice = new Narrator();
   /** Bước hiện tại đang được đọc thành tiếng */
   private spoken = false;
   /** Gọi khi bắt đầu (recipe) hoặc dừng (null) một thí nghiệm, để cập nhật đường dẫn */
-  onChange: (r: Recipe | null) => void = () => {};
+  onChange: (r: PlayScript | null) => void = () => {};
+  /** Nút "Ghi thí nghiệm mới" trong danh sách */
+  onRecord: () => void = () => {};
 
   constructor(private readonly lab: LabApi, listRoot: HTMLElement) {
     this.ui = new RecipeUi(listRoot, {
@@ -79,6 +93,7 @@ export class RecipePlayer {
         this.ui.setVoice(this.voice.enabled);
       },
       closed: () => this.voice.stop(),
+      record: () => this.onRecord(),
     });
     this.ui.setVoice(this.voice.enabled);
   }
@@ -88,14 +103,20 @@ export class RecipePlayer {
     return this.current?.id ?? null;
   }
 
+  /** Thí nghiệm đang chạy (cả thí nghiệm chia sẻ) */
+  get currentScript(): PlayScript | null {
+    return this.current;
+  }
+
   get playing(): boolean {
     return this.current !== null;
   }
 
-  async play(r: Recipe): Promise<void> {
+  async play(r: PlayScript): Promise<void> {
     const id = ++this.runId;
     this.current = r;
     this.paused = false;
+    this.guesses = [];
     this.ui.start(r);
     this.onChange(r);
     this.lab.resetAll();
@@ -105,6 +126,10 @@ export class RecipePlayer {
       for (let i = 0; i < r.steps.length; i++) {
         const step = r.steps[i];
         this.skip = false;
+        if (step.kind === 'predict') {
+          await this.predict(r.steps.slice(i + 1).find(isAction), i, r.steps.length, id);
+          continue;
+        }
         const text = describeStep(step);
         this.ui.step(i, r.steps.length, text);
         this.spoken = this.voice.speak(text).spoken;
@@ -122,8 +147,10 @@ export class RecipePlayer {
       }
       this.setSpeed(1);
       this.current = null;
-      this.ui.finish(r);
-      this.voice.speak(r.result.explain);
+      if (isRecipe(r)) {
+        this.ui.finish(r);
+        this.voice.speak(r.result.explain);
+      } else this.ui.finishShared(r, this.guesses);
     } catch (e) {
       if (!(e instanceof Abort)) throw e;
     }
@@ -144,9 +171,33 @@ export class RecipePlayer {
     this.ui.toast(text);
   }
 
+  /**
+   * Dừng mô phỏng, hỏi người xem bước tiếp theo sẽ thế nào; chạy tiếp khi họ bấm "Xem kết quả".
+   * Không chấm đúng sai: câu trả lời chỉ hiện lại để tự so với hiện tượng thật.
+   */
+  private async predict(next: Step | undefined, i: number, n: number, id: number): Promise<void> {
+    if (!next) return;
+    const action = describeStep(next);
+    this.voice.stop();
+    this.ui.progress(null);
+    this.lab.setSpeed(0);
+    let answered: string | null = null;
+    this.ui.ask(i, n, action, (g) => (answered = g));
+    while (answered === null && !this.skip) {
+      await frame();
+      this.check(id);
+    }
+    const guess = answered ?? '';
+    this.ui.closeAsk(guess);
+    if (guess) this.guesses.push({ before: action, guess });
+    this.lab.setSpeed(this.paused ? 0 : this.stepSpeed);
+  }
+
   /** Sao chép link tới thí nghiệm để gửi cho người khác */
-  private async share(r: Recipe): Promise<void> {
-    const ok = await copyText(shareUrl({ view: 'lab', tab: 'recipes', recipe: r.id }));
+  private async share(r: PlayScript): Promise<void> {
+    const ok = await copyText(r.shared
+      ? shareUrl({ view: 'lab', tab: 'recipes', shared: r.shared.data })
+      : shareUrl({ view: 'lab', tab: 'recipes', recipe: r.id }));
     this.ui.toast(ok ? 'Đã sao chép link thí nghiệm' : 'Không sao chép được, hãy copy từ thanh địa chỉ');
   }
 
@@ -228,8 +279,14 @@ export class RecipePlayer {
         return this.untilIdle(id);
       case 'weigh':
         this.ui.progress(null);
-        this.lab.weigh(s.vessel);
+        this.lab.weigh(s.vessel, s.off);
         return this.untilIdle(id);
+      case 'empty':
+        this.ui.progress(null);
+        this.lab.empty(s.vessel);
+        return this.untilIdle(id);
+      case 'predict':
+        return;
       case 'pour':
         this.ui.progress(null);
         this.lab.pour(s.src, s.dst);
@@ -260,11 +317,13 @@ export class RecipePlayer {
 // ── Giao diện ────────────────────────────────────────────────────────────
 
 interface UiHandlers {
-  play(r: Recipe): void;
+  play(r: PlayScript): void;
   pause(): void;
   skip(): void;
   stop(): void;
-  share(r: Recipe): void;
+  share(r: PlayScript): void;
+  /** Bắt đầu ghi một thí nghiệm tự làm */
+  record(): void;
   /** Bật/tắt giọng đọc */
   voice(): void;
   /** Đóng bảng kết luận */
@@ -292,6 +351,12 @@ class RecipeUi {
         </div>
       </div>
       <div class="rb-text"></div>
+      <div class="rb-ask hidden">
+        <div class="rb-q"></div>
+        <div class="rb-ask-row"><input class="rb-guess-in" maxlength="120" placeholder="Em đoán… (không bắt buộc)" enterkeyhint="go">
+        <button class="rb-go on">Xem kết quả ▶</button></div>
+      </div>
+      <div class="rb-guess hidden"></div>
       <div class="rb-progress"><div class="rb-fill"></div><span class="rb-time"></span></div>`;
     this.q<HTMLButtonElement>('.rb-pause').onclick = () => h.pause();
     this.q<HTMLButtonElement>('.rb-skip').onclick = () => h.skip();
@@ -300,7 +365,35 @@ class RecipeUi {
     this.q<HTMLButtonElement>('.rb-share').onclick = () => this.current && h.share(this.current);
   }
 
-  private current: Recipe | null = null;
+  private current: PlayScript | null = null;
+  private onAnswer: ((g: string) => void) | null = null;
+
+  /** Hiện câu hỏi "đoán xem" thay cho lời thuyết minh */
+  ask(i: number, n: number, action: string, answer: (g: string) => void): void {
+    this.q('.rb-count').textContent = `Bước ${i + 1}/${n}`;
+    this.q('.rb-text').textContent = '🤔 Dừng lại một chút!';
+    this.q('.rb-q').textContent = `Bước tiếp theo: ${action} Theo em, sẽ có hiện tượng gì?`;
+    this.q('.rb-guess').classList.add('hidden');
+    const input = this.q<HTMLInputElement>('.rb-guess-in');
+    input.value = '';
+    this.onAnswer = answer;
+    const go = () => { this.onAnswer?.(input.value.trim()); this.onAnswer = null; };
+    this.q<HTMLButtonElement>('.rb-go').onclick = go;
+    input.onkeydown = (e) => { if (e.key === 'Enter') go(); e.stopPropagation(); };
+    this.q('.rb-ask').classList.remove('hidden');
+    this.bar.classList.add('asking');
+    // Trên điện thoại không tự mở bàn phím: chỉ nhập khi người xem muốn
+    if (!matchMedia('(pointer: coarse)').matches) input.focus();
+  }
+
+  closeAsk(guess: string): void {
+    this.onAnswer = null;
+    this.q('.rb-ask').classList.add('hidden');
+    this.bar.classList.remove('asking');
+    const g = this.q('.rb-guess');
+    g.textContent = guess ? `Em đoán: ${guess}` : '';
+    g.classList.toggle('hidden', !guess);
+  }
 
   /** Thông báo ngắn ở giữa màn hình */
   toast(text: string): void {
@@ -336,7 +429,12 @@ class RecipeUi {
     const chip = (v: number | 'all', label: string) =>
       `<button class="r-lv${this.gradeFilter === v ? ' on' : ''}" data-grade="${v}">${label}</button>`;
     this.listRoot.innerHTML =
-      `<div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Các thí nghiệm theo sách giáo khoa, xếp theo bài học.</div>
+      `<div class="r-mine">
+        <div class="r-mine-head">🎬 Thí nghiệm của em</div>
+        <div class="r-mine-text">Tự làm một thí nghiệm, chương trình ghi lại từng thao tác thành một link. Gửi link cho bạn bè: máy của bạn sẽ làm lại đúng như vậy, và có thể dừng lại đố bạn đoán trước hiện tượng.</div>
+        <button class="r-rec">⏺ Ghi thí nghiệm mới</button>
+      </div>
+      <div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Các thí nghiệm theo sách giáo khoa, xếp theo bài học.</div>
       <div class="r-books">${(Object.keys(BOOKS) as BookId[]).map((b) =>
         `<button class="r-book${this.book === b ? ' on' : ''}" data-book="${b}">${BOOKS[b]}</button>`).join('')}</div>
       <div class="r-levels">${chip('all', 'Tất cả các lớp')}${grades.map((g) => chip(g, `Lớp ${g}`)).join('')}</div>` +
@@ -354,6 +452,7 @@ class RecipeUi {
             ${r.page ? `<span class="r-src">SGK tr. ${r.page}</span>` : ''}
           </div>
         </div>`).join('')).join('');
+    this.listRoot.querySelector<HTMLButtonElement>('.r-rec')!.onclick = () => this.h.record();
     this.listRoot.querySelectorAll<HTMLButtonElement>('.r-book').forEach((b) => {
       b.onclick = () => this.setBook(b.dataset.book as BookId);
     });
@@ -367,15 +466,39 @@ class RecipeUi {
     });
   }
 
-  start(r: Recipe): void {
+  start(r: PlayScript): void {
     this.current = r;
     // Mở bằng link tới bài của bộ sách khác: chuyển danh sách sang bộ sách đó
-    this.setBook(LESSONS[r.lesson].book);
+    if (isRecipe(r)) this.setBook(LESSONS[r.lesson].book);
+    this.closeAsk('');
+    this.bar.classList.toggle('shared', !!r.shared);
     this.result.classList.add('hidden');
     this.bar.classList.remove('hidden');
     this.q('.rb-title').textContent = r.title;
     this.setPaused(false);
     this.listRoot.querySelectorAll<HTMLElement>('.recipe').forEach((el) => el.classList.toggle('active', el.dataset.id === r.id));
+  }
+
+  /** Kết thúc thí nghiệm tự làm (không có kết luận soạn sẵn) */
+  finishShared(r: PlayScript, guesses: Guess[]): void {
+    this.bar.classList.add('hidden');
+    this.result.innerHTML = `
+      <div class="rr-head"><span>✔ Xong thí nghiệm</span><button class="rr-close" title="Đóng">×</button></div>
+      <div class="rr-title">${esc(r.title)}</div>
+      <div class="rr-note">Thí nghiệm do người dùng tự làm và chia sẻ. Mọi hiện tượng được máy của em tính lại từ đầu, xem chi tiết trong Nhật ký.</div>
+      ${guesses.length ? `<div class="sec">Em đã đoán</div>
+      <ul>${guesses.map((g) => `<li><span class="rr-before">${esc(g.before)}</span><br>➜ ${esc(g.guess)}</li>`).join('')}</ul>
+      <p class="rr-note">So với những gì vừa thấy, em đoán đúng không? Đoán sai cũng tốt: đó là lúc mình học được điều mới.</p>` : ''}
+      <div class="rr-actions"><button class="rr-replay">↻ Xem lại</button><button class="rr-link">🔗 Sao chép link</button><button class="rr-ok on">🧪 Tự làm tiếp</button></div>`;
+    this.result.classList.remove('hidden');
+    const close = () => { this.h.closed(); this.hide(); };
+    this.result.querySelector<HTMLButtonElement>('.rr-close')!.onclick = close;
+    this.result.querySelector<HTMLButtonElement>('.rr-ok')!.onclick = () => {
+      close();
+      document.querySelector<HTMLButtonElement>('#left .tabs [data-tab="chem"]')?.click();
+    };
+    this.result.querySelector<HTMLButtonElement>('.rr-replay')!.onclick = () => this.h.play(r);
+    this.result.querySelector<HTMLButtonElement>('.rr-link')!.onclick = () => this.h.share(r);
   }
 
   step(i: number, n: number, text: string): void {

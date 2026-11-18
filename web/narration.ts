@@ -49,7 +49,10 @@ export function describeStep(s: Step): string {
       const c = CHEMICALS.find((x) => x.key === s.chem);
       return s.text ?? `Dùng kẹp sắt giữ ${c?.formula ?? s.chem} đốt trên ngọn lửa đèn cồn.`;
     }
-    case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.' : `Đặt ${vn(s.vessel)} lên cân điện tử.`);
+    case 'weigh': return s.text ?? (s.vessel === null ? 'Lấy dụng cụ khỏi cân.'
+      : s.off ? `Lấy ${vn(s.vessel)} khỏi cân.` : `Đặt ${vn(s.vessel)} lên cân điện tử.`);
+    case 'empty': return s.text ?? `Đổ bỏ chất trong ${vn(s.vessel)}, tráng sạch.`;
+    case 'predict': return s.text ?? 'Em đoán xem bước tiếp theo sẽ có hiện tượng gì?';
     case 'pour': return s.text ?? `Đổ ${vn(s.src)} vào ${vn(s.dst)}.`;
     case 'focus': return '';
   }

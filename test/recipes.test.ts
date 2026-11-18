@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
-import { BEAKER, BOOKS, FLASK, LabState, LESSONS, Recipe, RECIPES, SYRINGE } from '../web/recipes';
+import { BEAKER, BOOKS, FLASK, LabState, LESSONS, PlayScript, RECIPES, SYRINGE } from '../web/recipes';
 
 interface RunResult {
   vessels: Vessel[];
@@ -17,7 +17,7 @@ interface RunResult {
   weighings: number[];
 }
 
-function runRecipe(r: Recipe): RunResult {
+function runRecipe(r: PlayScript): RunResult {
   const vessels = [0, 1, 2, 3].map(() => new Vessel(VESSELS.testTube));
   vessels.push(new Vessel(VESSELS.beaker100), new Vessel(VESSELS.flask100));
   const syringe = new GasSyringe(100);
@@ -79,10 +79,16 @@ function runRecipe(r: Recipe): RunResult {
         break;
       case 'weigh':
         if (s.vessel === null) onBalance = [];
+        else if (s.off) onBalance = onBalance.filter((i) => i !== s.vessel);
         else if (!onBalance.includes(s.vessel)) {
           const tubes = s.vessel < BEAKER && onBalance.length < 2 && onBalance.every((i) => i < BEAKER);
           onBalance = tubes ? [...onBalance, s.vessel] : [s.vessel];
         }
+        break;
+      case 'empty':
+        vessels[s.vessel] = new Vessel(vessels[s.vessel].spec);
+        break;
+      case 'predict':
         break;
       case 'pour': {
         const src = vessels[s.src], dst = vessels[s.dst];

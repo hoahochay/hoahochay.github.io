@@ -30,7 +30,12 @@ export type Step =
   | { kind: 'burn'; chem: string; text?: string }
   | { kind: 'connect'; src: number; dst: number | null; text?: string }
   | { kind: 'invert'; vessel: number; text?: string }
-  | { kind: 'weigh'; vessel: number | null; text?: string }
+  /** Đặt dụng cụ lên cân; `off`: lấy dụng cụ đó xuống; vessel null: lấy tất cả xuống */
+  | { kind: 'weigh'; vessel: number | null; off?: boolean; text?: string }
+  /** Đổ bỏ chất trong dụng cụ, tráng sạch */
+  | { kind: 'empty'; vessel: number; text?: string }
+  /** Dừng lại cho người xem đoán bước tiếp theo sẽ có hiện tượng gì */
+  | { kind: 'predict'; text?: string }
   /** Đổ hết chất lỏng từ dụng cụ src sang dụng cụ dst */
   | { kind: 'pour'; src: number; dst: number; text?: string }
   | { kind: 'focus'; vessels: number[] | null };
@@ -62,16 +67,22 @@ export type LessonId = keyof typeof LESSONS;
 export const gradeOf = (r: Recipe): number => LESSONS[r.lesson].grade;
 
 
-export interface Recipe {
+/** Những gì trình phát cần để chạy: thí nghiệm mẫu, hoặc thí nghiệm tự làm được chia sẻ bằng link */
+export interface PlayScript {
   id: string;
   title: string;
+  steps: Step[];
+  /** Thí nghiệm tự làm: dữ liệu trong link (#/chia-se/<data>) */
+  shared?: { data: string };
+}
+
+export interface Recipe extends PlayScript {
   lesson: LessonId;
   /** Khái niệm chính, hiện dưới dạng thẻ */
   concepts: string[];
   /** Trang trong SGK có thí nghiệm này */
   page?: number;
   summary: string;
-  steps: Step[];
   result: { phenomena: string[]; equations: string[]; explain: string };
 }
 

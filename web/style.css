@@ -495,3 +495,58 @@ body.chem-dragging #left { opacity: 0.12; pointer-events: none; transition: opac
 body.recipe-playing #speed,
 body.recipe-playing #btn-stir, body.recipe-playing #btn-heat, body.recipe-playing #btn-empty, body.recipe-playing #btn-invert,
 body.recipe-playing #chem .chem { opacity: 0.4; }
+
+/* ── Thí nghiệm tự làm: ghi thao tác, đoán hiện tượng, chia sẻ ── */
+.r-mine { margin: 8px 0 6px; padding: 10px 12px; border-radius: 10px; background: linear-gradient(135deg, #fff6e0, #fdeeee); border: 1px solid #f1dcc0; }
+.r-mine-head { font-weight: 700; font-size: 13.5px; }
+.r-mine-text { font-size: 12px; color: var(--muted); margin: 4px 0 8px; line-height: 1.45; }
+.r-rec { width: 100%; font-weight: 600; }
+.r-rec::first-letter { color: #d33; }
+
+#rec-bar {
+  left: 50%; top: 66px; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; font-size: 13px;
+  max-width: calc(100vw - 16px);
+}
+#rec-bar.hidden { display: none; }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #e0302e; animation: rec-blink 1.2s infinite; flex: none; }
+@keyframes rec-blink { 50% { opacity: 0.25; } }
+.rec-label { font-weight: 700; color: #c62828; white-space: nowrap; }
+.rec-count { color: var(--muted); white-space: nowrap; margin-right: 4px; }
+#rec-bar button { padding: 4px 9px; white-space: nowrap; }
+#rec-bar .rec-ask:disabled { opacity: 0.75; cursor: default; border-color: #f0c36d; background: #fff6e0; }
+body.recording .toast { top: 118px; }
+
+.rb-ask { margin: 2px 0 8px; padding: 8px 10px; border-radius: 9px; background: #fff6e0; border: 1px solid #f0d9a8; }
+.rb-ask.hidden, .rb-guess.hidden { display: none; }
+.rb-q { font-size: 14px; line-height: 1.45; margin-bottom: 6px; }
+.rb-ask-row { display: flex; gap: 6px; }
+.rb-guess-in { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; background: #fff; outline: none; }
+.rb-guess-in:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.rb-go { white-space: nowrap; }
+#recipe-bar.asking .rb-progress { display: none; }
+.rb-guess { font-size: 12.5px; color: #8a5a00; margin: -4px 0 6px; }
+.rr-note { color: var(--muted); font-size: 12.5px; margin: 4px 0 6px !important; }
+.rr-before { color: var(--muted); }
+#recipe-result .rr-actions { flex-wrap: wrap; }
+
+#share-dialog { position: fixed; inset: 0; z-index: 130; background: rgba(20, 28, 40, 0.35); display: grid; place-items: center; padding: 16px; }
+#share-dialog.hidden { display: none; }
+.sd-card { position: static; width: min(460px, 100%); padding: 14px 18px 16px; font-size: 13.5px; background: rgba(255, 255, 255, 0.98); }
+.sd-label { display: block; font-weight: 600; margin: 10px 0 4px; }
+.sd-title, .sd-url { display: block; width: 100%; box-sizing: border-box; font: inherit; font-weight: 400; margin-top: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; outline: none; }
+.sd-title:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sd-meta { color: var(--muted); font-size: 12.5px; }
+.sd-actions { display: flex; justify-content: flex-end; gap: 6px; margin: 12px 0 4px; }
+.sd-out { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.sd-out.hidden { display: none; }
+.sd-url { margin: 0; font-size: 12px; color: var(--muted); }
+.sd-copy { white-space: nowrap; }
+.sd-note { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.45; }
+
+@media (max-width: 700px) {
+  #rec-bar { top: 54px; gap: 5px; padding: 5px 6px 5px 10px; font-size: 12px; }
+  #rec-bar .rec-label { display: none; }
+  #rec-bar button { padding: 3px 7px; font-size: 12px; }
+  body.recording .toast { top: 100px; }
+}

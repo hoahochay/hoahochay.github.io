@@ -73,6 +73,10 @@ function helpHtml(phone: boolean): string {
         <p>Tab <b>Thí nghiệm mẫu</b>${pick('', ' trong <b>🧪 Kho</b>')} có các thí nghiệm theo sách giáo khoa (chọn bộ Kết nối tri thức hoặc Chân trời sáng tạo), xếp theo bài học và lọc theo lớp. Chương trình tự làm từng bước, trong lúc đó phòng thí nghiệm chỉ để xem; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Lời thuyết minh được đọc thành tiếng; ${pick('bấm', 'chạm')} 🔊 để tắt hoặc bật giọng đọc. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
       </section>
       <section>
+        <h3>🎬 Thí nghiệm của em</h3>
+        <p>Trong tab <b>Thí nghiệm mẫu</b>, ${pick('bấm', 'chạm')} <b>⏺ Ghi thí nghiệm mới</b>: bàn được dọn sạch và mọi thao tác của em được ghi lại. Muốn đố bạn, ${pick('bấm', 'chạm')} <b>🤔 Đố bạn đoán</b> ngay trước thao tác quan trọng: người xem sẽ được hỏi đoán hiện tượng rồi mới thấy kết quả. ${pick('Bấm', 'Chạm')} <b>⏹ Xong</b>, đặt tên rồi tạo link để gửi cho bạn bè. Thí nghiệm nằm ngay trong link (không lưu trên máy chủ nào); người mở link sẽ thấy máy của mình làm lại đúng các thao tác đó.</p>
+      </section>
+      <section>
         <h3>📋 Nhật ký hiện tượng</h3>
         <p>Mọi thao tác và hiện tượng (sủi bọt, kết tủa, đổi màu, nóng lên…) được ghi lại ${pick('ở bảng bên phải', 'trong <b>ℹ️ Thông tin</b>')}, kèm thời điểm.</p>
       </section>

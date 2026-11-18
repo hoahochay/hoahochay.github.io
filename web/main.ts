@@ -6,7 +6,7 @@ import { contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, ma
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
-import { RECIPES, SYRINGE } from './recipes';
+import { RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
@@ -24,7 +24,9 @@ import { SyringeView } from './syringe';
 import { MeasurePanel } from './measurePanel';
 import { BalanceView } from './balance';
 import { HelpOverlay } from './help';
-import { parseHash, Route, setRoute } from './router';
+import { parseHash, Route, setRoute, shareUrl } from './router';
+import { decodeShare, encodeShare, Recorder, SHARE_VERSION, ShareError, sharedScript } from './share';
+import { RecordBar, ShareDialog } from './recordUi';
 
 // ── Renderer, cảnh, camera ───────────────────────────────────────────────
 const app = document.getElementById('app')!;
@@ -122,6 +124,16 @@ const isOnBalance = (v: VesselView) => onBalance.includes(v);
  */
 const balanceReading = () => Math.round(onBalance.reduce((g, v) => g + contentsMassG(v.vessel.mix), 0) * 100) / 100 + 0;
 const fmtG = (g: number) => g.toFixed(2).replace('.', ',');
+
+/** Ghi thao tác của người dùng thành thí nghiệm tự làm (share.ts) */
+const recorder = new Recorder();
+const idx = (v: VesselView) => views.indexOf(v);
+function rec(step: ScriptStep) {
+  if (!recorder.active || player.playing) return;
+  recorder.push(step, simTime);
+  if (step.kind !== 'predict') askPending = false;
+  updateRecBar();
+}
 
 const lamp = new LampView();
 const LAMP_POS = new THREE.Vector3(-17, 0, 5);
@@ -361,6 +373,7 @@ function magnetTest(view: VesselView) {
 }
 
 function probe(kind: ToolKind, view: VesselView) {
+  rec({ kind: 'probe', tool: kind, vessel: idx(view) });
   if (kind === 'magnet') return magnetTest(view);
   const p = new ProbeView(kind);
   const isPaper = kind === 'litmus';
@@ -477,6 +490,8 @@ function burnInFlame(item: SolidItem) {
   const refusal = burnRefusal(item);
   if (refusal) return log(refusal, 'warning', LAMP_NAME);
   if (heatingView) return log('Đèn cồn đang dùng để đun. Tắt đèn trước rồi mới đốt mẫu.', 'warning', LAMP_NAME);
+  const key = CHEMICALS.find((c) => c.solid === item)?.key;
+  if (key) rec({ kind: 'burn', chem: key });
   const out = burnOutcome(item.id);
   const tongs = new TongsView(item);
   const g = tongs.group;
@@ -615,6 +630,7 @@ function placeOnBalance(v: VesselView, toggle = true) {
   const fits = v.kind.type === 'tube' && onBalance.length < 2 && onBalance.every((o) => o.kind.type === 'tube');
   if (!fits) takeOffBalance(undefined, true);
   onBalance.push(v);
+  rec({ kind: 'weigh', vessel: idx(v) });
   select(v);
   animator.run(
     // Ống đang nằm trên cân dịch sang một bên nhường chỗ
@@ -652,6 +668,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
     log(`Chỉ đổ được ${fmt(mL)} mL, ${dst.name.toLowerCase()} sẽ đầy.`, 'warning', src.name);
   }
   addPending(dst, mL);
+  rec({ kind: 'pour', src: idx(src), dst: idx(dst) });
   const theta = -1.85;
   const h = src.kind.profile.height;
   let from = new THREE.Vector3();
@@ -702,6 +719,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
 function takeOffBalance(v?: VesselView, quiet = false) {
   const off = v ? onBalance.filter((o) => o === v) : [...onBalance];
   if (!off.length) return;
+  rec(v ? { kind: 'weigh', vessel: idx(v), off: true } : { kind: 'weigh', vessel: null });
   onBalance = onBalance.filter((o) => !off.includes(o));
   animator.run(...off.map((o) => moveVessel(o, () => restPose(o))), ...onBalance.map((o) => moveVessel(o, () => restPose(o), 0.5)));
   balancePanel.start(simTime, balanceReading(), balanceNote());
@@ -718,6 +736,7 @@ function disconnect(v: VesselView, quiet = false) {
     scene.remove(t.group);
     t.dispose();
     tubes.delete(src);
+    rec({ kind: 'connect', src: idx(src), dst: null });
     if (!quiet) log(`Tháo ống dẫn khí sang ${t.dst.name.toLowerCase()}`, 'action', src.name);
   }
 }
@@ -737,6 +756,7 @@ function connect(src: VesselView, dst: VesselView | SyringeView) {
   tubes.set(src, t);
   scene.add(t.group);
   src.vessel.outlet = dst.vessel;
+  rec({ kind: 'connect', src: idx(src), dst: idx(dst) });
   const into = dst.vessel.inverted ? 'luồn vào miệng' : dst.vessel.mix.volumeL > 0 ? 'nhúng ngập trong dung dịch của' : 'đặt sát đáy';
   log(`Đậy nút, lắp ống dẫn khí ${into} ${dst.name.toLowerCase()}`, 'action', src.name);
 }
@@ -754,6 +774,7 @@ function connectSyringe(src: VesselView) {
   scene.add(t.group);
   syringeView.reset();
   src.vessel.outlet = syringeView.syringe;
+  rec({ kind: 'connect', src: idx(src), dst: SYRINGE });
   syringePanel.start(simTime, 0, `nối với ${src.name.toLowerCase()}`);
   log('Đậy nút, nối ống dẫn khí vào xi lanh đo khí (pít-tông ở vạch 0)', 'action', src.name);
 }
@@ -786,6 +807,7 @@ function invert(v = requireSelected(), quiet = false) {
   if (heatingView === v) return log('Không úp ống đang đun.', 'warning', v.name);
   if (v.vessel.outlet) return log('Ống đang được nút để phát khí, không úp được.', 'warning', v.name);
   const toInverted = !v.vessel.inverted;
+  rec({ kind: 'invert', vessel: idx(v) });
   let from = new THREE.Vector3();
   let dest = new THREE.Vector3();
   animator.run(
@@ -831,6 +853,7 @@ function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
     return;
   }
   select(view);
+  rec({ kind: 'add', chem: entry.key, amount, vessel: idx(view) });
   if (entry.solid) dropSolid(entry.solid, amount, view);
   else pour(entry.reagent!, amount, view);
 }
@@ -852,6 +875,7 @@ function moveVessel(v: VesselView, to: () => THREE.Vector3, dur = 0.9) {
 function stopHeat() {
   const v = heatingView;
   if (!v) return;
+  rec({ kind: 'heat', vessel: idx(v), on: false });
   heatingView = null;
   v.vessel.heaterW = 0;
   lamp.setLit(false);
@@ -869,6 +893,7 @@ function startHeat(v: VesselView) {
   if (v.vessel.inverted) return log('Không đun ống đang úp ngược.', 'warning', v.name);
   if (isOnBalance(v)) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
   if (heatingView) stopHeat();
+  rec({ kind: 'heat', vessel: idx(v), on: true });
   heatingView = v;
   v.heating = true;
   hud.setHeating(true);
@@ -892,6 +917,7 @@ function toggleHeat() {
 
 function stir(v = requireSelected()) {
   if (!v) return;
+  rec({ kind: 'stir', vessel: idx(v) });
   const base = v.group.rotation.z;
   animator.run(
     tween(0.8, (t) => (v.group.rotation.z = base + Math.sin(t * Math.PI * 6) * 0.12 * (1 - t))),
@@ -907,6 +933,7 @@ function empty() {
   const v = requireSelected();
   if (!v) return;
   if (v.vessel.inverted) return invert(v);
+  rec({ kind: 'empty', vessel: idx(v) });
   if (heatingView === v) toggleHeat();
   disconnect(v);
   animator.run(
@@ -1118,11 +1145,16 @@ function finishDrag(v: VesselView, zone: DropZone) {
   if (zone instanceof VesselView) {
     if (!pourVessel(v, zone)) settle(v);
   } else if (zone === 'lamp') {
-    if (isOnBalance(v)) { onBalance = onBalance.filter((o) => o !== v); balancePanel.start(simTime, balanceReading(), balanceNote()); }
+    if (isOnBalance(v)) {
+      rec({ kind: 'weigh', vessel: idx(v), off: true });
+      onBalance = onBalance.filter((o) => o !== v);
+      balancePanel.start(simTime, balanceReading(), balanceNote());
+    }
     select(v);
     if (heatingView !== v) startHeat(v);
   } else if (zone === 'balance') {
     if (heatingView === v) {
+      rec({ kind: 'heat', vessel: idx(v), on: false });
       heatingView = null;
       v.vessel.heaterW = 0;
       v.heating = false;
@@ -1381,7 +1413,8 @@ const player = new RecipePlayer({
   burn: (chem) => burnInFlame(CHEMICALS.find((c) => c.key === chem)!.solid!),
   connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
   invert: (vessel) => invert(views[vessel]),
-  weigh: (vessel) => (vessel === null ? takeOffBalance() : placeOnBalance(views[vessel], false)),
+  weigh: (vessel, off) => (vessel === null ? takeOffBalance() : off ? takeOffBalance(views[vessel]) : placeOnBalance(views[vessel], false)),
+  empty: (vessel) => { select(views[vessel]); empty(); },
   pour: (src, dst) => void pourVessel(views[src], views[dst]),
   focus: (vs) => panTo(vs ? vs.map((i) => views[i]) : null),
   resetAll,
@@ -1478,12 +1511,13 @@ function revealScene() {
 let applyingRoute = false;
 function syncRoute() {
   if (applyingRoute) return;
-  const id = player.currentId;
+  const cur = player.currentScript;
   setRoute(view === 'table'
     ? { view: 'table', element: tableElement ?? undefined }
-    : { view: 'lab', tab: id ? 'recipes' : leftTab, recipe: id ?? undefined });
+    : { view: 'lab', tab: cur ? 'recipes' : leftTab, recipe: cur && !cur.shared ? cur.id : undefined, shared: cur?.shared?.data });
 }
 player.onChange = (r) => {
+  if (r && recorder.active) cancelRecording('Đã dừng ghi vì bắt đầu xem một thí nghiệm khác');
   document.body.classList.toggle('recipe-playing', !!r);
   if (r) revealScene();
   syncRoute();
@@ -1499,6 +1533,10 @@ function applyRoute(r: Route) {
     }
     showView('lab');
     showTab(r.tab);
+    if (r.shared) {
+      if (player.currentScript?.shared?.data !== r.shared) void playShared(r.shared);
+      return;
+    }
     const recipe = r.recipe ? RECIPES.find((x) => x.id === r.recipe) : undefined;
     if (recipe && player.currentId !== recipe.id) void player.play(recipe);
   } finally {
@@ -1507,6 +1545,76 @@ function applyRoute(r: Route) {
   }
 }
 window.addEventListener('hashchange', () => applyRoute(parseHash(location.hash)));
+
+// ── Thí nghiệm tự làm: ghi thao tác, chia sẻ bằng link ───────────────────
+let askPending = false;
+const recordBar = new RecordBar({
+  predict: () => {
+    if (!recorder.active || askPending) return;
+    rec({ kind: 'predict' });
+    askPending = true;
+    updateRecBar();
+  },
+  finish: finishRecording,
+  cancel: () => cancelRecording('Đã hủy ghi'),
+});
+const shareDialog = new ShareDialog();
+
+function updateRecBar() {
+  recordBar.update(recorder.steps().filter((s) => s.kind !== 'wait' && s.kind !== 'predict').length, askPending);
+}
+
+function startRecording() {
+  if (player.playing) player.stop();
+  resetAll();
+  speed = 1;
+  hud.setSpeed(1);
+  recorder.start(simTime);
+  askPending = false;
+  recordBar.show(true);
+  updateRecBar();
+  showTab('chem');
+  if (phone.matches) setSheet('chem');
+  player.toast('Bắt đầu ghi: bàn thí nghiệm đã được dọn sạch');
+}
+player.onRecord = startRecording;
+
+function cancelRecording(msg: string) {
+  recorder.stop(simTime);
+  recordBar.show(false);
+  player.toast(msg);
+}
+
+function finishRecording() {
+  const all = recorder.stop(simTime);
+  recordBar.show(false);
+  // Câu hỏi "đoán xem" phía sau thao tác cuối cùng thì không còn gì để đoán
+  let last = -1;
+  all.forEach((s, i) => { if (s.kind !== 'wait' && s.kind !== 'predict') last = i; });
+  const steps = all.filter((s, i) => s.kind !== 'predict' || i < last);
+  if (last < 0) return player.toast('Chưa có thao tác nào để chia sẻ');
+  const encode = (title: string) => encodeShare({ version: SHARE_VERSION, title, steps });
+  shareDialog.open(steps, {
+    preview: async (title) => {
+      const data = await encode(title);
+      await playShared(data);
+    },
+    link: async (title) => shareUrl({ view: 'lab', tab: 'recipes', shared: await encode(title) }),
+  });
+}
+
+/** Mở thí nghiệm được chia sẻ (dữ liệu từ link) và chạy lại */
+async function playShared(data: string) {
+  try {
+    const e = await decodeShare(data);
+    showView('lab');
+    showTab('recipes');
+    if (e.version !== SHARE_VERSION) player.toast('Thí nghiệm này tạo bằng phiên bản cũ của ứng dụng, kết quả có thể hơi khác');
+    void player.play(sharedScript(e, data));
+  } catch (err) {
+    player.toast(`Không mở được thí nghiệm: ${err instanceof ShareError ? err.message : 'link hỏng'}`);
+  }
+}
 
 // ── Vòng lặp chính ───────────────────────────────────────────────────────
 const clock = new THREE.Clock();
@@ -1575,7 +1683,7 @@ frame();
 const startRoute = parseHash(location.hash);
 applyRoute(startRoute);
 // Người mở link tới một bài cụ thể muốn xem ngay; hướng dẫn vẫn mở được bằng nút ❓
-if (startRoute.view === 'lab' && !startRoute.recipe) help.openIfFirstVisit();
+if (startRoute.view === 'lab' && !startRoute.recipe && !startRoute.shared) help.openIfFirstVisit();
 
 // API cho bảng điều khiển trình duyệt / kiểm thử
 Object.assign(window, {
