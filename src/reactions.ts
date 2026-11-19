@@ -16,6 +16,14 @@ function cucl4Excess(mix: Mixture): number {
   return ((cu + cx) * K) / (1 + K) - cx;
 }
 
+/** Lượng xà phòng còn thiếu so với trạng thái cân bằng muối kết (mol/s, thời gian hồi phục 2 s) */
+function soapExcess(mix: Mixture): number {
+  const ol = mix.get('oleate'), sp = mix.get('soap');
+  if (ol + sp <= 0) return 0;
+  const K = (mix.conc('Na+') / 3) ** 6 * Math.exp(-(mix.tempK - 298) / 10);
+  return (((ol + sp) * K) / (1 + K) - sp) / 2;
+}
+
 export const REACTIONS: KineticReaction[] = [
   // ── Kim loại + acid ──────────────────────────────────────────────────
   {
@@ -76,6 +84,14 @@ export const REACTIONS: KineticReaction[] = [
     equation: 'Fe + S → FeS',
     reactants: { Fe: 1, S: 1 }, products: { FeS: 1 },
     rate: massAction({ k25: 7e-19, Ea: 150000, surface: 'Fe' }),
+    productForm: 'powder',
+  },
+  // Nhôm + lưu huỳnh (SGK Hóa 12 Bài 19): cần đun nóng để khơi mào, sau đó tự cháy, tỏa rất nhiều nhiệt
+  {
+    id: 'al_s', name: 'Nhôm tác dụng với lưu huỳnh',
+    equation: '2Al + 3S →(t°) Al₂S₃',
+    reactants: { Al: 2, S: 3 }, products: { Al2S3: 1 },
+    rate: massAction({ k25: 7e-19, Ea: 150000, surface: 'Al' }),
     productForm: 'powder',
   },
 
@@ -434,5 +450,84 @@ export const REACTIONS: KineticReaction[] = [
     equation: '10FeSO₄ + 2KMnO₄ + 8H₂SO₄ → 5Fe₂(SO₄)₃ + K₂SO₄ + 2MnSO₄ + 8H₂O',
     reactants: { 'Fe^2+': 5, 'MnO4-': 1, 'H+': 8 }, products: { 'Fe^3+': 5, 'Mn^2+': 1, H2O: 4 },
     rate: massAction({ k25: 1e4, Ea: 30000, orders: { 'Fe^2+': 1, 'MnO4-': 1 } }),
+  },
+
+  // ════ Lớp 12 · Bài 22: ăn mòn điện hóa ═══════════════════════════════════
+  // Sắt trong nước tiếp xúc không khí bị gỉ rất chậm (vài ngày mới thấy rõ); O₂ lấy từ không khí.
+  // Khi sắt tiếp xúc kẽm (kim loại hoạt động mạnh hơn), kẽm là anode bị ăn mòn, sắt được bảo vệ.
+  {
+    id: 'fe_rust', name: 'Sắt bị ăn mòn (gỉ) trong nước',
+    equation: '4Fe + 3O₂ + 2nH₂O → 2Fe₂O₃·nH₂O',
+    reactants: { Fe: 1 }, products: { FeOOH: 1 },
+    rate: (ctx) => ctx.V > 0 ? arrhenius(5e-11, 40000, ctx.T) * ctx.surface('Fe') * (ctx.surface('Zn') > 0 ? 0.01 : 1) : 0,
+  },
+  {
+    id: 'zn_corrosion', name: 'Kẽm bị ăn mòn trong nước',
+    equation: '2Zn + O₂ + 2H₂O → 2Zn(OH)₂',
+    reactants: { Zn: 1 }, products: { 'Zn(OH)2': 1 },
+    rate: (ctx) => ctx.V > 0 ? arrhenius(6e-12, 40000, ctx.T) * ctx.surface('Zn') * (ctx.surface('Fe') > 0 ? 8 : 1) : 0,
+  },
+
+  // ════ Lớp 12 · Chương 1: ester, chất béo ══════════════════════════════════
+  // Thủy phân ester trong acid: thuận nghịch (đến cân bằng chỉ khoảng 1/3 ester bị thủy phân)
+  {
+    id: 'ester_acid', name: 'Thủy phân ethyl acetate trong môi trường acid',
+    equation: 'CH₃COOC₂H₅ + H₂O ⇌(H⁺, t°) CH₃COOH + C₂H₅OH',
+    reactants: { CH3COOC2H5: 1, H2O: 1 }, products: { CH3COOH: 1, C2H5OH: 1 },
+    rate: (ctx) => arrhenius(4.5e-5, 60000, ctx.T) * ctx.conc('H+') * ctx.mix.get('CH3COOC2H5'),
+  },
+  {
+    id: 'ester_acid_back', name: 'Phản ứng ester hóa',
+    equation: 'CH₃COOH + C₂H₅OH ⇌(H⁺, t°) CH₃COOC₂H₅ + H₂O',
+    reactants: { CH3COOH: 1, C2H5OH: 1 }, products: { CH3COOC2H5: 1, H2O: 1 },
+    rate: (ctx) => (arrhenius(4.5e-5, 60000, ctx.T) / 0.77) * ctx.conc('H+') * ctx.conc('CH3COOH') * ctx.conc('C2H5OH') * ctx.V,
+  },
+  // Thủy phân ester trong kiềm (phản ứng xà phòng hóa): một chiều
+  {
+    id: 'ester_base', name: 'Thủy phân ethyl acetate trong môi trường kiềm',
+    equation: 'CH₃COOC₂H₅ + NaOH →(t°) CH₃COONa + C₂H₅OH',
+    reactants: { CH3COOC2H5: 1, 'OH-': 1 }, products: { 'CH3COO-': 1, C2H5OH: 1 },
+    rate: (ctx) => arrhenius(1.1e-4, 50000, ctx.T) * ctx.conc('OH-') * ctx.mix.get('CH3COOC2H5'),
+  },
+  {
+    id: 'saponification', name: 'Xà phòng hóa chất béo',
+    equation: '(C₁₇H₃₃COO)₃C₃H₅ + 3NaOH →(t°) 3C₁₇H₃₃COONa + C₃H₅(OH)₃',
+    reactants: { triolein: 1, 'OH-': 3 }, products: { oleate: 3, glycerol: 1 },
+    rate: (ctx) => arrhenius(3.8e-6, 60000, ctx.T) * ctx.conc('OH-') * ctx.mix.get('triolein'),
+  },
+  // Muối kết xà phòng: nồng độ Na⁺ lớn (dung dịch NaCl bão hòa) và nhiệt độ thấp làm xà phòng tách ra
+  {
+    id: 'soap_salting_out', name: 'Xà phòng tách ra khỏi dung dịch (muối kết)',
+    equation: 'C₁₇H₃₃COO⁻ + Na⁺ → C₁₇H₃₃COONa',
+    reactants: { oleate: 1, 'Na+': 1 }, products: { soap: 1 },
+    rate: (ctx) => Math.max(0, soapExcess(ctx.mix)),
+  },
+  {
+    id: 'soap_dissolve', name: 'Xà phòng tan vào dung dịch',
+    equation: 'C₁₇H₃₃COONa → C₁₇H₃₃COO⁻ + Na⁺',
+    reactants: { soap: 1 }, products: { oleate: 1, 'Na+': 1 },
+    rate: (ctx) => Math.max(0, -soapExcess(ctx.mix)),
+  },
+
+  // ════ Lớp 12 · Bài 6: cellulose ═══════════════════════════════════════════
+  // Trong H₂SO₄ 70% nóng, bông tan dần và bị thủy phân thành glucose; acid loãng, nguội: gần như không
+  {
+    id: 'cellulose_hydrolysis', name: 'Thủy phân cellulose trong môi trường acid',
+    equation: '(C₆H₁₀O₅)ₙ + nH₂O →(H⁺, t°) nC₆H₁₂O₆',
+    reactants: { cellulose: 1, H2O: 1 }, products: { glucose: 1 },
+    rate: (ctx) => arrhenius(2e-9, 80000, ctx.T) * ctx.surface('cellulose') * ctx.conc('H+') ** 3,
+  },
+  // Nitrate hóa: cần hỗn hợp HNO₃ đặc và H₂SO₄ đặc
+  {
+    id: 'cellulose_nitration', name: 'Cellulose tác dụng với nitric acid',
+    equation: '[C₆H₇O₂(OH)₃]ₙ + 3nHNO₃ →(H₂SO₄ đặc, t°) [C₆H₇O₂(ONO₂)₃]ₙ + 3nH₂O',
+    reactants: { cellulose: 1, 'H+': 3, 'NO3-': 3 }, products: { cellulose_nitrate: 1, H2O: 3 },
+    rate: (ctx) => arrhenius(2e-7, 60000, ctx.T) * ctx.surface('cellulose') * ctx.conc('H+') ** 2 * ctx.conc('NO3-'),
+  },
+  {
+    id: 'cellulose_schweizer', name: 'Cellulose tan trong nước Schweizer',
+    equation: '(C₆H₁₀O₅)ₙ tan trong dung dịch [Cu(NH₃)₄](OH)₂',
+    reactants: { cellulose: 1 }, products: { 'cellulose(sw)': 1 },
+    rate: (ctx) => 2e-4 * ctx.surface('cellulose') * Math.min(1, ctx.conc('Cu(NH3)4^2+') / 0.2),
   },
 ];

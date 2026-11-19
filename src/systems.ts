@@ -53,6 +53,11 @@ export interface SolidDef {
   dissolution: { k: number; kH?: number; Ea: number };
   /** Chỉ tan, không kết tủa lại từ dung dịch (oxide: ion của nó kết tủa dưới dạng hydroxide/muối khác) */
   dissolveOnly?: boolean;
+  /**
+   * Ngưỡng quá bão hòa để bắt đầu tạo mầm tinh thể: khi chưa có tinh thể, chỉ kết tủa khi Q > nucleation·Ksp.
+   * Dùng cho chất kết tủa chậm (CaSO₄): dung dịch có thể quá bão hòa một lúc rồi mới vẩn đục.
+   */
+  nucleation?: number;
 }
 
 export const SOLIDS: SolidDef[] = [
@@ -90,6 +95,8 @@ export const SOLIDS: SolidDef[] = [
   { id: 'P2O5', ions: { H3PO4: 2 }, Ksp: 1e6, dissolution: { k: 3e-4, Ea: 20000 }, dissolveOnly: true },
   { id: 'CaCO3', ions: { 'Ca^2+': 1, 'CO3^2-': 1 }, Ksp: 3.36e-9, dissolution: { k: 1e-7, kH: 6e-5, Ea: 35000 } },
   { id: 'BaSO4', ions: { 'Ba^2+': 1, 'SO4^2-': 1 }, Ksp: 1.08e-10, dissolution: { k: 1e-7, Ea: 40000 } },
+  // CaSO₄ ít tan (độ tan ≈ 2 g/L; Ksp theo nồng độ, đã tính hệ số hoạt độ) và tạo mầm chậm: phải quá bão hòa nhiều mới vẩn đục
+  { id: 'CaSO4', ions: { 'Ca^2+': 1, 'SO4^2-': 1 }, Ksp: 2.4e-4, dissolution: { k: 1e-6, Ea: 30000 }, nucleation: 500 },
   // Muối dễ tan (độ tan ≈ 1,1 M): chỉ dùng khi cho bột rắn vào, hòa tan nhanh
   { id: 'NaHCO3', ions: { 'Na+': 1, 'HCO3-': 1 }, Ksp: 1.2, dissolution: { k: 1e-5, Ea: 20000 } },
   // Độ tan muối ăn ≈ 36 g/100 g nước (6,1 M); CuSO₄·5H₂O ≈ 1,3 M. Tan trong khoảng chục giây khi khuấy

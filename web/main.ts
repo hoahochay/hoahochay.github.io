@@ -2,10 +2,11 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Burette, bleachRate, burnSulfurIn, contentsMassG, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { Burette, bleachRate, burnSulfurIn, contentsMassG, flameTest, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { BURETTES, BuretteTool, CHEMICALS, isBurette, ChemEntry, ReagentDef, reagentMixture, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
+import { fmtDuration } from './narration';
 import { BuretteAction, RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
@@ -337,6 +338,7 @@ const TOOL_NAME: Record<ToolKind, string> = {
   dish_burn: 'bát sứ',
   burette: 'burette chứa dung dịch NaOH',
   burette_kmno4: 'burette chứa dung dịch thuốc tím',
+  flame_wire: 'dây platinum',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -539,6 +541,7 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   if (kind === 'spoon_s') return sulfurSpoon(view);
   if (kind === 'dish_burn') return dishBurn(view);
   if (isBurette(kind)) return toggleBurette(view, kind);
+  if (kind === 'flame_wire') return flameWire(view);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
   const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
@@ -925,6 +928,68 @@ function dishBurn(view: VesselView) {
 }
 
 // ── Đốt mẩu kim loại trên ngọn lửa đèn cồn (cầm bằng kẹp sắt) ───────────
+/** Tua nhanh thời gian dài ở nhiệt độ phòng: mô phỏng theo bước 60 s (các quá trình rất chậm như ăn mòn) */
+function timelapse(seconds: number) {
+  for (let t = 0; t < seconds; t += 60) for (const v of views) v.vessel.step(Math.min(60, seconds - t));
+  simTime += seconds;
+  log(`⏩ Tua nhanh thời gian: ${fmtDuration(seconds)} trôi qua`, 'action', '');
+}
+
+/** Thử màu ngọn lửa: nhúng dây platinum vào dung dịch rồi hơ trên ngọn lửa đèn cồn */
+const PT_WIRE: SolidItem = { key: 'pt_wire', id: 'Pt', label: 'Dây platinum', grams: 0.2, form: 'strip', shape: 'wire' };
+function flameWire(view: VesselView) {
+  if (view.vessel.mix.liquidL() < 1e-5) return log('Không có dung dịch để nhúng dây platinum.', 'warning', view.name);
+  if (heatingView) return log('Đèn cồn đang dùng để đun. Tắt đèn trước rồi mới thử màu ngọn lửa.', 'warning', LAMP_NAME);
+  const res = flameTest(view.vessel.mix);
+  const tongs = new TongsView(PT_WIRE);
+  const g = tongs.group;
+  g.rotation.set(0, -Math.atan2(0.66, 0.75), 0.3, 'YXZ');
+  let inFlame = new THREE.Vector3(), away = new THREE.Vector3();
+  const light = new THREE.PointLight(res?.color ?? 0xffb347, 0, 60, 2);
+  let time = 0;
+  const phase = (dur: number, fn: (k: number) => void): AnimStep => {
+    let e = 0;
+    return (dt) => { e += dt; time += dt; fn(Math.min(1, e / dur)); return e >= dur; };
+  };
+  animator.run(
+    call(() => {
+      const flame = lamp.group.localToWorld(lamp.flameTip.clone()).add(new THREE.Vector3(0, -0.9, 0));
+      g.position.set(0, 0, 0);
+      g.updateMatrixWorld(true);
+      inFlame = flame.sub(g.localToWorld(tongs.tipLocal.clone()));
+      away = inFlame.clone().add(new THREE.Vector3(1.5, 4.5, 3));
+      g.position.copy(away);
+      addTemp(g);
+      addTemp(light);
+      lamp.setLit(true);
+      log(`Nhúng dây platinum vào dung dịch trong ${view.name.toLowerCase()}, rồi hơ đầu dây trên ngọn lửa đèn cồn`, 'action', LAMP_NAME);
+    }),
+    tween(0.9, (t) => g.position.lerpVectors(away, inFlame, t)),
+    call(() => {
+      if (res) log(`Ngọn lửa có màu ${res.name} (ion ${res.ion})`, 'phenomenon', LAMP_NAME);
+      else log('Ngọn lửa không đổi màu', 'phenomenon', LAMP_NAME);
+    }),
+    phase(3.5, (k) => {
+      const flick = 1 + 0.15 * Math.sin(time * 37) + 0.08 * Math.sin(time * 61);
+      const fade = Math.min(1, k * 6) * (k > 0.85 ? (1 - k) / 0.15 : 1);
+      if (res) tongs.setFlame(0.15, 1.6 * fade, res.color, flick);
+      tongs.setHot(Math.min(1, k * 3));
+      light.position.copy(g.localToWorld(tongs.tipLocal.clone()));
+      light.intensity = res ? 300 * fade * flick : 0;
+    }),
+    tween(0.7, (t) => {
+      tongs.setFlame(0, 0);
+      g.position.lerpVectors(inFlame, away, t);
+      g.scale.setScalar(Math.max(0.001, 1 - t));
+    }),
+    call(() => {
+      lamp.setLit(false);
+      removeTemp(g);
+      removeTemp(light);
+    }),
+  );
+}
+
 function burnInFlame(item: SolidItem) {
   const refusal = burnRefusal(item);
   if (refusal) return log(refusal, 'warning', LAMP_NAME);
@@ -1863,6 +1928,7 @@ const player = new RecipePlayer({
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
   burette: (vessel, action) => buretteAction(views[vessel], action),
+  timelapse: (seconds) => timelapse(seconds),
   probe: (tool, vessel) => probe(tool, views[vessel]),
   burn: (chem) => burnInFlame(CHEMICALS.find((c) => c.key === chem)!.solid!),
   connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
@@ -2210,6 +2276,7 @@ Object.assign(window, {
     player,
     recipes: RECIPES,
     setSpeed: (s: number) => { speed = s; hud.setSpeed(s); },
+    timelapse: (s: number) => timelapse(s),
     busy: () => animator.busy,
   },
 });

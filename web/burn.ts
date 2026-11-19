@@ -38,6 +38,18 @@ const OUTCOMES: Record<string, BurnOutcome> = {
     during: 'Đinh sắt nóng đỏ nhưng không cháy (sắt khối khó cháy trong không khí)',
     result: 'Đinh sắt chỉ hơi xỉn màu',
   },
+  cellulose: {
+    burns: true, after: [0.12, 0.11, 0.1], light: 0xffa23a,
+    during: 'Bông cháy chậm với ngọn lửa màu vàng, có khói',
+    result: 'Bông cháy để lại tàn tro màu đen',
+    equation: '(C₆H₁₀O₅)ₙ + 6nO₂ → 6nCO₂ + 5nH₂O',
+  },
+  cellulose_nitrate: {
+    burns: true, after: [0.85, 0.84, 0.8], light: 0xfff2d8,
+    during: 'Bông nitrate hóa bùng cháy rất nhanh, sáng chói, gần như không có khói',
+    result: 'Sản phẩm cháy hết trong chớp mắt, không để lại tàn tro',
+    equation: '2[C₆H₇O₂(ONO₂)₃]ₙ → 6nCO₂ + 6nCO + 4nH₂O + 3nN₂ + nH₂',
+  },
 };
 
 const DEFAULT_OUTCOME: BurnOutcome = {

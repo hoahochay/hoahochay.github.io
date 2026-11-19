@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { Burette, burnSulfurIn, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { Burette, burnSulfurIn, flameTest, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { BURETTES, CHEMICALS, isBurette, reagentMixture, solidMol } from '../web/catalog';
 import { X_HIDDEN_TURBIDITY } from '../web/xcard';
 import { BEAKER, CATEGORIES, FLASK, TUBE1, TUBE2, TUBE3, TUBE4, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
@@ -53,6 +53,10 @@ function runRecipe(r: PlayScript): RunResult {
         if (c.solid) v.addSolid(c.solid.id, solidMol(c.solid, s.amount), c.solid.form);
         else v.add(reagentMixture(c.reagent!, s.amount, v.roomK));
         expect(v.mix.liquidL() * 1000, `${r.id}: tràn ${s.vessel}`).toBeLessThanOrEqual(v.spec.capacityL * 1000);
+        break;
+      }
+      case 'timelapse': {
+        for (let t = 0; t < s.seconds; t += 60) for (const v of vessels) v.step(Math.min(60, s.seconds - t));
         break;
       }
       case 'wait': {
@@ -135,7 +139,8 @@ function runRecipe(r: PlayScript): RunResult {
         else if (isBurette(s.tool)) {
           if (burettes.has(s.vessel)) burettes.delete(s.vessel);
           else burettes.set(s.vessel, new Burette(v, BURETTES[s.tool].solutes));
-        } else if (s.tool === 'dish_burn') probes.push('dish-' + liquidBurn(v.take(Math.min(0.001, v.mix.liquidL()))).flame);
+        } else if (s.tool === 'flame_wire') probes.push('flame-' + (flameTest(v.mix)?.ion ?? 'none'));
+        else if (s.tool === 'dish_burn') probes.push('dish-' + liquidBurn(v.take(Math.min(0.001, v.mix.liquidL()))).flame);
         else if (s.tool === 'spoon_s') {
           let o2 = 0;
           for (let i = 0; i < 6; i++) { o2 = burnSulfurIn(v, 1); run(1); }
@@ -332,6 +337,71 @@ describe('Thí nghiệm mẫu', () => {
       expect(r.vessels[TUBE1].mix.get('Cu(NH3)4^2+')).toBeGreaterThan(3e-4);
       const m = r.vessels[TUBE2].mix;
       expect(m.get('CuCl4^2-')).toBeGreaterThan(0.8 * (m.get('CuCl4^2-') + m.get('Cu^2+')));
+    });
+    it('Bài 1 – ester thủy phân không hết trong acid, gần hết trong kiềm', () => {
+      const r = run('thuy-phan-ester');
+      const n0 = (2 * 0.902) / 88.11;
+      expect(r.vessels[TUBE1].mix.get('CH3COOC2H5')).toBeGreaterThan(0.5 * n0);
+      expect(r.vessels[TUBE2].mix.get('CH3COOC2H5')).toBeLessThan(0.2 * n0);
+    });
+    it('Bài 2 – xà phòng hóa chất béo, xà phòng tách ra trong NaCl bão hòa', () => {
+      const r = run('xa-phong-hoa-chat-beo');
+      expect(r.timedOut).toEqual([]);
+      const b = r.vessels[BEAKER].mix;
+      expect(b.get('soap')).toBeGreaterThan(4 * b.get('oleate'));
+      expect(b.get('glycerol')).toBeGreaterThan(1.5e-3);
+    });
+    it('Bài 6 – thủy phân cellulose, sản phẩm khử Cu(OH)₂ tạo Cu₂O', () => {
+      const r = run('thuy-phan-cellulose');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE2].mix.get('Cu2O')).toBeGreaterThan(5e-5);
+    });
+    it('Bài 6 – nitrate hóa cellulose; bông nitrate cháy bùng', () => {
+      const r = run('cellulose-nitric-acid');
+      expect(r.timedOut).toEqual([]);
+      expect(r.probes).toEqual(['burn-cellulose', 'burn-cellulose_nitrate']);
+      expect(r.vessels[TUBE1].mix.get('cellulose_nitrate')).toBeGreaterThan(2.5e-4);
+    });
+    it('Bài 6 – bông tan trong nước Schweizer', () => {
+      const r = run('cellulose-schweizer');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[BEAKER].mix.get('cellulose(sw)')).toBeGreaterThan(3e-4);
+    });
+    it('Bài 19 – đốt Mg; Al + S bùng cháy tạo Al₂S₃', () => {
+      const r = run('kim-loai-phi-kim-hoa12');
+      expect(r.timedOut).toEqual([]);
+      expect(r.probes).toEqual(['burn-Mg']);
+      expect(r.vessels[TUBE1].mix.get('Al2S3')).toBeGreaterThan(1.5e-3);
+    });
+    it('Bài 22 – đinh sắt gỉ sau 3 ngày', () => {
+      const r = run('an-mon-dien-hoa-sat');
+      expect(r.vessels[TUBE1].mix.get('FeOOH') * 88.85e3).toBeGreaterThan(8);
+    });
+    it('Bài 22 – kẽm bảo vệ sắt', () => {
+      const r = run('bao-ve-sat-dien-hoa');
+      const rust1 = r.vessels[TUBE1].mix.get('FeOOH'), rust2 = r.vessels[TUBE2].mix.get('FeOOH');
+      expect(rust2).toBeLessThan(0.02 * rust1);
+      expect(r.vessels[TUBE2].mix.get('Zn(OH)2')).toBeGreaterThan(1e-5);
+    });
+    it('Bài 24 – Li, Na, K với nước; màu ngọn lửa Li⁺, Na⁺, K⁺', () => {
+      expect(run('alkali-water').timedOut).toEqual([]);
+      expect(run('mau-ngon-lua-nhom-ia').probes).toEqual(['flame-Li⁺', 'flame-Na⁺', 'flame-K⁺']);
+    });
+    it('Bài 25 – màu ngọn lửa Ca²⁺, Sr²⁺, Ba²⁺', () => {
+      expect(run('mau-ngon-lua-nhom-iia').probes).toEqual(['flame-Ca²⁺', 'flame-Sr²⁺', 'flame-Ba²⁺']);
+    });
+    it('Bài 25 – BaSO₄ kết tủa ngay, CaSO₄ phải nhỏ nhiều giọt', () => {
+      const r = run('do-tan-caso4-baso4');
+      expect(r.vessels[TUBE2].mix.get('BaSO4')).toBeGreaterThan(4e-5);
+      expect(r.vessels[TUBE1].mix.get('CaSO4')).toBeGreaterThan(1e-4);
+    });
+    it('Bài 25 – nhận biết Ca²⁺, Ba²⁺, SO₄²⁻, CO₃²⁻', () => {
+      const r = run('nhan-biet-ca-ba-so4-co3');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE2].mix.get('BaSO4')).toBeGreaterThan(1.5e-4);
+      expect(r.vessels[TUBE3].mix.get('BaSO4')).toBeGreaterThan(1.4e-4);
+      expect(r.vessels[TUBE1].mix.get('CaSO4')).toBeLessThan(r.vessels[TUBE2].mix.get('BaSO4'));
+      expect(r.vessels[TUBE4].mix.get('CaCO3')).toBeLessThan(1e-6);
     });
     it('Bài 10 – protein đông tụ khi đun, HNO₃ đặc tạo kết tủa vàng', () => {
       const r = run('dong-tu-protein');

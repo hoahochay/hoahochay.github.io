@@ -37,6 +37,8 @@ export interface LabApi {
   focus(vessels: number[] | null): void;
   /** Vặn khóa burette lắp trên dụng cụ */
   burette(vessel: number, action: BuretteAction): void;
+  /** Tua nhanh thời gian (giây) */
+  timelapse(seconds: number): void;
   resetAll(): void;
   setSpeed(s: number): void;
   simTime(): number;
@@ -65,9 +67,10 @@ const SHARED_WAIT_S = 5;
 const SHARED_HOLD_S = 1.5;
 
 function fmtTime(t: number): string {
-  const m = Math.floor(t / 60);
-  const s = Math.floor(t % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  const s = Math.floor(t % 60).toString().padStart(2, '0');
+  // Sau khi tua nhanh nhiều giờ, nhiều ngày: hiển thị giờ:phút:giây
+  if (t >= 3600) return `${Math.floor(t / 3600)}:${Math.floor((t % 3600) / 60).toString().padStart(2, '0')}:${s}`;
+  return `${Math.floor(t / 60)}:${s}`;
 }
 
 export class RecipePlayer {
@@ -295,6 +298,10 @@ export class RecipePlayer {
         this.lab.empty(s.vessel);
         return this.untilIdle(id);
       case 'predict':
+        return;
+      case 'timelapse':
+        this.ui.progress(null);
+        this.lab.timelapse(s.seconds);
         return;
       case 'pour':
         this.ui.progress(null);

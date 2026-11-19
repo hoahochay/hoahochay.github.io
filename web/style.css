@@ -1,3 +1,6 @@
+/* Hiện trang khi CSS đã nạp (index.html ẩn body lúc đầu) */
+body { visibility: visible !important; }
+
 :root {
   --bg: #dfe5ec;
   --card: rgba(255, 255, 255, 0.9);

@@ -7,7 +7,7 @@ import { setRGB, softCircleTexture } from './materials';
 /** xcard: tờ giấy kẻ chữ X đặt sau ống, kèm đồng hồ bấm giờ (xem xcard.ts) */
 /** dye_paper: mẩu giấy màu ẩm thử tính tẩy màu của khí chlorine */
 export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'ph_moist' | 'magnet' | 'xcard' | 'dye_paper'
-  | 'ice_bath' | 'warm_bath' | 'hot_bath' | 'no2_tube' | 'spoon_s' | 'dish_burn' | 'burette' | 'burette_kmno4';
+  | 'ice_bath' | 'warm_bath' | 'hot_bath' | 'no2_tube' | 'spoon_s' | 'dish_burn' | 'burette' | 'burette_kmno4' | 'flame_wire';
 /** Màu ban đầu của mẩu giấy màu ẩm */
 export const DYE_PAPER_COLOR: RGB = [0.86, 0.16, 0.3];
 

@@ -152,7 +152,8 @@ export function equilibrate(mix: Mixture): void {
     for (const s of SOLIDS) {
       if (s.dissolveOnly) continue;
       const ksp = K.Ksp.get(s.id)!;
-      if (ionProduct(s, logh, t, K) <= ksp * (1 + 1e-9)) continue;
+      const fresh = !(mix.get(s.id) > 0);
+      if (ionProduct(s, logh, t, K) <= ksp * (fresh && s.nucleation ? s.nucleation : 1 + 1e-9)) continue;
       let maxD = Infinity;
       for (const [id, nu] of Object.entries(s.ions)) maxD = Math.min(maxD, available(t, id) / nu);
       if (!(maxD > 0) || !Number.isFinite(maxD)) continue;

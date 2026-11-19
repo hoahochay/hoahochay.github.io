@@ -14,5 +14,6 @@ export * from './organic';
 export * from './combustion';
 export * from './burette';
 export * from './distill';
+export * from './flameTest';
 export * from './gasTests';
 export * from './gasSyringe';

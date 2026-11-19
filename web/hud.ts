@@ -20,9 +20,10 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as
 const swatch = (c: RGB) => `<span class="sw" style="background:${toHex(c)}"></span>`;
 
 function fmtTime(t: number): string {
-  const m = Math.floor(t / 60);
-  const s = Math.floor(t % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  const s = Math.floor(t % 60).toString().padStart(2, '0');
+  // Sau khi tua nhanh nhiều giờ, nhiều ngày: hiển thị giờ:phút:giây
+  if (t >= 3600) return `${Math.floor(t / 3600)}:${Math.floor((t % 3600) / 60).toString().padStart(2, '0')}:${s}`;
+  return `${Math.floor(t / 60)}:${s}`;
 }
 
 /** Nồng độ mol luôn ghi bằng M (mol/L) như SGK, không dùng mM; giữ 3 chữ số có nghĩa */

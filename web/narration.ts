@@ -21,12 +21,20 @@ const PROBE_NAME: Record<ToolKind, string> = {
   dish_burn: 'bát sứ',
   burette: 'burette chứa dung dịch NaOH',
   burette_kmno4: 'burette chứa dung dịch thuốc tím',
+  flame_wire: 'dây platinum',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
 };
 
 /** Tên dụng cụ theo số thứ tự dùng trong kịch bản (khớp với tên trong cảnh 3D) */
+/** 259200 → '3 ngày', 7200 → '2 giờ' */
+export function fmtDuration(s: number): string {
+  if (s >= 86400) return `${Math.round(s / 86400)} ngày`;
+  if (s >= 3600) return `${Math.round(s / 3600)} giờ`;
+  return `${Math.round(s / 60)} phút`;
+}
+
 export function vesselName(i: number): string {
   if (i === SYRINGE) return 'Xi lanh đo khí';
   if (i === BEAKER) return 'Cốc 100 mL';
@@ -62,6 +70,8 @@ export function describeStep(s: Step): string {
       ? `Ngâm ${vn(s.vessel)} vào ${PROBE_NAME[s.tool]}.`
       : s.tool === 'dish_burn'
       ? `Rót khoảng 1 mL chất lỏng từ ${vn(s.vessel)} vào bát sứ nhỏ, đưa que đóm đang cháy vào bề mặt chất lỏng.`
+      : s.tool === 'flame_wire'
+      ? `Nhúng dây platinum vào dung dịch trong ${vn(s.vessel)}, rồi hơ nóng đầu dây trên ngọn lửa đèn cồn.`
       : s.tool === 'spoon_s'
       ? `Đốt lưu huỳnh trên muôi sắt rồi đưa vào ${vn(s.vessel)}.`
       : s.tool === 'no2_tube'
@@ -82,5 +92,6 @@ export function describeStep(s: Step): string {
     case 'predict': return s.text ?? 'Em đoán xem bước tiếp theo sẽ có hiện tượng gì?';
     case 'pour': return s.text ?? (s.mL ? `Rót khoảng ${fmt(s.mL)} mL từ ${vn(s.src)} sang ${vn(s.dst)}.` : `Đổ ${vn(s.src)} vào ${vn(s.dst)}.`);
     case 'focus': return '';
+    case 'timelapse': return s.text ?? `Tua nhanh thời gian khoảng ${fmtDuration(s.seconds)}.`;
   }
 }

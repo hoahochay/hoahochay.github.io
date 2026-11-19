@@ -9,7 +9,7 @@ import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 import { XCard } from './xcard';
 import { BATH_TOOL, BathView } from './bath';
-import { porcelainDishModel, spoonModel } from './burn';
+import { porcelainDishModel, spoonModel, TongsView } from './burn';
 import { BuretteView } from './buretteView';
 import { glassMaterial } from './materials';
 
@@ -43,6 +43,9 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = new BathView(BATH_TOOL[e.tool]).group;
     } else if (e.tool === 'burette' || e.tool === 'burette_kmno4') {
       obj = new BuretteView(2, e.tool === 'burette' ? undefined : 0x8a1c7c).group;
+    } else if (e.tool === 'flame_wire') {
+      obj = new TongsView({ key: 'pt_wire', id: 'Pt', label: 'Dây platinum', grams: 0.2, form: 'strip', shape: 'wire' }).group;
+      obj.rotation.z = 0.5;
     } else if (e.tool === 'dish_burn') {
       obj = porcelainDishModel().group;
     } else if (e.tool === 'spoon_s') {

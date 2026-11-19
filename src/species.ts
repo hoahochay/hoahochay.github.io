@@ -101,6 +101,7 @@ sp('Mg^2+', 'ion magnesium', 'aq', 2, 0, -466.85, 24.305);
 sp('Zn^2+', 'ion kẽm', 'aq', 2, 0, -153.89, 65.38);
 sp('Ca^2+', 'ion calcium', 'aq', 2, 0, -542.83, 40.08);
 sp('Ba^2+', 'ion barium', 'aq', 2, 0, -537.64, 137.33);
+sp('Sr^2+', 'ion strontium', 'aq', 2, 0, -545.8, 87.62);
 sp('Pb^2+', 'ion chì(II)', 'aq', 2, 0, -1.7, 207.2);
 
 // ── Các hệ acid–base (xem systems.ts) ────────────────────────────────────
@@ -155,6 +156,12 @@ sp('C2O4^2-', 'ion oxalate', 'aq', -2, 0, -825.1, 88.02);
 sp('C2H4Br2', '1,2-dibromoethane', 'org', 0, 4, -81.0, 187.86, { density: 2.18 });
 sp('C2H2Br4', '1,1,2,2-tetrabromoethane', 'org', 0, 2, -60.0, 345.65, { density: 2.97 });
 // ── Chất lỏng hữu cơ không tan trong nước (lớp riêng) ──
+// Ester, chất béo (SGK Hóa 12 Chương 1): chất lỏng không tan trong nước, nhẹ hơn nước
+sp('CH3COOC2H5', 'ethyl acetate', 'org', 0, 8, -479.3, 88.11, { density: 0.902 });
+sp('triolein', 'chất béo (triolein)', 'org', 0, 104, -2190, 885.4, { density: 0.915, epsilon: [0.02, 0.03, 0.12], label: '(C₁₇H₃₃COO)₃C₃H₅' });
+sp('oleate', 'ion oleate', 'aq', -1, 33, -800, 281.5, { label: 'C₁₇H₃₃COO⁻' });
+// Xà phòng (sodium oleate) bị muối kết: tách thành khối nhẹ nổi lên trên
+sp('soap', 'xà phòng (sodium oleate)', 'org', 0, 33, -1040, 304.4, { density: 0.95, epsilon: [0.05, 0.06, 0.15], label: 'C₁₇H₃₃COONa' });
 sp('C6H14', 'hexane', 'org', 0, 14, -198.7, 86.18, { density: 0.655 });
 sp('C6H6', 'benzene', 'org', 0, 6, 49.1, 78.11, { density: 0.877 });
 sp('C6H5CH3', 'toluene', 'org', 0, 8, 12.4, 92.14, { density: 0.867 });
@@ -193,7 +200,7 @@ sp('C6H5NH2', 'aniline', 'aq', 0, 7, 31.3, 93.13);
 sp('C6H5NH3+', 'ion anilinium', 'aq', 1, 8, 1.3, 94.14);
 sp('C6H2Br3NH2', '2,4,6-tribromoaniline', 's', 0, 4, 16, 329.8, { color: [0.98, 0.98, 0.96], label: 'C₆H₂Br₃NH₂', scatter: 3 });
 // Phức tan màu xanh lam đậm của Cu²⁺ với ammonia và methylamine
-sp('Cu(NH3)4^2+', 'ion tetraamminecopper(II)', 'aq', 2, 12, -351.0, 131.67, { epsilon: [60, 15, 1], label: '[Cu(NH₃)₄]²⁺' });
+sp('Cu(NH3)4^2+', 'ion tetraamminecopper(II)', 'aq', 2, 12, -351.0, 131.67, { epsilon: [60, 15, 0.4], label: '[Cu(NH₃)₄]²⁺' });
 sp('Cu(CH3NH2)4^2+', 'phức copper(II) – methylamine', 'aq', 2, 20, -310.6, 187.79, { epsilon: [60, 15, 1], label: '[Cu(CH₃NH₂)₄]²⁺' });
 // Phức [CuCl₄]²⁻ màu vàng (trong HCl đặc)
 sp('CuCl4^2-', 'ion tetrachlorocuprate(II)', 'aq', -2, 0, -583.9, 205.36, { epsilon: [0.8, 1.2, 30], label: '[CuCl₄]²⁻' });
@@ -257,6 +264,18 @@ sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0
 sp('AgCl', 'silver chloride', 's', 0, 0, -127.07, 143.32, { color: WHITE });
 sp('AgBr', 'silver bromide', 's', 0, 0, -100.37, 187.77, { color: [0.97, 0.94, 0.74] });
 sp('AgI', 'silver iodide', 's', 0, 0, -61.84, 234.77, { color: [0.98, 0.88, 0.42] });
+sp('Al', 'aluminium', 's', 0, 0, 0, 26.98, { color: [0.78, 0.79, 0.81] });
+sp('Al2S3', 'aluminium sulfide', 's', 0, 0, -724, 150.16, { color: [0.72, 0.68, 0.5] });
+// Gỉ sắt (Fe₂O₃·nH₂O, viết gọn FeOOH) màu nâu đỏ; kẽm bị ăn mòn tạo Zn(OH)₂ trắng
+sp('FeOOH', 'gỉ sắt', 's', 0, 1, -559, 88.85, { color: [0.62, 0.3, 0.12], label: 'Fe₂O₃·nH₂O' });
+sp('Zn(OH)2', 'zinc hydroxide', 's', 0, 2, -642, 99.4, { color: [0.96, 0.96, 0.95] });
+// Cellulose (bông), tính theo một mắt xích C₆H₁₀O₅
+sp('cellulose', 'cellulose (bông)', 's', 0, 10, -963, 162.14, { color: [0.97, 0.97, 0.95], label: '(C₆H₁₀O₅)ₙ' });
+sp('cellulose_nitrate', 'cellulose trinitrate', 's', 0, 7, -700, 297.13, { color: [0.95, 0.94, 0.9], label: '[C₆H₇O₂(ONO₂)₃]ₙ' });
+// Cellulose tan trong nước Schweizer (tạo phức với ion đồng–ammonia)
+sp('cellulose(sw)', 'cellulose tan trong nước Schweizer', 'aq', 0, 10, -963, 162.14, { label: '(C₆H₁₀O₅)ₙ' });
+sp('Pt', 'platinum', 's', 0, 0, 0, 195.08, { color: [0.82, 0.82, 0.84] });
+sp('CaSO4', 'calcium sulfate', 's', 0, 0, -1434.5, 136.14, { color: WHITE });
 sp('Cu(OH)2', 'copper(II) hydroxide', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });
 sp('Al(OH)3', 'aluminium hydroxide', 's', 0, 3, -1276, 78.0, { color: WHITE });
 sp('NH4Cl', 'ammonium chloride', 's', 0, 4, -314.43, 53.49, { color: [0.97, 0.97, 0.97] });
