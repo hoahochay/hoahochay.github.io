@@ -112,7 +112,7 @@ export class Hud {
 
   /** Cập nhật bảng thông tin (giới hạn ~6 lần/giây) */
   /** stopwatch: chữ hiển thị của đồng hồ bấm giờ (tờ giấy kẻ chữ X) đặt ở dụng cụ này, nếu có */
-  panel(view: VesselView | null, o: Observation | null, now: number, stopwatch?: string, burette?: { usedML: number; mode: string }): void {
+  panel(view: VesselView | null, o: Observation | null, now: number, stopwatch?: string, burette?: { usedML: number; mode: string; label: string }): void {
     if (now - this.lastPanel < 0.16) return;
     this.lastPanel = now;
     const el = $('#info');
@@ -159,7 +159,7 @@ export class Hud {
         <div class="meter"><div class="k">Thể tích</div><div class="val">${totalML.toFixed(totalML < 10 ? 2 : 1)}<small> mL</small></div></div>
       </div>
       ${o.volumeML < 0.005 ? '' : `<div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>`}
-      ${burette ? `<div class="sec">Burette NaOH (≈ 0,1 M)</div>
+      ${burette ? `<div class="sec">Burette ${burette.label}</div>
         <div class="row"><span class="k">Đã dùng</span><b>${burette.usedML.toFixed(2).replace('.', ',')} mL</b>&nbsp;· ${burette.mode === 'stream' ? 'đang chảy thành dòng' : burette.mode === 'drip' ? 'đang nhỏ từng giọt' : 'khóa đóng'}</div>
         <div class="bur-btns">${([['stream', '▶ Mở khóa'], ['drip', '💧 Nhỏ từng giọt'], ['drop', '+1 giọt'], ['close', '⏹ Đóng khóa']] as const)
           .map(([a, t]) => `<button data-burette="${a}"${burette.mode === a ? ' class="on"' : ''}>${t}</button>`).join('')}</div>` : ''}

@@ -4,9 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Burette, burnSulfurIn, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
-import { BURETTE_SOLUTES, CHEMICALS, reagentMixture, solidMol } from '../web/catalog';
+import { BURETTES, CHEMICALS, isBurette, reagentMixture, solidMol } from '../web/catalog';
 import { X_HIDDEN_TURBIDITY } from '../web/xcard';
-import { BEAKER, CATEGORIES, FLASK, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
+import { BEAKER, CATEGORIES, FLASK, TUBE1, TUBE2, TUBE3, TUBE4, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
 
 interface RunResult {
   vessels: Vessel[];
@@ -127,12 +127,14 @@ function runRecipe(r: PlayScript): RunResult {
         else if (s.tool === 'xcard') probes.push('xcard');
         else if (s.tool === 'dye_paper') probes.push('dye-' + testDyePaper(v));
         else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
-        else if (s.tool === 'ice_bath') v.bathK = 273.15;
-        else if (s.tool === 'warm_bath') v.bathK = 323.15;
-        else if (s.tool === 'hot_bath') v.bathK = 353.15;
-        else if (s.tool === 'burette') {
+        // Như giao diện: ngâm lần nữa vào cùng loại cốc thì lấy ống ra
+        else if (s.tool === 'ice_bath' || s.tool === 'warm_bath' || s.tool === 'hot_bath') {
+          const K = { ice_bath: 273.15, warm_bath: 323.15, hot_bath: 353.15 }[s.tool];
+          v.bathK = v.bathK === K ? null : K;
+        }
+        else if (isBurette(s.tool)) {
           if (burettes.has(s.vessel)) burettes.delete(s.vessel);
-          else burettes.set(s.vessel, new Burette(v, BURETTE_SOLUTES));
+          else burettes.set(s.vessel, new Burette(v, BURETTES[s.tool].solutes));
         } else if (s.tool === 'dish_burn') probes.push('dish-' + liquidBurn(v.take(Math.min(0.001, v.mix.liquidL()))).flame);
         else if (s.tool === 'spoon_s') {
           let o2 = 0;
@@ -246,6 +248,97 @@ describe('Thí nghiệm mẫu', () => {
     const res = runRecipe(RECIPES.find((x) => x.id === 'luu-huynh-chay-oxygen')!);
     expect(res.timedOut).toEqual([]);
     expect(res.probes).toEqual(['spoon-bright', 'litmus-acid']);
+  });
+
+  describe('Hóa 12 – Chương 2, 3', () => {
+    const run = (id: string) => runRecipe(RECIPES.find((x) => x.id === id)!);
+    it('Bài 4 – glucose hòa tan Cu(OH)₂ thành dung dịch xanh lam', () => {
+      const r = run('glucose-cuoh2');
+      expect(r.timedOut).toEqual([]);
+      const m = r.vessels[TUBE1].mix;
+      expect(m.get('Cu(OH)2')).toBeLessThan(2e-6);
+      expect(m.get('Cu(glucose)')).toBeGreaterThan(1.4e-4);
+    });
+    it('Bài 4 – tính chất aldehyde của glucose: Cu₂O, gương bạc, mất màu bromine', () => {
+      const r = run('glucose-tinh-chat-aldehyde');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('Cu2O')).toBeGreaterThan(7e-5);
+      expect(r.vessels[TUBE2].mix.get('Ag(mirror)')).toBeGreaterThan(1e-4);
+      expect(r.vessels[TUBE3].mix.get('Br2')).toBeLessThan(1e-7);
+    });
+    it('Bài 5 – saccharose hòa tan Cu(OH)₂, đun nóng không khử', () => {
+      const r = run('saccharose-cuoh2');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('Cu(saccharose)')).toBeGreaterThan(1.4e-4);
+    });
+    it('Bài 6 – thủy phân tinh bột rồi thử Cu(OH)₂: kết tủa đỏ gạch', () => {
+      const r = run('thuy-phan-tinh-bot');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('amylose')).toBeLessThan(1.5e-5);
+      expect(r.vessels[TUBE2].mix.get('Cu2O')).toBeGreaterThan(6e-5);
+    });
+    it('Bài 6 – hồ tinh bột + iodine: xanh tím', () => {
+      const r = run('ho-tinh-bot-iodine');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('I2-starch')).toBeGreaterThan(4e-6);
+    });
+    it('Bài 8 – methylamine: base, mất màu hồng, Fe(OH)₃, phức Cu xanh lam đậm', () => {
+      const r = run('tinh-chat-methylamine');
+      expect(r.timedOut).toEqual([]);
+      expect(r.probes[0]).toMatch(/^ph-1[12]$/);
+      expect(r.vessels[TUBE1].observe().pH).toBeLessThan(8);
+      expect(r.vessels[TUBE2].mix.get('Fe(OH)3')).toBeGreaterThan(8e-5);
+      expect(r.vessels[TUBE4].mix.get('Cu(CH3NH2)4^2+')).toBeGreaterThan(1.8e-4);
+    });
+    it('Bài 8 – aniline + nước bromine: mất màu, kết tủa trắng', () => {
+      const r = run('aniline-nuoc-bromine');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('C6H2Br3NH2')).toBeGreaterThan(6e-6);
+    });
+    it('Bài 9 – phản ứng màu biuret: tím', () => {
+      const r = run('phan-ung-biuret');
+      expect(r.timedOut).toEqual([]);
+      const o = r.vessels[TUBE1].observe();
+      expect(r.vessels[TUBE1].mix.get('Cu(protein)')).toBeGreaterThan(1.8e-5);
+      // Tím: kênh xanh lục bị hấp thụ nhiều hơn kênh đỏ và lam
+      expect(o.solutionColor[1]).toBeLessThan(o.solutionColor[0] - 0.05);
+      expect(o.solutionColor[1]).toBeLessThan(o.solutionColor[2] - 0.05);
+    });
+    it('Bài 19 – kẽm + H₂SO₄ loãng: khí hydrogen', () => {
+      const r = run('kim-loai-acid-loang-hoa12');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('Zn^2+')).toBeGreaterThan(1e-4);
+    });
+    it('Bài 19 – đinh sắt + CuSO₄: đồng bám trên đinh', () => {
+      const r = run('kim-loai-dung-dich-muoi-hoa12');
+      expect(r.vessels[TUBE1].mix.get('Cu')).toBeGreaterThan(2e-4);
+    });
+    it('Bài 27 – chuẩn độ FeSO₄ bằng KMnO₄: hết khoảng 4,8 mL', () => {
+      const r = run('chuan-do-fe2-kmno4');
+      expect(r.timedOut).toEqual([]);
+      const used = r.burettes.get(FLASK)!.usedML;
+      expect(used).toBeGreaterThan(4.75);
+      expect(used).toBeLessThan(4.95);
+      expect(r.vessels[FLASK].mix.get('MnO4-')).toBeGreaterThan(3e-7);
+    });
+    it('Bài 27 – nhận biết Fe³⁺ (nâu đỏ) và Cu²⁺ (xanh)', () => {
+      const r = run('nhan-biet-cu2-fe3');
+      expect(r.vessels[TUBE1].mix.get('Fe(OH)3')).toBeGreaterThan(4e-5);
+      expect(r.vessels[TUBE2].mix.get('Cu(OH)2')).toBeGreaterThan(6e-5);
+    });
+    it('Bài 29 – phức [Cu(NH₃)₄]²⁺ xanh lam đậm và [CuCl₄]²⁻ vàng', () => {
+      const r = run('phuc-chat-cu2');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('Cu(NH3)4^2+')).toBeGreaterThan(3e-4);
+      const m = r.vessels[TUBE2].mix;
+      expect(m.get('CuCl4^2-')).toBeGreaterThan(0.8 * (m.get('CuCl4^2-') + m.get('Cu^2+')));
+    });
+    it('Bài 10 – protein đông tụ khi đun, HNO₃ đặc tạo kết tủa vàng', () => {
+      const r = run('dong-tu-protein');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[TUBE1].mix.get('protein(coag)')).toBeGreaterThan(5.5e-4);
+      expect(r.vessels[TUBE2].mix.get('xanthoprotein')).toBeGreaterThan(3e-4);
+    });
   });
 
   it('Hóa 11 Bài 11 – chưng cất rượu: sôi khoảng 86 °C, sản phẩm có độ cồn cao, cháy được', () => {

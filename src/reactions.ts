@@ -6,7 +6,15 @@
  * động học chính xác. Ea lấy gần với giá trị trong tài liệu.
  */
 import { KineticReaction, massAction } from './kinetics';
+import type { Mixture } from './mixture';
 import { arrhenius } from './thermo';
+
+/** Lượng phức [CuCl₄]²⁻ còn thiếu so với cân bằng (mol, âm nếu dư), chia cho thời gian hồi phục 1 s */
+function cucl4Excess(mix: Mixture): number {
+  const cu = mix.get('Cu^2+'), cx = mix.get('CuCl4^2-');
+  const K = 0.02 * mix.conc('Cl-') ** 4;
+  return ((cu + cx) * K) / (1 + K) - cx;
+}
 
 export const REACTIONS: KineticReaction[] = [
   // ── Kim loại + acid ──────────────────────────────────────────────────
@@ -309,4 +317,122 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 7e-6, Ea: 50000, orders: { H2O2: 1 }, surface: 'MnO2' }),
   },
 
+
+  // ════ Lớp 12 · Chương 2: carbohydrate ═══════════════════════════════════
+  // Glucose, saccharose có nhiều nhóm –OH liền kề: hòa tan Cu(OH)₂ thành dung dịch xanh lam (như glycerol)
+  {
+    id: 'cuoh2_glucose', name: 'Glucose hòa tan copper(II) hydroxide',
+    equation: '2C₆H₁₂O₆ + Cu(OH)₂ → (C₆H₁₁O₆)₂Cu + 2H₂O',
+    reactants: { 'Cu(OH)2': 1, glucose: 1 }, products: { 'Cu(glucose)': 1, H2O: 2 },
+    rate: massAction({ k25: 3e-6, Ea: 30000, orders: { glucose: 1 }, surface: 'Cu(OH)2' }),
+  },
+  {
+    id: 'cuoh2_saccharose', name: 'Saccharose hòa tan copper(II) hydroxide',
+    equation: '2C₁₂H₂₂O₁₁ + Cu(OH)₂ → (C₁₂H₂₁O₁₁)₂Cu + 2H₂O',
+    reactants: { 'Cu(OH)2': 1, saccharose: 1 }, products: { 'Cu(saccharose)': 1, H2O: 2 },
+    rate: massAction({ k25: 3e-6, Ea: 30000, orders: { saccharose: 1 }, surface: 'Cu(OH)2' }),
+  },
+  // Nhóm –CHO của glucose khử Cu(II) thành Cu₂O đỏ gạch khi đun nóng trong môi trường kiềm
+  {
+    id: 'glucose_cu_heat', name: 'Glucose khử copper(II) hydroxide khi đun nóng',
+    equation: 'C₅H₁₁O₅CHO + 2Cu(OH)₂ + NaOH →(t°) C₅H₁₁O₅COONa + Cu₂O↓ + 3H₂O',
+    reactants: { 'Cu(glucose)': 2, 'OH-': 1, H2O: 1 }, products: { Cu2O: 1, gluconate: 1, glucose: 1 },
+    rate: massAction({ k25: 9e-5, Ea: 80000, orders: { 'Cu(glucose)': 1, 'OH-': 1 } }),
+  },
+  {
+    id: 'glucose_cuoh2', name: 'Glucose khử copper(II) hydroxide khi đun nóng',
+    equation: 'C₅H₁₁O₅CHO + 2Cu(OH)₂ + NaOH →(t°) C₅H₁₁O₅COONa + Cu₂O↓ + 3H₂O',
+    reactants: { glucose: 1, 'Cu(OH)2': 2, 'OH-': 1 }, products: { gluconate: 1, Cu2O: 1, H2O: 3 },
+    rate: massAction({ k25: 1.5e-10, Ea: 80000, orders: { glucose: 1 }, surface: 'Cu(OH)2' }),
+  },
+  {
+    id: 'glucose_tollens', name: 'Glucose khử thuốc thử Tollens (tráng bạc)',
+    equation: 'C₅H₁₁O₅CHO + 2[Ag(NH₃)₂]OH →(t°) C₅H₁₁O₅COONH₄ + 2Ag↓ + 3NH₃ + H₂O',
+    reactants: { glucose: 1, 'Ag(NH3)2+': 2, 'OH-': 3 }, products: { gluconate: 1, 'Ag(mirror)': 2, NH3: 4, H2O: 2 },
+    rate: massAction({ k25: 5e-3, Ea: 60000, orders: { glucose: 1, 'Ag(NH3)2+': 1 } }),
+    productForm: 'strip',
+  },
+  {
+    id: 'glucose_br2', name: 'Glucose làm mất màu nước bromine',
+    equation: 'C₅H₁₁O₅CHO + Br₂ + H₂O → C₅H₁₁O₅COOH + 2HBr',
+    reactants: { glucose: 1, Br2: 1, H2O: 1 }, products: { gluconate: 1, 'H+': 3, 'Br-': 2 },
+    rate: massAction({ k25: 1, Ea: 50000, orders: { glucose: 1, Br2: 1 } }),
+  },
+  // Thủy phân tinh bột (mắt xích C₆H₁₀O₅) có acid xúc tác: chậm ở nhiệt độ thường, nhanh trong nước nóng
+  {
+    id: 'starch_hydrolysis', name: 'Thủy phân tinh bột trong môi trường acid',
+    equation: '(C₆H₁₀O₅)ₙ + nH₂O →(H⁺, t°) nC₆H₁₂O₆',
+    reactants: { amylose: 1, H2O: 1 }, products: { glucose: 1 },
+    rate: massAction({ k25: 3.3e-4, Ea: 80000, orders: { amylose: 1, 'H+': 1 } }),
+  },
+
+  // ════ Lớp 12 · Chương 3: amine, protein ═════════════════════════════════
+  // Ammonia, methylamine dư hòa tan Cu(OH)₂ tạo phức xanh lam đậm
+  {
+    id: 'cuoh2_nh3', name: 'Copper(II) hydroxide tan trong dung dịch ammonia',
+    equation: 'Cu(OH)₂ + 4NH₃ → [Cu(NH₃)₄](OH)₂',
+    reactants: { 'Cu(OH)2': 1, NH3: 4 }, products: { 'Cu(NH3)4^2+': 1, 'OH-': 2 },
+    rate: massAction({ k25: 2e-3, Ea: 20000, orders: { NH3: 1 }, surface: 'Cu(OH)2' }),
+  },
+  {
+    id: 'cuoh2_methylamine', name: 'Copper(II) hydroxide tan trong dung dịch methylamine',
+    equation: 'Cu(OH)₂ + 4CH₃NH₂ → [Cu(CH₃NH₂)₄](OH)₂',
+    reactants: { 'Cu(OH)2': 1, CH3NH2: 4 }, products: { 'Cu(CH3NH2)4^2+': 1, 'OH-': 2 },
+    rate: massAction({ k25: 2e-3, Ea: 20000, orders: { CH3NH2: 1 }, surface: 'Cu(OH)2' }),
+  },
+  // [Cu(H₂O)₆]²⁺ + 4Cl⁻ ⇌ [CuCl₄]²⁻ + 6H₂O: chỉ chuyển sang màu vàng khi nồng độ Cl⁻ rất lớn (HCl đặc).
+  // Cân bằng nhanh: lượng phức tiến dần về giá trị cân bằng (β hiệu dụng 0,02 M⁻⁴) với thời gian hồi phục 1 s
+  {
+    id: 'cucl4_form', name: 'Ion Cu²⁺ tạo phức với ion chloride',
+    equation: '[Cu(H₂O)₆]²⁺ + 4Cl⁻ → [CuCl₄]²⁻ + 6H₂O',
+    reactants: { 'Cu^2+': 1, 'Cl-': 4 }, products: { 'CuCl4^2-': 1 },
+    rate: (ctx) => Math.max(0, cucl4Excess(ctx.mix)),
+  },
+  {
+    id: 'cucl4_back', name: 'Phức [CuCl₄]²⁻ bị nước thế phối tử',
+    equation: '[CuCl₄]²⁻ + 6H₂O → [Cu(H₂O)₆]²⁺ + 4Cl⁻',
+    reactants: { 'CuCl4^2-': 1 }, products: { 'Cu^2+': 1, 'Cl-': 4 },
+    rate: (ctx) => Math.max(0, -cucl4Excess(ctx.mix)),
+  },
+  {
+    id: 'aniline_br2', name: 'Aniline tác dụng với nước bromine',
+    equation: 'C₆H₅NH₂ + 3Br₂ → C₆H₂Br₃NH₂↓ + 3HBr',
+    reactants: { C6H5NH2: 1, Br2: 3 }, products: { C6H2Br3NH2: 1, 'H+': 3, 'Br-': 3 },
+    rate: massAction({ k25: 50, Ea: 20000, orders: { C6H5NH2: 1, Br2: 1 } }),
+  },
+  // HBr sinh ra chuyển một phần aniline thành ion anilinium; phản ứng thế vẫn tiếp tục (qua cân bằng với aniline)
+  {
+    id: 'anilinium_br2', name: 'Aniline tác dụng với nước bromine',
+    equation: 'C₆H₅NH₂ + 3Br₂ → C₆H₂Br₃NH₂↓ + 3HBr',
+    reactants: { 'C6H5NH3+': 1, Br2: 3 }, products: { C6H2Br3NH2: 1, 'H+': 4, 'Br-': 3 },
+    rate: massAction({ k25: 50, Ea: 20000, orders: { 'C6H5NH3+': 1, Br2: 1 } }),
+  },
+  // Phản ứng màu biuret: Cu(OH)₂ trong kiềm tạo phức màu tím với các liên kết peptide
+  {
+    id: 'biuret', name: 'Phản ứng màu biuret của peptide',
+    equation: 'peptide + Cu(OH)₂ (OH⁻) → phức chất màu tím',
+    reactants: { 'Cu(OH)2': 1, protein: 4 }, products: { 'Cu(protein)': 1, H2O: 2 },
+    rate: massAction({ k25: 3e-6, Ea: 30000, orders: { protein: 1 }, surface: 'Cu(OH)2' }),
+  },
+  // Protein đông tụ khi đun nóng: gần như không xảy ra ở nhiệt độ thường, rất nhanh từ khoảng 70 °C
+  {
+    id: 'protein_coag', name: 'Protein đông tụ khi đun nóng',
+    equation: 'protein (tan) →(t°) protein đông tụ',
+    reactants: { protein: 1 }, products: { 'protein(coag)': 1 },
+    rate: massAction({ k25: 6e-9, Ea: 300000, orders: { protein: 1 } }),
+  },
+  {
+    id: 'xanthoprotein', name: 'Protein tác dụng với nitric acid đặc',
+    equation: 'protein + HNO₃ đặc → kết tủa màu vàng',
+    reactants: { protein: 1, 'H+': 1, 'NO3-': 1 }, products: { xanthoprotein: 1, H2O: 1 },
+    rate: massAction({ k25: 0.02, Ea: 40000, orders: { protein: 1, 'H+': 1, 'NO3-': 1 } }),
+  },
+
+  // ════ Lớp 12 · Chương 8: chuẩn độ muối Fe(II) bằng thuốc tím trong môi trường acid ═══
+  {
+    id: 'fe2_mno4', name: 'Muối iron(II) khử thuốc tím trong môi trường acid',
+    equation: '10FeSO₄ + 2KMnO₄ + 8H₂SO₄ → 5Fe₂(SO₄)₃ + K₂SO₄ + 2MnSO₄ + 8H₂O',
+    reactants: { 'Fe^2+': 5, 'MnO4-': 1, 'H+': 8 }, products: { 'Fe^3+': 5, 'Mn^2+': 1, H2O: 4 },
+    rate: massAction({ k25: 1e4, Ea: 30000, orders: { 'Fe^2+': 1, 'MnO4-': 1 } }),
+  },
 ];

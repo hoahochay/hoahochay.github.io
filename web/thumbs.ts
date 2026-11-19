@@ -41,8 +41,8 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = new XCard().group;
     } else if (e.tool === 'ice_bath' || e.tool === 'warm_bath' || e.tool === 'hot_bath') {
       obj = new BathView(BATH_TOOL[e.tool]).group;
-    } else if (e.tool === 'burette') {
-      obj = new BuretteView(2).group;
+    } else if (e.tool === 'burette' || e.tool === 'burette_kmno4') {
+      obj = new BuretteView(2, e.tool === 'burette' ? undefined : 0x8a1c7c).group;
     } else if (e.tool === 'dish_burn') {
       obj = porcelainDishModel().group;
     } else if (e.tool === 'spoon_s') {

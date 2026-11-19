@@ -20,6 +20,7 @@ const PROBE_NAME: Record<ToolKind, string> = {
   spoon_s: 'muôi sắt đựng lưu huỳnh',
   dish_burn: 'bát sứ',
   burette: 'burette chứa dung dịch NaOH',
+  burette_kmno4: 'burette chứa dung dịch thuốc tím',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',

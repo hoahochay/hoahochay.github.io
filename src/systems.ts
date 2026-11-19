@@ -31,6 +31,9 @@ export const FAMILIES: AcidBaseFamily[] = [
   // Cu²⁺ thủy phân chủ yếu qua dimer Cu₂(OH)₂²⁺ và engine chưa tính hệ số hoạt độ.
   // Giá trị 6,0 được hiệu chỉnh để CuSO₄ 0,1M có pH ≈ 4 như số đo thực tế.
   { id: 'copper2', forms: ['Cu^2+', 'CuOH+'], pKa: [6.0] },
+  // Amine: base yếu như ammonia (methylamine mạnh hơn, aniline yếu hơn nhiều)
+  { id: 'methylammonium', forms: ['CH3NH3+', 'CH3NH2'], pKa: [10.64] },
+  { id: 'anilinium', forms: ['C6H5NH3+', 'C6H5NH2'], pKa: [4.6] },
 ];
 
 /** id chất → { chỉ số hệ, vị trí dạng } */
@@ -96,7 +99,7 @@ export const SOLIDS: SolidDef[] = [
   // một phút ở nhiệt độ phòng, nhanh hơn vài lần trong nước nóng (Ea lớn hơn muối thường)
   { id: 'VitC', ions: { H3Cit: 1, 'Na+': 2, 'HCO3-': 2 }, Ksp: 1e6, dissolution: { k: 3e-5, Ea: 30000 } },
   // Oxide base: CuO + 2H⁺ → Cu²⁺ + H₂O. Không tan trong nước, tan dần trong acid (vài chục giây khi lắc)
-  { id: 'CuO', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2e-21, dissolution: { k: 1e-9, kH: 6e-7, Ea: 50000 } },
+  { id: 'CuO', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2e-21, dissolution: { k: 1e-9, kH: 6e-7, Ea: 50000 }, dissolveOnly: true },
   { id: 'PbI2', ions: { 'Pb^2+': 1, 'I-': 2 }, Ksp: 9.8e-9, dissolution: { k: 1e-6, Ea: 40000 } },
 ];
 

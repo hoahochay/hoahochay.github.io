@@ -34,6 +34,14 @@ function reagent(
 /** Hỗn hợp rót vào khi lấy amount (mL, hoặc số giọt với chất chỉ thị) của một lọ hóa chất */
 /** Dung dịch trong burette: NaOH có nồng độ "khoảng 0,1 M", cần xác định bằng chuẩn độ */
 export const BURETTE_SOLUTES = { NaOH: 0.105 };
+/** Các loại burette: dụng cụ → dung dịch chứa trong burette */
+export interface BuretteDef { solutes: Record<string, number>; label: string; desc: string; color: number }
+export const BURETTES = {
+  burette: { solutes: BURETTE_SOLUTES, label: 'NaOH (≈ 0,1 M)', desc: 'dung dịch NaOH (nồng độ khoảng 0,1 M)', color: 0xe4eef4 },
+  burette_kmno4: { solutes: { KMnO4: 0.02 }, label: 'KMnO₄ 0,02 M', desc: 'dung dịch KMnO₄ 0,02 M', color: 0x8a1c7c },
+} as const satisfies Record<string, BuretteDef>;
+export type BuretteTool = keyof typeof BURETTES;
+export const isBurette = (t: string): t is BuretteTool => t in BURETTES;
 
 export function reagentMixture(def: ReagentDef, amount: number, tempK: number): Mixture {
   if (def.indicator) return indicatorDrops(def.indicator, amount);
@@ -48,7 +56,9 @@ export const REAGENTS: ReagentDef[] = [
   reagent('hcl05', 'HCl', '0,5M', 'hydrochloric acid', { HCl: 0.5 }),
   reagent('hcl_dac', 'HCl', 'đặc', 'hydrochloric acid đặc (≈ 37%)', { HCl: 12 }, { aka: 'hcl dac axit clohidric dac 37%' }),
   reagent('hno3', 'HNO₃', '1M', 'nitric acid loãng', { HNO3: 1 }),
+  reagent('hno3_dac', 'HNO₃', 'đặc', 'nitric acid đặc (≈ 68%)', { HNO3: 15 }, { aka: 'axit nitric dac hno3 dac' }),
   reagent('h2so4', 'H₂SO₄', '0,5M', 'sulfuric acid loãng', { H2SO4: 0.5 }),
+  reagent('h2so4_10', 'H₂SO₄', '10%', 'sulfuric acid loãng', { H2SO4: 1.09 }),
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
   // Giấm ăn: acetic acid khoảng 5% (≈ 0,83 M)
   reagent('ch3cooh_10', 'CH₃COOH', '10%', 'acetic acid', { CH3COOH: 1.67 }, { aka: 'acetic acid 10% axit axetic' }),
@@ -61,9 +71,11 @@ export const REAGENTS: ReagentDef[] = [
   reagent('naoh05', 'NaOH', '0,5M', 'sodium hydroxide', { NaOH: 0.5 }),
   reagent('naoh_10', 'NaOH', '10%', 'sodium hydroxide', { NaOH: 2.75 }),
   reagent('naoh_2m', 'NaOH', '2M', 'sodium hydroxide', { NaOH: 2 }),
+  reagent('naoh_30', 'NaOH', '30%', 'sodium hydroxide', { NaOH: 10 }),
   reagent('naoh_20', 'NaOH', '20%', 'sodium hydroxide', { NaOH: 6.1 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('nh3_5', 'NH₃', '5%', 'dung dịch ammonia', { NH3: 2.9 }),
+  reagent('nh3_10', 'NH₃', '10%', 'dung dịch ammonia', { NH3: 5.6 }),
   reagent('ch3coona', 'CH₃COONa', '0,5M', 'sodium acetate', { CH3COONa: 0.5 }, { aka: 'natri axetat sodium acetate' }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
   reagent('na2co3_10', 'Na₂CO₃', '10%', 'sodium carbonate', { Na2CO3: 0.94 }),
@@ -95,6 +107,12 @@ export const REAGENTS: ReagentDef[] = [
   reagent('phenol_5', 'C₆H₅OH', '5%', 'dung dịch phenol', { C6H5OH: 0.53 }, { aka: 'phenol c6h5oh axit phenic' }),
   reagent('ch3cho_5', 'CH₃CHO', '5%', 'acetaldehyde (ethanal)', { CH3CHO: 1.13 }, { aka: 'acetaldehyde ethanal andehit axetic anđehit aldehyde' }),
   reagent('glycerol', 'C₃H₅(OH)₃', '', 'glycerol', { glycerol: 13.7 }, { aka: 'glycerol glixerol glyxerin' }),
+  reagent('glucose_2', 'Glucose', '2%', 'glucose (đường nho)', { glucose: 0.111 }, { aka: 'glucose glucozo duong nho c6h12o6 carbohydrate' }),
+  reagent('saccharose_5', 'Saccharose', '5%', 'saccharose (đường mía)', { saccharose: 0.146 }, { aka: 'saccharose saccarozo sucrose duong mia c12h22o11 carbohydrate' }),
+  reagent('iodine', 'Iodine', 'trong KI', 'dung dịch iodine (thuốc thử hồ tinh bột)', { I2: 0.05, KI: 0.1 }, { amber: true, aka: 'iot iodine i2 dung dich lugol' }),
+  reagent('methylamine', 'CH₃NH₂', '0,1M', 'methylamine', { CH3NH2: 0.1 }, { aka: 'methylamine metylamin amine amin' }),
+  reagent('aniline', 'C₆H₅NH₂', 'loãng', 'aniline', { C6H5NH2: 0.1 }, { aka: 'aniline anilin amine amin thom' }),
+  reagent('egg_white', 'Lòng trắng trứng', '', 'dung dịch protein (albumin)', { protein: 0.3 }, { aka: 'long trang trung protein albumin peptide' }),
   // Chất lỏng hữu cơ không tan trong nước: tách thành lớp riêng
   reagent('hexane', 'C₆H₁₄', '', 'hexane', {}, { organic: 'C6H14', aka: 'hexane hexan dung moi huu co ankan alkane' }),
   reagent('benzene', 'C₆H₆', '', 'benzene', {}, { organic: 'C6H6', aka: 'benzene benzen arene hydrocarbon thom' }),
@@ -109,10 +127,15 @@ export const REAGENTS: ReagentDef[] = [
   reagent('agno3_1', 'AgNO₃', '1%', 'silver nitrate', { AgNO3: 0.059 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
   reagent('cuso4_2', 'CuSO₄', '2%', 'copper(II) sulfate', { CuSO4: 0.13 }),
+  reagent('cuso4_01', 'CuSO₄', '0,1M', 'copper(II) sulfate', { CuSO4: 0.1 }),
+  reagent('cuso4_1m', 'CuSO₄', '1M', 'copper(II) sulfate', { CuSO4: 1 }),
   reagent('cuso4_5', 'CuSO₄', '5%', 'copper(II) sulfate', { CuSO4: 0.32 }),
   reagent('fecl3', 'FeCl₃', '0,1M', 'iron(III) chloride', { FeCl3: 0.1 }),
+  reagent('fecl3_1m', 'FeCl₃', '1M', 'iron(III) chloride', { FeCl3: 1 }),
   reagent('alcl3', 'AlCl₃', '0,1M', 'aluminium chloride', { AlCl3: 0.1 }),
   reagent('feso4', 'FeSO₄', '0,1M', 'iron(II) sulfate', { FeSO4: 0.1 }),
+  // Mẫu cần xác định nồng độ bằng chuẩn độ (SGK Hóa 12 Bài 27): nồng độ thật 0,096 M
+  reagent('feso4_x', 'FeSO₄', '≈ 0,1M', 'iron(II) sulfate (cần xác định nồng độ)', { FeSO4: 0.096 }, { aka: 'sat ii sunfat feso4 chuan do kmno4 xac dinh ham luong' }),
   reagent('bacl2', 'BaCl₂', '0,1M', 'barium chloride', { BaCl2: 0.1 }),
   reagent('na2so4', 'Na₂SO₄', '0,1M', 'sodium sulfate', { Na2SO4: 0.1 }),
   reagent('pbno3', 'Pb(NO₃)₂', '0,01M', 'lead(II) nitrate', { 'Pb(NO3)2': 0.01 }),
@@ -259,6 +282,7 @@ export const CHEMICALS: ChemEntry[] = [
     ['hot_bath', 'hot_bath', 'Cốc nước nóng', 'Ngâm ống nghiệm ở khoảng 80 °C (thả lần nữa để lấy ra)', 'coc nuoc nong ngam ong cach thuy dun nhiet do can bang'],
     ['no2_tube', 'no2_tube', 'Khí NO₂ (nút kín)', 'Nạp khí nitrogen dioxide vào ống khô rồi đậy nút', 'khi no2 nitrogen dioxide nito dioxit n2o4 nau do can bang ong nut kin'],
     ['burette', 'burette', 'Burette NaOH (≈ 0,1 M)', 'Lắp burette 25 mL chứa NaOH nồng độ khoảng 0,1 M lên bình nón để chuẩn độ', 'burette buret chuan do naoh acid base'],
+    ['burette_kmno4', 'burette_kmno4', 'Burette KMnO₄ 0,02 M', 'Lắp burette 25 mL chứa thuốc tím 0,02 M lên bình nón để chuẩn độ (vd. muối Fe(II))', 'burette buret chuan do kmno4 thuoc tim permanganat fe2 sat'],
     ['dish_burn', 'dish_burn', 'Bát sứ + que đóm', 'Rót khoảng 1 mL chất lỏng ra bát sứ rồi châm lửa (hexane, cồn…)', 'bat su dot chay chat long que dom hexane con ethanol'],
     ['spoon_s', 'spoon_s', 'Muôi sắt + lưu huỳnh', 'Đốt lưu huỳnh trên đèn cồn rồi đưa vào bình (vd. bình oxygen)', 'muoi sat dot luu huynh sulfur chay binh oxygen so2'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],

@@ -178,6 +178,34 @@ sp('I2', 'iodine', 'aq', 0, 0, 22.6, 253.8, { epsilon: [60, 160, 600] });
 sp('amylose', 'hồ tinh bột', 'aq', 0, 10, -960, 162.14);
 sp('I2-starch', 'phức iodine – tinh bột', 'aq', 0, 0, 22.6, 253.8, { epsilon: [70, 300, 20] });
 
+// ── Lớp 12: carbohydrate (SGK Hóa 12 Chương 2) ──────────────────────────
+sp('glucose', 'glucose', 'aq', 0, 12, -1263.8, 180.16, { label: 'C₆H₁₂O₆' });
+sp('gluconate', 'ion gluconate', 'aq', -1, 11, -1593, 195.15, { label: 'C₅H₁₁O₅COO⁻' });
+sp('saccharose', 'saccharose', 'aq', 0, 22, -2215.9, 342.3, { label: 'C₁₂H₂₂O₁₁' });
+// Phức tan của Cu²⁺ với glucose / saccharose (nhiều nhóm –OH liền kề): dung dịch xanh lam
+sp('Cu(glucose)', 'phức copper(II) – glucose', 'aq', 0, 10, -1141.9, 241.69, { epsilon: [45, 7, 0.6], label: 'phức Cu²⁺ – glucose' });
+sp('Cu(saccharose)', 'phức copper(II) – saccharose', 'aq', 0, 20, -2094.0, 403.83, { epsilon: [45, 7, 0.6], label: 'phức Cu²⁺ – saccharose' });
+
+// ── Lớp 12: amine, protein (SGK Hóa 12 Chương 3) ─────────────────────────
+sp('CH3NH2', 'methylamine', 'aq', 0, 5, -70.2, 31.06);
+sp('CH3NH3+', 'ion methylammonium', 'aq', 1, 6, -124.9, 32.07);
+sp('C6H5NH2', 'aniline', 'aq', 0, 7, 31.3, 93.13);
+sp('C6H5NH3+', 'ion anilinium', 'aq', 1, 8, 1.3, 94.14);
+sp('C6H2Br3NH2', '2,4,6-tribromoaniline', 's', 0, 4, 16, 329.8, { color: [0.98, 0.98, 0.96], label: 'C₆H₂Br₃NH₂', scatter: 3 });
+// Phức tan màu xanh lam đậm của Cu²⁺ với ammonia và methylamine
+sp('Cu(NH3)4^2+', 'ion tetraamminecopper(II)', 'aq', 2, 12, -351.0, 131.67, { epsilon: [60, 15, 1], label: '[Cu(NH₃)₄]²⁺' });
+sp('Cu(CH3NH2)4^2+', 'phức copper(II) – methylamine', 'aq', 2, 20, -310.6, 187.79, { epsilon: [60, 15, 1], label: '[Cu(CH₃NH₂)₄]²⁺' });
+// Phức [CuCl₄]²⁻ màu vàng (trong HCl đặc)
+sp('CuCl4^2-', 'ion tetrachlorocuprate(II)', 'aq', -2, 0, -583.9, 205.36, { epsilon: [0.8, 1.2, 30], label: '[CuCl₄]²⁻' });
+// Protein lòng trắng trứng, tính theo một gốc amino acid trung bình (≈ 110 g/mol)
+sp('protein', 'protein (lòng trắng trứng)', 'aq', 0, 7, -400, 110, { label: 'protein' });
+// Phức màu tím của Cu²⁺ với liên kết peptide (phản ứng màu biuret)
+sp('Cu(protein)', 'phức biuret (Cu²⁺ – peptide)', 'aq', 0, 26, -1478.1, 501.5, { epsilon: [25, 120, 15], label: 'phức biuret' });
+// Protein bị đông tụ khi đun nóng: khối kết tủa trắng đục
+sp('protein(coag)', 'protein đông tụ', 's', 0, 7, -405, 110, { color: [0.97, 0.96, 0.93], label: 'protein đông tụ', scatter: 4 });
+// Protein phản ứng với HNO₃ đặc: kết tủa màu vàng (nitro hóa vòng benzene trong gốc amino acid)
+sp('xanthoprotein', 'protein bị nitro hóa', 's', 0, 6, -340, 155, { color: [0.98, 0.82, 0.2], label: 'kết tủa vàng', scatter: 4 });
+
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
 sp('phenolphthalein', 'phenolphthalein', 'aq', 0, 0, 0, 318.3, {
   indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2, viaOH: true },

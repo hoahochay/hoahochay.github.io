@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Burette, bleachRate, burnSulfurIn, contentsMassG, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
-import { BURETTE_SOLUTES, CHEMICALS, ChemEntry, ReagentDef, reagentMixture, SolidItem, solidMol } from './catalog';
+import { BURETTES, BuretteTool, CHEMICALS, isBurette, ChemEntry, ReagentDef, reagentMixture, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
 import { BuretteAction, RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
@@ -336,6 +336,7 @@ const TOOL_NAME: Record<ToolKind, string> = {
   spoon_s: 'muôi sắt đựng lưu huỳnh',
   dish_burn: 'bát sứ',
   burette: 'burette chứa dung dịch NaOH',
+  burette_kmno4: 'burette chứa dung dịch thuốc tím',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -537,7 +538,7 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   if (kind === 'no2_tube') return fillNO2(view);
   if (kind === 'spoon_s') return sulfurSpoon(view);
   if (kind === 'dish_burn') return dishBurn(view);
-  if (kind === 'burette') return toggleBurette(view);
+  if (isBurette(kind)) return toggleBurette(view, kind);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
   const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
@@ -777,23 +778,26 @@ function sulfurSpoon(view: VesselView) {
 
 // ── Đốt khoảng 1 mL chất lỏng trong bát sứ bằng que đóm đang cháy (SGK Hóa 11 Bài 15) ──
 // ── Burette chuẩn độ (SGK Hóa 11 Bài 2) ──
-interface MountedBurette { b: Burette; view: BuretteView; disp: number }
+interface MountedBurette { b: Burette; view: BuretteView; disp: number; tool: BuretteTool }
 const burettes = new Map<VesselView, MountedBurette>();
 const fmtML = (x: number) => x.toFixed(2).replace('.', ',');
 
-function toggleBurette(view: VesselView) {
-  if (burettes.has(view)) {
+function toggleBurette(view: VesselView, tool: BuretteTool) {
+  const was = burettes.get(view)?.tool;
+  if (was) {
     removeBurette(view);
-    return log('Tháo burette', 'action', view.name);
+    log('Tháo burette', 'action', view.name);
+    if (was === tool) return;
   }
+  const def = BURETTES[tool];
   if (view.kind.type === 'tube') return log('Burette lắp trên bình nón hoặc cốc, không lắp trên ống nghiệm.', 'warning', view.name);
   if (view.vessel.inverted || view.vessel.outlet || view.vessel.stoppered) return log('Mở miệng dụng cụ trước khi lắp burette.', 'warning', view.name);
   const tip = view.mouthWorld().add(new THREE.Vector3(0, 1.2, 0));
-  const bv = new BuretteView(tip.y - LAMP_POS.y);
+  const bv = new BuretteView(tip.y - LAMP_POS.y, def.color);
   bv.group.position.copy(tip);
   scene.add(bv.group);
-  burettes.set(view, { b: new Burette(view.vessel, BURETTE_SOLUTES), view: bv, disp: 0 });
-  log('Lắp burette chứa dung dịch NaOH (nồng độ khoảng 0,1 M) phía trên dụng cụ, chỉnh mức dung dịch về vạch 0', 'action', view.name);
+  burettes.set(view, { b: new Burette(view.vessel, def.solutes), view: bv, disp: 0, tool });
+  log(`Lắp burette chứa ${def.desc} phía trên dụng cụ, chỉnh mức dung dịch về vạch 0`, 'action', view.name);
 }
 
 function removeBurette(view: VesselView) {
@@ -810,21 +814,21 @@ function buretteAction(view: VesselView, action: BuretteAction) {
   rec({ kind: 'burette', vessel: idx(view), action });
   if (action === 'drop') {
     m.disp += m.b.drop();
-    return log(`Nhỏ 1 giọt NaOH (đã dùng ${fmtML(m.b.usedML)} mL)`, 'action', view.name);
+    return log(`Nhỏ 1 giọt từ burette (đã dùng ${fmtML(m.b.usedML)} mL)`, 'action', view.name);
   }
   if (action === 'close') {
     if (m.b.mode === 'closed') return;
     m.b.mode = 'closed';
-    return log(`Đóng khóa burette. Thể tích dung dịch NaOH đã dùng: ${fmtML(m.b.usedML)} mL`, 'action', view.name);
+    return log(`Đóng khóa burette. Thể tích ${BURETTES[m.tool].desc.replace(/ \(.*\)/, '')} đã dùng: ${fmtML(m.b.usedML)} mL`, 'action', view.name);
   }
   m.b.mode = action;
-  log(action === 'stream' ? 'Mở khóa burette, dung dịch NaOH chảy thành dòng xuống bình (lắc đều bình)'
-    : 'Vặn khóa burette cho dung dịch NaOH nhỏ từng giọt (lắc đều bình)', 'action', view.name);
+  log(action === 'stream' ? 'Mở khóa burette, dung dịch chảy thành dòng xuống bình (lắc đều bình)'
+    : 'Vặn khóa burette cho dung dịch nhỏ từng giọt (lắc đều bình)', 'action', view.name);
 }
 
 function buretteInfo(v: VesselView) {
   const m = burettes.get(v);
-  return m ? { usedML: m.b.usedML, mode: m.b.mode } : undefined;
+  return m ? { usedML: m.b.usedML, mode: m.b.mode, label: BURETTES[m.tool].label } : undefined;
 }
 
 const capitalize = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);

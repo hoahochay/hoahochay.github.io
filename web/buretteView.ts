@@ -21,10 +21,11 @@ export class BuretteView {
   private readonly stream: THREE.Mesh;
   private readonly drops: Drop[] = [];
   private readonly dropGeo = new THREE.SphereGeometry(0.11, 10, 8).scale(1, 1.3, 1);
-  private readonly liquidMat = new THREE.MeshStandardMaterial({ color: 0xe4eef4, transparent: true, opacity: 0.55, roughness: 0.1, depthWrite: false });
+  private readonly liquidMat: THREE.MeshStandardMaterial;
 
   /** tipAboveBench: độ cao đầu vòi so với mặt bàn (để chân giá chạm bàn) */
-  constructor(tipAboveBench: number) {
+  constructor(tipAboveBench: number, color = 0xe4eef4) {
+    this.liquidMat = new THREE.MeshStandardMaterial({ color, transparent: true, opacity: color === 0xe4eef4 ? 0.55 : 0.85, roughness: 0.1, depthWrite: false });
     const glass = glassMaterial(0xffffff, 0.25);
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TOP - TUBE_BOTTOM, 20, 1, true).translate(0, (TOP + TUBE_BOTTOM) / 2, 0), glass);
     tube.renderOrder = 5;
