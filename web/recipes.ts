@@ -46,6 +46,12 @@ export type CategoryId = keyof typeof CATEGORIES;
 
 /** Chủ đề (bài học) mà thí nghiệm thuộc về; thứ tự ở đây là thứ tự hiện trong danh sách */
 export const TOPICS = {
+  // Lớp 10: SGK Hóa học 10 – Kết nối tri thức với cuộc sống
+  'hoa10-b7': { cat: 10, title: 'Hóa 10 · Bài 7. Xu hướng biến đổi thành phần và một số tính chất của hợp chất trong một chu kì' },
+  'hoa10-b15': { cat: 10, title: 'Hóa 10 · Bài 15. Phản ứng oxi hóa – khử' },
+  'hoa10-b17': { cat: 10, title: 'Hóa 10 · Bài 17. Biến thiên enthalpy trong các phản ứng hóa học' },
+  'hoa10-b19': { cat: 10, title: 'Hóa 10 · Bài 19. Tốc độ phản ứng' },
+  'hoa10-b22': { cat: 10, title: 'Hóa 10 · Bài 22. Hydrogen halide. Muối halide' },
   // Khám phá: thí nghiệm cơ bản, làm quen với hóa học
   'kp-phan-ung': { cat: 'explore', title: 'Biến đổi chất và phản ứng hóa học' },
   'kp-dung-dich': { cat: 'explore', title: 'Dung dịch và nồng độ' },
@@ -66,11 +72,13 @@ export const categoryOf = (r: Recipe): CategoryId => TOPICS[r.topic].cat;
 export const RECIPE_ALIASES: Record<string, string> = {
   'phan-ung-sat-luu-huynh': 'sat-luu-huynh',
   'bao-toan-khoi-luong-ctst': 'bao-toan-khoi-luong',
-  'be-mat-toc-do-ctst': 'be-mat-toc-do-phan-ung',
+  'be-mat-toc-do-ctst': 'dien-tich-be-mat-hoa10',
+  'be-mat-toc-do-phan-ung': 'dien-tich-be-mat-hoa10',
+  'xuc-tac-toc-do-phan-ung': 'xuc-tac-hoa10',
   // Thí nghiệm cũ (trước khi theo SGK) trùng với thí nghiệm hiện có
   'mg-hcl': 'metal-activity',
   'fe-cu': 'tinh-chat-muoi',
-  'h2o2': 'xuc-tac-toc-do-phan-ung',
+  'h2o2': 'xuc-tac-hoa10',
   'neutralization': 'tinh-chat-base',
   'caco3-hcl': 'co2-test',
   'co2-limewater': 'tinh-chat-oxide-acid',
@@ -114,6 +122,173 @@ const pourInto = (src: number, dst: number, text?: string): Step => ({ kind: 'po
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
 export const RECIPES: Recipe[] = [
+  // ── Lớp 10 ────────────────────────────────────────────────────────────
+  {
+    id: 'muoi-carbonate-tac-dung-acid',
+    title: 'Phản ứng của muối carbonate với dung dịch acid',
+    topic: 'hoa10-b7', page: 41,
+    concepts: ['tính acid', 'nitric acid', 'carbonic acid', 'chu kì 2'],
+    summary: 'Nhỏ từng giọt dung dịch sodium carbonate vào nitric acid loãng. Có hiện tượng gì? Acid nào mạnh hơn: HNO₃ hay H₂CO₃?',
+    steps: [
+      focus(TUBE1),
+      add('hno3', 2, TUBE1, 'Cho khoảng 2 mL dung dịch nitric acid loãng vào ống nghiệm.'),
+      add('na2co3', 0.3, TUBE1, 'Thêm từng giọt dung dịch sodium carbonate vào ống.'),
+      wait(4, { text: 'Có bọt khí không màu thoát ra ngay khi giọt sodium carbonate rơi xuống.' }),
+      add('na2co3', 0.3, TUBE1, 'Nhỏ tiếp vài giọt.'),
+      wait(4, { text: 'Lại sủi bọt khí carbon dioxide.' }),
+      say('Nitric acid đẩy được carbonic acid ra khỏi muối carbonate: nitric acid mạnh hơn carbonic acid.'),
+    ],
+    result: {
+      phenomena: ['Mỗi khi nhỏ dung dịch sodium carbonate vào, có bọt khí không màu (carbon dioxide) thoát ra'],
+      equations: ['Na₂CO₃ + 2HNO₃ → 2NaNO₃ + CO₂↑ + H₂O'],
+      explain: 'Acid mạnh hơn đẩy acid yếu hơn ra khỏi muối. Carbonic acid sinh ra không bền, phân hủy ngay thành khí carbon dioxide và nước, nên ta thấy sủi bọt. Vậy HNO₃ là acid mạnh hơn H₂CO₃. Carbon (nhóm IVA) và nitrogen (nhóm VA) cùng ở chu kì 2: trong một chu kì, đi từ trái sang phải, tính acid của oxide và hydroxide ứng với hóa trị cao nhất tăng dần.',
+    },
+  },
+  {
+    id: 'chat-oxi-hoa-chat-khu',
+    title: 'Xác định chất oxi hóa, chất khử',
+    topic: 'hoa10-b15', page: 73,
+    concepts: ['chất oxi hóa', 'chất khử', 'số oxi hóa', 'sắt'],
+    summary: 'Cho đinh sắt vào dung dịch copper(II) sulfate và vào dung dịch sulfuric acid loãng. Trong mỗi phản ứng, chất nào nhường electron, chất nào nhận electron?',
+    steps: [
+      focus(TUBE1, TUBE2),
+      add('cuso4', 3, TUBE1, 'Thí nghiệm 1: ống (1) chứa dung dịch copper(II) sulfate.'),
+      add('h2so4', 3, TUBE2, 'Thí nghiệm 2: ống (2) chứa dung dịch sulfuric acid loãng.'),
+      add('fe', 2, TUBE1, 'Cho một đinh sắt vào ống (1).'),
+      add('fe', 2, TUBE2, 'Cho một đinh sắt vào ống (2).'),
+      wait(10, { text: 'Ống (2): có bọt khí nhỏ thoát ra trên bề mặt đinh sắt.' }),
+      wait(180, { speed: 6, text: 'Tua nhanh: ở ống (1), lớp kim loại màu đỏ bám dần lên đinh sắt, màu xanh của dung dịch nhạt đi.' }),
+      say('Trong cả hai thí nghiệm, sắt nhường electron và bị oxi hóa thành ion Fe²⁺: sắt là chất khử. Ở ống (1), ion Cu²⁺ nhận electron thành đồng; ở ống (2), ion H⁺ nhận electron thành khí hydrogen: đó là các chất oxi hóa.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1): có lớp kim loại màu đỏ (đồng) bám trên đinh sắt, màu xanh của dung dịch nhạt dần',
+        'Ống (2): có bọt khí không màu (hydrogen) thoát ra trên đinh sắt',
+      ],
+      equations: ['Fe + CuSO₄ → FeSO₄ + Cu', 'Fe + H₂SO₄ → FeSO₄ + H₂↑'],
+      explain: 'Thí nghiệm 1: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử Cu⁺² + 2e → Cu⁰. Sắt là chất khử, CuSO₄ (ion Cu²⁺) là chất oxi hóa. Thí nghiệm 2: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử 2H⁺ + 2e → H₂⁰. Sắt là chất khử, H₂SO₄ loãng (ion H⁺) là chất oxi hóa. Chất khử là chất nhường electron, số oxi hóa tăng; chất oxi hóa là chất nhận electron, số oxi hóa giảm.',
+    },
+  },
+  {
+    id: 'nhiet-phan-ung-trung-hoa',
+    title: 'Theo dõi sự thay đổi nhiệt độ của phản ứng trung hòa',
+    topic: 'hoa10-b17', page: 82,
+    concepts: ['phản ứng tỏa nhiệt', 'trung hòa', 'nhiệt độ', 'biến thiên enthalpy'],
+    summary: 'Rót dung dịch sodium hydroxide 0,5M vào cốc đựng hydrochloric acid 0,5M và theo dõi nhiệt độ. Phản ứng trung hòa tỏa nhiệt hay thu nhiệt?',
+    steps: [
+      say('Sách dùng mỗi dung dịch 50 mL, cốc 150 mL và nhiệt kế. Ở đây dùng mỗi dung dịch 25 mL; bảng thông tin bên phải hiển thị nhiệt độ như một nhiệt kế nhúng trong cốc.'),
+      focus(BEAKER, FLASK),
+      add('hcl05', 25, BEAKER, 'Lấy 25 mL dung dịch hydrochloric acid 0,5M cho vào cốc. Đọc nhiệt độ dung dịch: khoảng 25 °C.'),
+      add('naoh05', 25, FLASK, 'Lấy 25 mL dung dịch sodium hydroxide 0,5M vào bình.'),
+      pourInto(FLASK, BEAKER, 'Rót dung dịch sodium hydroxide vào cốc.'),
+      stir(BEAKER, 'Khuấy nhẹ.'),
+      wait(10, { text: 'Nhiệt độ dung dịch trong cốc tăng lên khoảng 2,7 °C rồi giữ gần như không đổi.' }),
+      say('Nhiệt độ tăng: phản ứng trung hòa giữa acid và base là phản ứng tỏa nhiệt.'),
+    ],
+    result: {
+      phenomena: [
+        'Trước khi rót: dung dịch acid ở khoảng 25 °C',
+        'Sau khi rót và khuấy: nhiệt độ tăng lên khoảng 27,7 °C',
+      ],
+      equations: ['HCl + NaOH → NaCl + H₂O', 'H⁺ + OH⁻ → H₂O   ΔrH°₂₉₈ ≈ −57 kJ'],
+      explain: 'Phản ứng trung hòa tỏa nhiệt: mỗi mol nước tạo thành từ H⁺ và OH⁻ giải phóng khoảng 57 kJ, làm dung dịch nóng lên. Ở đây có 0,0125 mol nước được tạo thành, tỏa ra khoảng 0,7 kJ. Nếu dùng dung dịch loãng hơn (ví dụ 0,25 M), lượng nước tạo thành ít hơn trong cùng thể tích dung dịch nên nhiệt độ tăng ít hơn, chỉ khoảng một nửa.',
+    },
+  },
+  {
+    id: 'dien-tich-be-mat-hoa10',
+    title: 'Ảnh hưởng của diện tích bề mặt đến tốc độ phản ứng',
+    topic: 'hoa10-b19', page: 98,
+    concepts: ['tốc độ phản ứng', 'diện tích bề mặt', 'đá vôi', 'va chạm hiệu quả'],
+    summary: 'Cho cùng khối lượng đá vôi dạng viên và đá vôi đập nhỏ vào hydrochloric acid 0,5M. Phản ứng nào thoát khí nhanh hơn?',
+    steps: [
+      say('Sách dùng 2 bình tam giác, mỗi bình khoảng 2 g đá vôi và 20 mL acid. Ở đây dùng 2 ống nghiệm với lượng bằng một phần tư.'),
+      focus(TUBE1, TUBE2),
+      add('caco3', 0.5, TUBE1, 'Ống (1): 0,5 g đá vôi dạng viên.'),
+      add('caco3_powder', 0.5, TUBE2, 'Ống (2): 0,5 g đá vôi đập nhỏ.'),
+      add('hcl05', 5, TUBE1, 'Rót 5 mL dung dịch hydrochloric acid 0,5M vào ống (1).'),
+      add('hcl05', 5, TUBE2, 'Rót 5 mL dung dịch hydrochloric acid 0,5M vào ống (2).'),
+      wait(15, { text: 'Ống (2) sủi bọt khí rất mạnh ngay từ đầu; ống (1) sủi bọt chậm hơn nhiều.' }),
+      say('Đá vôi đập nhỏ có tổng diện tích bề mặt lớn hơn nên phản ứng nhanh hơn.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1), đá vôi dạng viên: bọt khí thoát ra chậm, kéo dài',
+        'Ống (2), đá vôi đập nhỏ: sủi bọt khí mạnh, phản ứng xong nhanh',
+      ],
+      equations: ['CaCO₃ + 2HCl → CaCl₂ + CO₂↑ + H₂O'],
+      explain: 'Phản ứng xảy ra trên bề mặt chất rắn. Cùng khối lượng, đá vôi đập nhỏ có tổng diện tích bề mặt lớn hơn nhiều, nên số va chạm giữa H⁺ và bề mặt đá vôi tăng, số va chạm hiệu quả tăng theo, tốc độ phản ứng tăng. Có thể tăng diện tích bề mặt bằng cách đập nhỏ hoặc tạo hạt xốp.',
+    },
+  },
+  {
+    id: 'xuc-tac-hoa10',
+    title: 'Ảnh hưởng của chất xúc tác đến tốc độ phản ứng',
+    topic: 'hoa10-b19', page: 99,
+    concepts: ['chất xúc tác', 'manganese dioxide', 'hydrogen peroxide', 'năng lượng hoạt hóa'],
+    summary: 'Hai ống chứa dung dịch hydrogen peroxide 10%; thêm manganese dioxide vào một ống. So sánh tốc độ thoát khí ở hai ống.',
+    steps: [
+      say('Sách dùng 2 bình tam giác, mỗi bình 20 mL. Ở đây dùng 2 ống nghiệm, mỗi ống 5 mL.'),
+      focus(TUBE1, TUBE2),
+      add('h2o2_10', 5, TUBE1, 'Ống (1): 5 mL dung dịch hydrogen peroxide 10%.'),
+      add('h2o2_10', 5, TUBE2, 'Ống (2): 5 mL dung dịch hydrogen peroxide 10%.'),
+      wait(3, { text: 'Cả hai ống đều không thấy hiện tượng gì: hydrogen peroxide phân hủy rất chậm.' }),
+      add('mno2', 0.1, TUBE2, 'Thêm khoảng 0,1 g manganese dioxide vào ống (2) và lắc đều.'),
+      stir(TUBE2),
+      wait(20, { text: 'Ống (2) sủi bọt khí oxygen rất mạnh và nóng lên; ống (1) vẫn yên lặng.' }),
+      say('Sau phản ứng, bột manganese dioxide màu đen vẫn còn nguyên dưới đáy ống (2).'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1), không có xúc tác: không thấy khí thoát ra',
+        'Ống (2), có manganese dioxide: sủi bọt khí rất mạnh, ống nóng lên rõ rệt',
+        'Manganese dioxide còn nguyên sau phản ứng',
+      ],
+      equations: ['2H₂O₂ —MnO₂→ 2H₂O + O₂↑'],
+      explain: 'Chất xúc tác làm phản ứng xảy ra qua nhiều giai đoạn, mỗi giai đoạn có năng lượng hoạt hóa thấp hơn phản ứng không xúc tác. Vì vậy có nhiều hạt đủ năng lượng để phản ứng hơn, tốc độ phản ứng tăng. Sau phản ứng, khối lượng và bản chất hóa học của chất xúc tác không đổi. Phản ứng phân hủy hydrogen peroxide tỏa nhiệt nên ống nóng lên.',
+    },
+  },
+  {
+    id: 'hcl-tac-dung-kim-loai',
+    title: 'Dung dịch HCl tác dụng với kim loại',
+    topic: 'hoa10-b22', page: 113,
+    concepts: ['hydrochloric acid', 'tính acid', 'kim loại', 'dãy hoạt động'],
+    summary: 'Cho vài hạt kẽm và vài mẩu đồng vào hai ống đựng dung dịch hydrochloric acid loãng. Kim loại nào phản ứng?',
+    steps: [
+      focus(TUBE1, TUBE2),
+      add('hcl', 2, TUBE1, 'Cho khoảng 2 mL dung dịch hydrochloric acid loãng vào ống (1).'),
+      add('hcl', 2, TUBE2, 'Cho khoảng 2 mL dung dịch hydrochloric acid loãng vào ống (2).'),
+      add('zn', 1, TUBE1, 'Cho vài hạt kẽm vào ống (1).'),
+      add('cu', 1, TUBE2, 'Cho đồng vào ống (2).'),
+      wait(15, { text: 'Ống (1): có bọt khí thoát ra trên bề mặt hạt kẽm. Ống (2): không có hiện tượng gì.' }),
+      say('Kẽm đứng trước hydrogen trong dãy hoạt động hóa học nên tác dụng với hydrochloric acid giải phóng khí hydrogen; đồng đứng sau hydrogen nên không phản ứng.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1), kẽm: có bọt khí không màu thoát ra, hạt kẽm tan dần',
+        'Ống (2), đồng: không có hiện tượng',
+      ],
+      equations: ['Zn + 2HCl → ZnCl₂ + H₂↑', 'Cu + HCl: không phản ứng'],
+      explain: 'Hydrochloric acid là acid mạnh. Ion H⁺ trong dung dịch có tính oxi hóa, tác dụng với các kim loại đứng trước hydrogen trong dãy hoạt động hóa học (như Mg, Zn, Fe) tạo muối chloride và khí hydrogen. Đồng đứng sau hydrogen nên không tác dụng với hydrochloric acid.',
+    },
+  },
+  {
+    id: 'hcl-tac-dung-nahco3',
+    title: 'Dung dịch HCl tác dụng với muối NaHCO₃ rắn',
+    topic: 'hoa10-b22', page: 114,
+    concepts: ['hydrochloric acid', 'tính acid', 'muối hydrogencarbonate', 'khí carbon dioxide'],
+    summary: 'Cho một thìa nhỏ sodium hydrogencarbonate vào ống nghiệm rồi thêm dung dịch hydrochloric acid loãng. Acid nào mạnh hơn: HCl hay H₂CO₃?',
+    steps: [
+      focus(TUBE1),
+      add('baking_soda', 0.2, TUBE1, 'Cho một thìa nhỏ sodium hydrogencarbonate rắn vào ống nghiệm.'),
+      add('hcl', 3, TUBE1, 'Thêm dung dịch hydrochloric acid loãng.'),
+      wait(10, { text: 'Sủi bọt khí không màu mạnh, chất rắn tan dần.' }),
+      say('Hydrochloric acid đẩy carbonic acid ra khỏi muối: hydrochloric acid mạnh hơn carbonic acid.'),
+    ],
+    result: {
+      phenomena: ['Sủi bọt khí không màu (carbon dioxide)', 'Chất rắn sodium hydrogencarbonate tan dần'],
+      equations: ['NaHCO₃ + HCl → NaCl + CO₂↑ + H₂O'],
+      explain: 'Hydrochloric acid là acid mạnh, đẩy được acid yếu hơn là carbonic acid ra khỏi muối. Carbonic acid không bền, phân hủy thành khí carbon dioxide và nước. Tính chất này giúp hydrochloric acid làm sạch lớp muối carbonate bám trên bề mặt kim loại trước khi sơn, hàn, mạ điện.',
+    },
+  },
   // ── Khám phá: thí nghiệm cơ bản, không thuộc chương trình lớp 10 – 12 ──
   {
     id: 'sat-luu-huynh',
@@ -545,30 +720,6 @@ export const RECIPES: Recipe[] = [
     },
   },
   {
-    id: 'be-mat-toc-do-phan-ung',
-    title: 'Diện tích tiếp xúc: đá vôi dạng viên và dạng bột',
-    topic: 'kp-toc-do',
-    concepts: ['tốc độ phản ứng', 'diện tích tiếp xúc', 'đá vôi', 'hydrochloric acid'],
-    summary: 'Cho cùng khối lượng đá vôi dạng viên và dạng bột mịn vào hydrochloric acid. Ống nào có khí thoát ra nhanh hơn?',
-    steps: [
-      focus(TUBE1, TUBE2),
-      add('caco3', 1, TUBE1, 'Ống (1): một mẩu đá vôi nhỏ.'),
-      add('caco3_powder', 1, TUBE2, 'Ống (2): cùng khối lượng bột đá vôi đã nghiền mịn.'),
-      add('hcl', 5, TUBE1, 'Thêm 5 mL dung dịch hydrochloric acid vào ống (1).'),
-      add('hcl', 5, TUBE2, 'Thêm 5 mL dung dịch hydrochloric acid vào ống (2).'),
-      wait(15, { text: 'Ống (2) sủi bọt khí rất mạnh, có thể trào bọt; ống (1) sủi bọt từ từ.' }),
-      say('Bột đá vôi có diện tích tiếp xúc với acid lớn hơn nhiều so với mẩu đá vôi nên phản ứng nhanh hơn.'),
-    ],
-    result: {
-      phenomena: [
-        'Ống (1), đá vôi dạng viên: bọt khí thoát ra từ từ',
-        'Ống (2), bột đá vôi: sủi bọt khí rất mạnh, bột tan nhanh',
-      ],
-      equations: ['CaCO₃ + 2HCl → CaCl₂ + CO₂↑ + H₂O'],
-      explain: 'Phản ứng chỉ xảy ra trên bề mặt chất rắn. Nghiền nhỏ, đập dập hay cắt thành nhiều mảnh làm tăng diện tích bề mặt tiếp xúc, nên tốc độ phản ứng tăng. Vì vậy chẻ nhỏ củi thì dễ nhóm lửa hơn, và pháo hoa dùng nguyên liệu ở dạng bột để cháy thật nhanh.',
-    },
-  },
-  {
     id: 'surface-area',
     title: 'Diện tích tiếp xúc: magnesium dạng dải và dạng bột',
     topic: 'kp-toc-do',
@@ -589,33 +740,6 @@ export const RECIPES: Recipe[] = [
       phenomena: ['Ống (2), bột magnesium: sủi bọt rất mạnh, kết thúc sau vài giây', 'Ống (1), dải magnesium: sủi bọt đều, kéo dài khoảng 1 phút'],
       equations: ['Mg + 2HCl → MgCl₂ + H₂↑'],
       explain: 'Phản ứng xảy ra trên bề mặt chất rắn. Chia nhỏ chất rắn làm tăng diện tích bề mặt, nhiều nguyên tử Mg tiếp xúc với H⁺ cùng lúc hơn, nên tốc độ phản ứng tăng.',
-    },
-  },
-  {
-    id: 'xuc-tac-toc-do-phan-ung',
-    title: 'Chất xúc tác: phân hủy hydrogen peroxide',
-    topic: 'kp-toc-do',
-    concepts: ['tốc độ phản ứng', 'chất xúc tác', 'khí oxygen'],
-    summary: 'Cho một ít bột manganese dioxide vào một trong hai ống nước oxy già. Ống nào thoát khí nhanh hơn?',
-    steps: [
-      say('Nước oxy già (hydrogen peroxide) tự phân hủy rất chậm thành nước và khí oxygen. Ta xem manganese dioxide ảnh hưởng thế nào đến phản ứng này.'),
-      focus(TUBE1, TUBE2),
-      add('h2o2', 3, TUBE1, 'Ống (1): khoảng 3 mL nước oxy già 3%.'),
-      add('h2o2', 3, TUBE2, 'Ống (2): khoảng 3 mL nước oxy già 3%.'),
-      add('mno2', 0.1, TUBE2, 'Cho một ít bột manganese dioxide vào ống (2).'),
-      wait(6, { text: 'Ống (2) sủi bọt khí rất mạnh; ống (1) hầu như không thấy bọt khí.' }),
-      probe('glowing', TUBE2, 'Đưa que đóm còn tàn đỏ vào miệng ống (2): que đóm bùng cháy, khí thoát ra là oxygen.'),
-      wait(20, { text: 'Phản ứng ở ống (2) dần dừng lại; bột manganese dioxide màu đen vẫn còn nguyên dưới đáy ống.' }),
-      say('Manganese dioxide làm phản ứng phân hủy nước oxy già xảy ra nhanh hơn, và sau phản ứng nó vẫn còn nguyên: đó là chất xúc tác.'),
-    ],
-    result: {
-      phenomena: [
-        'Ống (1) chỉ có nước oxy già: hầu như không thấy khí thoát ra',
-        'Ống (2) có thêm manganese dioxide: sủi bọt khí rất mạnh, khí làm que đóm còn tàn đỏ bùng cháy',
-        'Sau phản ứng, bột manganese dioxide màu đen vẫn còn ở đáy ống (2)',
-      ],
-      equations: ['2H₂O₂ → 2H₂O + O₂↑ (xúc tác MnO₂)'],
-      explain: 'Hydrogen peroxide phân hủy thành nước và khí oxygen. Khi không có chất xúc tác, phản ứng xảy ra rất chậm. Manganese dioxide làm tăng tốc độ phản ứng nhưng không bị mất đi: sau phản ứng, khối lượng và tính chất hóa học của nó không đổi. Chất như vậy gọi là chất xúc tác. Trong cơ thể, các enzyme cũng là chất xúc tác giúp quá trình tiêu hóa thức ăn diễn ra nhanh.',
     },
   },
   {

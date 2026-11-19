@@ -214,19 +214,12 @@ describe('Thí nghiệm mẫu', () => {
 
   it('Bài 7 – diện tích bề mặt: đá vôi bột phản ứng nhanh hơn đá vôi viên', () => {
     // So sánh trong 5 giây đầu (về sau acid ở ống bột đã hết nên hai ống gần bằng nhau)
-    const r = RECIPES.find((x) => x.id === 'be-mat-toc-do-phan-ung')!;
+    const r = RECIPES.find((x) => x.id === 'dien-tich-be-mat-hoa10')!;
     const steps = r.steps.map((st) => (st.kind === 'wait' ? { ...st, seconds: 5 } : st));
     const v = runRecipe({ ...r, steps }).vessels;
     expect(v[1].mix.get('Ca^2+')).toBeGreaterThan(2 * v[0].mix.get('Ca^2+'));
   });
 
-  it('Bài 7 – xúc tác: MnO2 phân hủy gần hết H2O2, que đóm bùng cháy, MnO2 còn nguyên', () => {
-    const res = runRecipe(RECIPES.find((x) => x.id === 'xuc-tac-toc-do-phan-ung')!);
-    const v = res.vessels;
-    expect(v[1].mix.get('H2O2')).toBeLessThan(0.05 * v[0].mix.get('H2O2'));
-    expect(v[1].mix.get('MnO2') * 86.94).toBeCloseTo(0.1, 3);
-    expect(res.probes).toEqual(['relight']);
-  });
 
   it('Bài 8 – HCl làm quỳ tím hóa đỏ, tác dụng với sắt và kẽm (kẽm mạnh hơn)', () => {
     const res = runRecipe(RECIPES.find((x) => x.id === 'tinh-chat-hydrochloric-acid')!);
@@ -367,6 +360,24 @@ describe('Thí nghiệm mẫu', () => {
     expect(h2[1]).toBeGreaterThan(h2[2]);
     expect(h2[2]).toBeGreaterThan(0);
     expect(h2[3]).toBe(0);
+  });
+
+  it('Lớp 10 – các thí nghiệm giai đoạn 1 cho đúng hiện tượng', () => {
+    const v7 = vesselsOf('muoi-carbonate-tac-dung-acid');
+    expect(v7[0].gasTotal.get('CO2') ?? 0).toBeGreaterThan(1e-4);
+    const v15 = vesselsOf('chat-oxi-hoa-chat-khu');
+    expect(v15[0].mix.get('Cu') * 63.55).toBeGreaterThan(0.01);
+    expect(v15[1].gasTotal.get('H2') ?? 0).toBeGreaterThan(0);
+    const v17 = vesselsOf('nhiet-phan-ung-trung-hoa');
+    expect(v17[BEAKER].observe().tempC).toBeGreaterThan(27);
+    expect(v17[BEAKER].observe().pH).toBeCloseTo(7, 0);
+    const v19 = vesselsOf('xuc-tac-hoa10');
+    expect(v19[1].mix.get('H2O2')).toBeLessThan(0.05 * v19[0].mix.get('H2O2'));
+    expect(v19[1].mix.get('MnO2') * 86.94).toBeCloseTo(0.1, 3);
+    const v22 = vesselsOf('hcl-tac-dung-kim-loai');
+    expect(v22[0].gasTotal.get('H2') ?? 0).toBeGreaterThan(0);
+    expect(v22[1].gasTotal.get('H2') ?? 0).toBe(0);
+    expect(vesselsOf('hcl-tac-dung-nahco3')[0].gasTotal.get('CO2') ?? 0).toBeGreaterThan(1e-3);
   });
 
   it('mỗi thí nghiệm thuộc một chủ đề và một mục có trong danh sách; id không trùng', () => {
