@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
-import { BEAKER, BOOKS, FLASK, LabState, LESSONS, PlayScript, RECIPES, SYRINGE } from '../web/recipes';
+import { BEAKER, CATEGORIES, FLASK, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
 
 interface RunResult {
   vessels: Vessel[];
@@ -217,7 +217,7 @@ describe('Thí nghiệm mẫu', () => {
     const r = RECIPES.find((x) => x.id === 'be-mat-toc-do-phan-ung')!;
     const steps = r.steps.map((st) => (st.kind === 'wait' ? { ...st, seconds: 5 } : st));
     const v = runRecipe({ ...r, steps }).vessels;
-    expect(v[0].mix.get('Ca^2+')).toBeGreaterThan(2 * v[1].mix.get('Ca^2+'));
+    expect(v[1].mix.get('Ca^2+')).toBeGreaterThan(2 * v[0].mix.get('Ca^2+'));
   });
 
   it('Bài 7 – xúc tác: MnO2 phân hủy gần hết H2O2, que đóm bùng cháy, MnO2 còn nguyên', () => {
@@ -274,22 +274,10 @@ describe('Thí nghiệm mẫu', () => {
     expect(v[3].mix.get('Cu(OH)2')).toBeGreaterThan(4e-4);
   });
 
-  it('CTST Bài 3 – sắt và lưu huỳnh: chỉ ống đun mới thành FeS', () => {
-    const res = runRecipe(RECIPES.find((x) => x.id === 'phan-ung-sat-luu-huynh')!);
-    expect(res.timedOut).toEqual([]);
-    expect(res.vessels[0].mix.get('FeS')).toBeGreaterThan(0.009);
-    expect(res.vessels[1].mix.get('FeS')).toBeLessThan(1e-6);
-  });
-
   it('CTST Bài 3 – vôi sống tỏa nhiệt, viên sủi thu nhiệt', () => {
     const res = runRecipe(RECIPES.find((x) => x.id === 'phan-ung-toa-nhiet-thu-nhiet')!);
     expect(res.timedOut).toEqual([]);
     expect(res.vessels[0].mix.get('Ca(OH)2')).toBeGreaterThan(0.01);
-  });
-
-  it('CTST Bài 4 – bảo toàn khối lượng: có kết tủa BaSO4', () => {
-    const res = runRecipe(RECIPES.find((x) => x.id === 'bao-toan-khoi-luong-ctst')!);
-    expect(res.vessels[1].mix.get('BaSO4')).toBeGreaterThan(4e-4);
   });
 
   it('CTST Bài 7 – pha CaCl2 10% và 1M', () => {
@@ -306,8 +294,6 @@ describe('Thí nghiệm mẫu', () => {
     const t = runRecipe(RECIPES.find((x) => x.id === 'nhiet-do-toc-do-ctst')!);
     expect(t.timedOut).toEqual([]);
     expect(t.vessels[0].mix.get('Zn')).toBeLessThan(t.vessels[1].mix.get('Zn'));
-    const s = runRecipe(RECIPES.find((x) => x.id === 'be-mat-toc-do-ctst')!).vessels;
-    expect(s[1].mix.get('CaCO3')).toBeLessThan(s[0].mix.get('CaCO3'));
   });
 
   it('CTST Bài 8 – xúc tác MnO2: KClO3 phân hủy sớm hơn', () => {
@@ -317,7 +303,81 @@ describe('Thí nghiệm mẫu', () => {
     expect(res.vessels[1].mix.get('MnO2') * 86.94).toBeCloseTo(0.1, 3);
   });
 
-  it('mỗi bài học thuộc một bộ sách có trong danh sách', () => {
-    for (const r of RECIPES) expect(BOOKS[LESSONS[r.lesson].book]).toBeTruthy();
+  const probesOf = (id: string) => runRecipe(RECIPES.find((r) => r.id === id)!).probes;
+  const vesselsOf = (id: string) => runRecipe(RECIPES.find((r) => r.id === id)!).vessels;
+
+  it('Khám phá – bảo toàn khối lượng: kết tủa không đổi, đá vôi + acid trong bình hở giảm khoảng 0,2 g', () => {
+    const r = RECIPES.find((x) => x.id === 'mass-change')!;
+    const res = runRecipe(r);
+    const idx = (text: string) => r.steps.findIndex((s) => 'text' in s && s.text?.startsWith(text));
+    const w = res.weighings;
+    const afterMix = w[idx('Kết tủa trắng')];
+    expect(w[idx('Theo dõi tiếp')]).toBeCloseTo(afterMix, 2);
+    expect(afterMix).toBeGreaterThan(20);
+    const added = w[idx('Thả 0,5 g đá vôi')];
+    const lost = added - w[w.length - 1];
+    expect(lost).toBeGreaterThan(0.15);
+    expect(lost).toBeLessThan(0.25);
+  });
+
+  it('Khám phá – xi lanh đo khí: thu được khoảng 40 mL khí', () => {
+    const res = runRecipe(RECIPES.find((r) => r.id === 'mg-rate')!);
+    expect(res.syringe.volumeML).toBeGreaterThan(34);
+    expect(res.syringe.volumeML).toBeLessThan(44);
+    expect(res.vessels[FLASK].mix.get('Mg')).toBeLessThan(1e-5);
+  });
+
+  it('Khám phá – magnesium bột hết trước magnesium dải', () => {
+    const r = RECIPES.find((x) => x.id === 'surface-area')!;
+    const steps = r.steps.map((st) => (st.kind === 'wait' ? { ...st, seconds: 4, until: undefined } : st));
+    const v = runRecipe({ ...r, steps }).vessels;
+    expect(v[1].mix.get('Mg')).toBeLessThan(0.5 * v[0].mix.get('Mg'));
+  });
+
+  it('Khám phá – Cu(OH)2 kết tủa rồi tan hết trong HCl', () => {
+    expect(vesselsOf('cuoh2')[1].mix.get('Cu(OH)2')).toBe(0);
+  });
+
+  it('Khám phá – mưa vàng: PbI2 kết tinh lại sau khi nguội', () => {
+    expect(vesselsOf('golden-rain')[3].mix.get('PbI2')).toBeGreaterThan(3e-5);
+  });
+
+  it('Khám phá – nhận biết Cl-, SO4 2-, Fe3+ bằng kết tủa', () => {
+    const v = vesselsOf('nhan-biet-ion');
+    expect(v[0].mix.get('AgCl')).toBeGreaterThan(0);
+    expect(v[1].mix.get('BaSO4')).toBeGreaterThan(0);
+    expect(v[2].mix.get('Fe(OH)3')).toBeGreaterThan(0);
+  });
+
+  it('Khám phá – thử khí O2, H2, CO2, NH3 và cách thu H2', () => {
+    expect(probesOf('o2-test')).toEqual(['none', 'relight']);
+    expect(probesOf('h2-test')).toEqual(['pop', 'normal']);
+    expect(probesOf('co2-test')).toEqual(['extinguished', 'litmus-acid']);
+    expect(probesOf('nh3-test')).toEqual(['litmus-neutral', 'litmus-base']);
+    expect(probesOf('h2-collect')).toEqual(['normal', 'pop']);
+  });
+
+  it('Khám phá – Li, Na, K với nước đều tạo base mạnh', () => {
+    for (const v of vesselsOf('alkali-water').slice(0, 3)) expect(v.observe().pH).toBeGreaterThan(12);
+  });
+
+  it('Khám phá – dãy hoạt động: Mg > Zn > Fe > Cu', () => {
+    const h2 = vesselsOf('metal-activity').slice(0, 4).map((v) => v.gasTotal.get('H2') ?? 0);
+    expect(h2[0]).toBeGreaterThan(h2[1]);
+    expect(h2[1]).toBeGreaterThan(h2[2]);
+    expect(h2[2]).toBeGreaterThan(0);
+    expect(h2[3]).toBe(0);
+  });
+
+  it('mỗi thí nghiệm thuộc một chủ đề và một mục có trong danh sách; id không trùng', () => {
+    for (const r of RECIPES) expect(CATEGORIES[TOPICS[r.topic].cat]).toBeTruthy();
+    expect(new Set(RECIPES.map((r) => r.id)).size).toBe(RECIPES.length);
+  });
+
+  it('link cũ tới thí nghiệm đã gộp vẫn trỏ tới thí nghiệm có thật', () => {
+    for (const [old, id] of Object.entries(RECIPE_ALIASES)) {
+      expect(RECIPES.some((r) => r.id === old)).toBe(false);
+      expect(RECIPES.some((r) => r.id === id)).toBe(true);
+    }
   });
 });

@@ -2,16 +2,20 @@
 import type { ToolKind } from './probes';
 import { describeStep } from './narration';
 import { copyText, shareUrl } from './router';
-import { BookId, BOOKS, gradeOf, LabState, LESSONS, LessonId, PlayScript, Recipe, RECIPES, Step } from './recipes';
+import { CATEGORIES, categoryOf, CategoryId, LabState, PlayScript, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
 import { Narrator } from './voice';
 
-const BOOK_KEY = 'lab-book';
-function savedBook(): BookId {
+type Tab = CategoryId | 'all';
+const TAB_KEY = 'lab-tab';
+const TABS: Tab[] = ['all', 10, 11, 12, 'explore'];
+const tabLabel = (t: Tab) => (t === 'all' ? 'Tất cả' : CATEGORIES[t]);
+function savedTab(): Tab {
   try {
-    const b = localStorage.getItem(BOOK_KEY);
-    if (b && b in BOOKS) return b as BookId;
+    const t = localStorage.getItem(TAB_KEY);
+    const found = TABS.find((x) => String(x) === t);
+    if (found !== undefined) return found;
   } catch { /* bộ nhớ trình duyệt bị chặn */ }
-  return 'kntt';
+  return 'all';
 }
 
 /** Những gì trình phát cần từ phòng thí nghiệm (main.ts cung cấp) */
@@ -397,55 +401,45 @@ class RecipeUi {
     return this.bar.querySelector(sel) as T;
   }
 
-  private gradeFilter: number | 'all' = 'all';
-  /** Bộ sách đang xem */
-  private book: BookId = savedBook();
+  /** Tab đang xem: tất cả, một lớp, hoặc nhóm Khám phá */
+  private tab: Tab = savedTab();
 
-  private setBook(b: BookId): void {
-    if (b === this.book) return;
-    this.book = b;
-    try { localStorage.setItem(BOOK_KEY, b); } catch { /* bỏ qua */ }
+  private setTab(t: Tab): void {
+    if (t === this.tab) return;
+    this.tab = t;
+    try { localStorage.setItem(TAB_KEY, String(t)); } catch { /* bỏ qua */ }
     this.renderList();
   }
 
   private renderList(): void {
-    const inBook = RECIPES.filter((r) => LESSONS[r.lesson].book === this.book);
-    const grades = [...new Set(inBook.map(gradeOf))].sort((a, b) => a - b);
-    if (this.gradeFilter !== 'all' && !grades.includes(this.gradeFilter)) this.gradeFilter = 'all';
-    const shown = inBook.filter((r) => this.gradeFilter === 'all' || gradeOf(r) === this.gradeFilter);
-    const lessons = (Object.keys(LESSONS) as LessonId[]).filter((t) => shown.some((r) => r.lesson === t));
-    const chip = (v: number | 'all', label: string) =>
-      `<button class="r-lv${this.gradeFilter === v ? ' on' : ''}" data-grade="${v}">${label}</button>`;
+    const shown = RECIPES.filter((r) => this.tab === 'all' || categoryOf(r) === this.tab);
+    const topics = (Object.keys(TOPICS) as TopicId[]).filter((t) => shown.some((r) => r.topic === t));
     this.listRoot.innerHTML =
       `<div class="r-mine">
         <div class="r-mine-head">🎬 Thí nghiệm của em</div>
         <div class="r-mine-text">Tự làm một thí nghiệm, chương trình ghi lại từng thao tác thành một link. Gửi link cho bạn bè: máy của bạn sẽ làm lại đúng như vậy, và có thể dừng lại đố bạn đoán trước hiện tượng.</div>
         <button class="r-rec">⏺ Ghi thí nghiệm mới</button>
       </div>
-      <div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Các thí nghiệm theo sách giáo khoa, xếp theo bài học.</div>
-      <div class="r-books">${(Object.keys(BOOKS) as BookId[]).map((b) =>
-        `<button class="r-book${this.book === b ? ' on' : ''}" data-book="${b}">${BOOKS[b]}</button>`).join('')}</div>
-      <div class="r-levels">${chip('all', 'Tất cả các lớp')}${grades.map((g) => chip(g, `Lớp ${g}`)).join('')}</div>` +
-      (shown.length ? '' : '<div class="chem-hint">Bộ sách này chưa có thí nghiệm nào.</div>') +
-      lessons.map((t) => `
-        <div class="r-topic">${LESSONS[t].title}</div>` +
-        shown.filter((r) => r.lesson === t).map((r) => `
+      <div class="chem-hint">Chọn một thí nghiệm, chương trình sẽ tự làm từng bước để bạn quan sát. Thí nghiệm lớp 10 – 12 theo sách giáo khoa; mục Khám phá gồm các thí nghiệm cơ bản để làm quen với hóa học.</div>
+      <div class="r-books">${TABS.map((t) =>
+        `<button class="r-book${this.tab === t ? ' on' : ''}" data-tab="${t}">${tabLabel(t)}</button>`).join('')}</div>` +
+      (shown.length ? '' : '<div class="chem-hint">Mục này đang được soạn, chưa có thí nghiệm nào.</div>') +
+      topics.map((t) => `
+        <div class="r-topic">${TOPICS[t].title}</div>` +
+        shown.filter((r) => r.topic === t).map((r) => `
         <div class="recipe" data-id="${r.id}">
           <div class="r-title">${r.title}</div>
-          <div class="r-tags"><span class="grade">Lớp ${gradeOf(r)}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
+          <div class="r-tags"><span class="grade">${CATEGORIES[categoryOf(r)]}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
           <div class="r-sum">${r.summary}</div>
           <div class="r-foot">
             <button class="r-play">▶ Xem thí nghiệm</button>
             <button class="r-share" title="Sao chép link tới thí nghiệm này">🔗</button>
-            ${r.page ? `<span class="r-src">SGK tr. ${r.page}</span>` : ''}
+            ${r.page && categoryOf(r) !== 'explore' ? `<span class="r-src">SGK tr. ${r.page}</span>` : ''}
           </div>
         </div>`).join('')).join('');
     this.listRoot.querySelector<HTMLButtonElement>('.r-rec')!.onclick = () => this.h.record();
     this.listRoot.querySelectorAll<HTMLButtonElement>('.r-book').forEach((b) => {
-      b.onclick = () => this.setBook(b.dataset.book as BookId);
-    });
-    this.listRoot.querySelectorAll<HTMLButtonElement>('.r-lv').forEach((b) => {
-      b.onclick = () => { this.gradeFilter = b.dataset.grade === 'all' ? 'all' : Number(b.dataset.grade); this.renderList(); };
+      b.onclick = () => this.setTab(TABS.find((t) => String(t) === b.dataset.tab) ?? 'all');
     });
     this.listRoot.querySelectorAll<HTMLElement>('.recipe').forEach((el) => {
       const r = RECIPES.find((x) => x.id === el.dataset.id)!;
@@ -456,8 +450,8 @@ class RecipeUi {
 
   start(r: PlayScript): void {
     this.current = r;
-    // Mở bằng link tới bài của bộ sách khác: chuyển danh sách sang bộ sách đó
-    if (isRecipe(r)) this.setBook(LESSONS[r.lesson].book);
+    // Mở bằng link tới thí nghiệm ở mục khác: chuyển danh sách sang mục đó
+    if (isRecipe(r) && this.tab !== 'all' && this.tab !== categoryOf(r)) this.setTab(categoryOf(r));
     this.closeAsk();
     this.bar.classList.toggle('shared', !!r.shared);
     this.result.classList.add('hidden');

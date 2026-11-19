@@ -6,7 +6,7 @@ import { contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, ma
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
-import { RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
+import { RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
@@ -1551,7 +1551,7 @@ const ptable = new PeriodicTable(ptableRoot, {
   playRecipe: (id) => {
     showView('lab');
     showTab('recipes');
-    const r = RECIPES.find((x) => x.id === id);
+    const r = RECIPES.find((x) => x.id === (RECIPE_ALIASES[id] ?? id));
     if (r) void player.play(r);
   },
 });
@@ -1611,7 +1611,7 @@ function applyRoute(r: Route) {
       if (player.currentScript?.shared?.data !== r.shared) void playShared(r.shared);
       return;
     }
-    const recipe = r.recipe ? RECIPES.find((x) => x.id === r.recipe) : undefined;
+    const recipe = r.recipe ? RECIPES.find((x) => x.id === (RECIPE_ALIASES[r.recipe!] ?? r.recipe)) : undefined;
     if (recipe && player.currentId !== recipe.id) void player.play(recipe);
   } finally {
     applyingRoute = false;

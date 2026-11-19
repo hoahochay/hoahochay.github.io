@@ -2,7 +2,7 @@
 import { normalize } from '../catalog';
 import { CATEGORY_INFO, Category, COMMON, Element, ELEMENTS, groupName, STATE_NAME } from './elements';
 import { chemicalsFor, recipesFor } from './labLinks';
-import { BOOKS, LESSONS } from '../recipes';
+import { CATEGORIES, categoryOf, TOPICS } from '../recipes';
 
 export interface TableLinks {
   openChemical(key: string): void;
@@ -288,7 +288,7 @@ export class PeriodicTable {
       ${recipes.length ? `
         <div class="sec">Thí nghiệm mẫu có ${e.display.toLowerCase()}</div>
         <div class="pc-recipes">${recipes.map((r) => `
-          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${BOOKS[LESSONS[r.lesson].book]} · ${LESSONS[r.lesson].title}</small></button>`).join('')}
+          <button class="pc-recipe" data-recipe="${r.id}"><span>▶</span><b>${r.title}</b><small>${CATEGORIES[categoryOf(r)]} · ${TOPICS[r.topic].title}</small></button>`).join('')}
         </div>` : ''}
       ${chems.length ? `
         <div class="sec">Hóa chất có trong kho</div>

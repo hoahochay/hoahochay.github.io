@@ -73,8 +73,8 @@ button.on { background: var(--accent); border-color: var(--accent); color: #fff;
 .r-share { width: 30px; padding: 0; margin-right: auto; font-size: 14px; }
 .r-src { font-size: 11.5px; color: var(--muted); text-decoration: none; }
 .r-src:hover { color: var(--accent); text-decoration: underline; }
-.r-books { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
-.r-book { border: 0; border-radius: 0; font-size: 12.5px; padding: 6px 4px; background: transparent; }
+.r-books { display: grid; grid-template-columns: repeat(5, auto); gap: 0; margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.r-book { border: 0; border-radius: 0; font-size: 12.5px; padding: 6px 2px; white-space: nowrap; background: transparent; }
 .r-book + .r-book { border-left: 1px solid var(--line); }
 .r-book.on { background: var(--accent); color: #fff; font-weight: 600; }
 .r-levels { display: flex; gap: 4px; margin: 8px 0 2px; flex-wrap: wrap; }

@@ -73,7 +73,7 @@ function helpHtml(phone: boolean): string {
       </section>
       <section>
         <h3>▶ Thí nghiệm mẫu</h3>
-        <p>Tab <b>Thí nghiệm mẫu</b>${pick('', ' trong <b>🧪 Kho</b>')} có các thí nghiệm theo sách giáo khoa (chọn bộ Kết nối tri thức hoặc Chân trời sáng tạo), xếp theo bài học và lọc theo lớp. Chương trình tự làm từng bước, trong lúc đó phòng thí nghiệm chỉ để xem; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Lời thuyết minh được đọc thành tiếng; ${pick('bấm', 'chạm')} 🔊 để tắt hoặc bật giọng đọc. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
+        <p>Tab <b>Thí nghiệm mẫu</b>${pick('', ' trong <b>🧪 Kho</b>')} có các thí nghiệm chia theo mục: Lớp 10, Lớp 11, Lớp 12 (theo sách giáo khoa) và Khám phá (các thí nghiệm cơ bản để làm quen với hóa học), xếp theo chủ đề. Chương trình tự làm từng bước, trong lúc đó phòng thí nghiệm chỉ để xem; dùng ⏸ tạm dừng, ⏭ tua nhanh bước hiện tại, ✕ dừng. Lời thuyết minh được đọc thành tiếng; ${pick('bấm', 'chạm')} 🔊 để tắt hoặc bật giọng đọc. Cuối bài có phần kết luận và phương trình. Nút 🔗 sao chép link tới bài để gửi cho bạn bè hoặc học sinh.</p>
       </section>
       <section>
         <h3>🎬 Thí nghiệm của em</h3>
