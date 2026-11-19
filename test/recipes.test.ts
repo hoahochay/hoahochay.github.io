@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { Burette, burnSulfurIn, flameTest, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { Burette, burnSulfurIn, cellReading, flameTest, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { BURETTES, CHEMICALS, isBurette, reagentMixture, solidMol } from '../web/catalog';
 import { X_HIDDEN_TURBIDITY } from '../web/xcard';
 import { BEAKER, CATEGORIES, FLASK, TUBE1, TUBE2, TUBE3, TUBE4, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
@@ -139,7 +139,9 @@ function runRecipe(r: PlayScript): RunResult {
         else if (isBurette(s.tool)) {
           if (burettes.has(s.vessel)) burettes.delete(s.vessel);
           else burettes.set(s.vessel, new Burette(v, BURETTES[s.tool].solutes));
-        } else if (s.tool === 'flame_wire') probes.push('flame-' + (flameTest(v.mix)?.ion ?? 'none'));
+        } else if (s.tool === 'voltmeter') probes.push('volt-' + (cellReading(v.mix)?.volts ?? 0).toFixed(2));
+        else if (s.tool === 'dc_power') v.mix.current = v.mix.current > 0 ? 0 : 0.5;
+        else if (s.tool === 'flame_wire') probes.push('flame-' + (flameTest(v.mix)?.ion ?? 'none'));
         else if (s.tool === 'dish_burn') probes.push('dish-' + liquidBurn(v.take(Math.min(0.001, v.mix.liquidL()))).flame);
         else if (s.tool === 'spoon_s') {
           let o2 = 0;
@@ -366,6 +368,32 @@ describe('Thí nghiệm mẫu', () => {
       const r = run('cellulose-schweizer');
       expect(r.timedOut).toEqual([]);
       expect(r.vessels[BEAKER].mix.get('cellulose(sw)')).toBeGreaterThan(3e-4);
+    });
+    it('Bài 15 – kẽm đẩy đồng khỏi dung dịch CuSO₄', () => {
+      expect(run('kem-dung-dich-cuso4').timedOut).toEqual([]);
+    });
+    it('Bài 15 – pin chanh: Zn–Cu ≈ 0,95 V, Fe–Cu ≈ 0,5 V, Cu–Cu 0 V', () => {
+      expect(run('pin-chanh').probes).toEqual(['volt-0.95', 'volt-0.50', 'volt-0.00']);
+    });
+    it('Bài 16 – điện phân CuSO₄: đồng ở cathode, O₂ ở anode, dung dịch acid', () => {
+      const r = run('dien-phan-cuso4');
+      const v = r.vessels[BEAKER];
+      expect(v.mix.get('Cu')).toBeGreaterThan(6e-4);
+      expect(v.gasTotal.get('O2') ?? 0).toBeGreaterThan(2.5e-4);
+      expect(v.observe().pH).toBeLessThan(3.5);
+      expect(v.mix.current).toBe(0);
+    });
+    it('Bài 16 – điện phân NaCl tạo nước Javel tẩy màu cánh hoa', () => {
+      const r = run('dien-phan-nacl-javel');
+      expect(r.timedOut).toEqual([]);
+      expect(r.vessels[BEAKER].gasTotal.get('H2') ?? 0).toBeGreaterThan(5e-4);
+      expect(r.vessels[TUBE1].mix.get('petal(bleached)')).toBeGreaterThan(4e-4);
+      expect(r.vessels[TUBE2].mix.get('petal(bleached)')).toBe(0);
+    });
+    it('Bài 25 – làm mềm nước cứng', () => {
+      const r = run('lam-mem-nuoc-cung');
+      expect(r.vessels[TUBE1].mix.get('CaCO3')).toBeGreaterThan(1e-5);
+      expect(r.vessels[TUBE2].mix.conc('Ca^2+')).toBeLessThan(1e-4);
     });
     it('Bài 19 – đốt Mg; Al + S bùng cháy tạo Al₂S₃', () => {
       const r = run('kim-loai-phi-kim-hoa12');

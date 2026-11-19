@@ -274,6 +274,10 @@ sp('cellulose', 'cellulose (bông)', 's', 0, 10, -963, 162.14, { color: [0.97, 0
 sp('cellulose_nitrate', 'cellulose trinitrate', 's', 0, 7, -700, 297.13, { color: [0.95, 0.94, 0.9], label: '[C₆H₇O₂(ONO₂)₃]ₙ' });
 // Cellulose tan trong nước Schweizer (tạo phức với ion đồng–ammonia)
 sp('cellulose(sw)', 'cellulose tan trong nước Schweizer', 'aq', 0, 10, -963, 162.14, { label: '(C₆H₁₀O₅)ₙ' });
+sp('ClO-', 'ion hypochlorite', 'aq', -1, 0, -107.1, 51.45);
+// Cánh hoa hồng: chất màu trong cánh hoa bị chất tẩy màu (ClO⁻, Cl₂, HClO) phá hủy
+sp('petal', 'cánh hoa hồng', 's', 0, 0, 0, 100, { color: [0.93, 0.42, 0.6], label: 'cánh hoa hồng' });
+sp('petal(bleached)', 'cánh hoa đã mất màu', 's', 0, 0, 0, 100, { color: [0.95, 0.93, 0.86], label: 'cánh hoa (mất màu)' });
 sp('Pt', 'platinum', 's', 0, 0, 0, 195.08, { color: [0.82, 0.82, 0.84] });
 sp('CaSO4', 'calcium sulfate', 's', 0, 0, -1434.5, 136.14, { color: WHITE });
 sp('Cu(OH)2', 'copper(II) hydroxide', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });

@@ -6,7 +6,7 @@ xóa file không còn dùng, ghi public/tts/index.json: {"voice": ..., "clips": 
 Giữ mô hình và giọng ghi trong index.json; đổi bằng biến môi trường (đổi thì tạo lại toàn bộ):
   TTS_MODEL=v3turbo|v3nano  TTS_VOICE="Mai Anh"  npm run tts
 """
-import json, os, subprocess, sys, tempfile, time
+import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "public" / "tts"
@@ -47,6 +47,7 @@ def main() -> None:
                             "-b:a", bitrate, str(OUT / f"{it['key']}.mp3")], check=True)
             clips[it["key"]] = round(len(wav) / tts.sample_rate, 2)
             print(f"[{n}/{len(todo)}] {clips[it['key']]:5.1f}s ({time.time() - t0:.1f}s) {it['text'][:70]}", file=sys.stderr)
+        shutil.rmtree(tmp, ignore_errors=True)
 
     keep = {it["key"] for it in items}
     clips = {k: v for k, v in clips.items() if k in keep}

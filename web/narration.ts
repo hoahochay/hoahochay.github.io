@@ -22,6 +22,8 @@ const PROBE_NAME: Record<ToolKind, string> = {
   burette: 'burette chứa dung dịch NaOH',
   burette_kmno4: 'burette chứa dung dịch thuốc tím',
   flame_wire: 'dây platinum',
+  voltmeter: 'vôn kế',
+  dc_power: 'nguồn điện một chiều',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -70,6 +72,10 @@ export function describeStep(s: Step): string {
       ? `Ngâm ${vn(s.vessel)} vào ${PROBE_NAME[s.tool]}.`
       : s.tool === 'dish_burn'
       ? `Rót khoảng 1 mL chất lỏng từ ${vn(s.vessel)} vào bát sứ nhỏ, đưa que đóm đang cháy vào bề mặt chất lỏng.`
+      : s.tool === 'voltmeter'
+      ? `Nối hai thanh kim loại trong ${vn(s.vessel)} với hai cực của vôn kế.`
+      : s.tool === 'dc_power'
+      ? `Nhúng hai điện cực than chì vào ${vn(s.vessel)}, nối với nguồn điện một chiều.`
       : s.tool === 'flame_wire'
       ? `Nhúng dây platinum vào dung dịch trong ${vn(s.vessel)}, rồi hơ nóng đầu dây trên ngọn lửa đèn cồn.`
       : s.tool === 'spoon_s'

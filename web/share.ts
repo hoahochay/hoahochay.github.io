@@ -95,7 +95,7 @@ function pack(s: Step): Packed | null {
   }
 }
 
-const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist', 'ice_bath', 'hot_bath', 'no2_tube', 'spoon_s', 'warm_bath', 'dish_burn', 'burette', 'burette_kmno4', 'flame_wire'];
+const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist', 'ice_bath', 'hot_bath', 'no2_tube', 'spoon_s', 'warm_bath', 'dish_burn', 'burette', 'burette_kmno4', 'flame_wire', 'voltmeter', 'dc_power'];
 
 class Bad extends Error {}
 

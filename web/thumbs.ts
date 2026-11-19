@@ -11,6 +11,7 @@ import { XCard } from './xcard';
 import { BATH_TOOL, BathView } from './bath';
 import { porcelainDishModel, spoonModel, TongsView } from './burn';
 import { BuretteView } from './buretteView';
+import { ElectrolysisView, VoltmeterView } from './electroView';
 import { glassMaterial } from './materials';
 
 export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, string> {
@@ -43,6 +44,10 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = new BathView(BATH_TOOL[e.tool]).group;
     } else if (e.tool === 'burette' || e.tool === 'burette_kmno4') {
       obj = new BuretteView(2, e.tool === 'burette' ? undefined : 0x8a1c7c).group;
+    } else if (e.tool === 'voltmeter') {
+      obj = new VoltmeterView(2, 0.75, 0).group;
+    } else if (e.tool === 'dc_power') {
+      obj = new ElectrolysisView(3, 1).group;
     } else if (e.tool === 'flame_wire') {
       obj = new TongsView({ key: 'pt_wire', id: 'Pt', label: 'Dây platinum', grams: 0.2, form: 'strip', shape: 'wire' }).group;
       obj.rotation.z = 0.5;

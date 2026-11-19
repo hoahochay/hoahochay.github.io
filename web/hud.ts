@@ -151,19 +151,20 @@ export class Hud {
       .map(([id, x]) => `<span class="chip">${pretty(id)} <b>${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%</b></span>`)
       .join('');
     const rx = activeReactions(view);
+    const burHtml = burette ? `<div class="sec">Burette ${burette.label}</div>
+        <div class="row"><span class="k">Đã dùng</span><b>${burette.usedML.toFixed(2).replace('.', ',')} mL</b>&nbsp;· ${burette.mode === 'stream' ? 'đang chảy thành dòng' : burette.mode === 'drip' ? 'đang nhỏ từng giọt' : 'khóa đóng'}</div>
+        <div class="bur-btns">${([['stream', '▶ Mở khóa'], ['drip', '💧 Nhỏ từng giọt'], ['drop', '+1 giọt'], ['close', '⏹ Đóng khóa']] as const)
+          .map(([a, t]) => `<button data-burette="${a}"${burette.mode === a ? ' class="on"' : ''}>${t}</button>`).join('')}</div>` : '';
     el.innerHTML = `
       <div class="title">${view.name}</div>
-      ${empty ? '<div class="muted">Đang trống. Kéo hóa chất từ kho bên trái vào đây.</div>' : `
+      ${empty ? '<div class="muted">Đang trống. Kéo hóa chất từ kho bên trái vào đây.</div>' + burHtml : `
       <div class="meters">
         <div class="meter"><div class="k">Nhiệt độ</div><div class="val">${o.tempC.toFixed(1)}<small> °C</small></div></div>
         <div class="meter"><div class="k">pH</div><div class="val">${o.volumeML > 0.005 ? o.pH.toFixed(2) : '–'}</div></div>
         <div class="meter"><div class="k">Thể tích</div><div class="val">${totalML.toFixed(totalML < 10 ? 2 : 1)}<small> mL</small></div></div>
       </div>
       ${o.volumeML < 0.005 ? '' : `<div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>`}
-      ${burette ? `<div class="sec">Burette ${burette.label}</div>
-        <div class="row"><span class="k">Đã dùng</span><b>${burette.usedML.toFixed(2).replace('.', ',')} mL</b>&nbsp;· ${burette.mode === 'stream' ? 'đang chảy thành dòng' : burette.mode === 'drip' ? 'đang nhỏ từng giọt' : 'khóa đóng'}</div>
-        <div class="bur-btns">${([['stream', '▶ Mở khóa'], ['drip', '💧 Nhỏ từng giọt'], ['drop', '+1 giọt'], ['close', '⏹ Đóng khóa']] as const)
-          .map(([a, t]) => `<button data-burette="${a}"${burette.mode === a ? ' class="on"' : ''}>${t}</button>`).join('')}</div>` : ''}
+      ${burHtml}
       ${stopwatch ? `<div class="row"><span class="k">${/^[⏱⏹]/.test(stopwatch) ? 'Đồng hồ' : 'Ngâm'}</span><b>${stopwatch}</b></div>` : ''}
       ${dissolved ? `<div class="sec">Chất tan${org ? ' (lớp nước)' : ''}</div><div class="chips">${dissolved}</div>` : ''}
       ${org ? `<div class="sec">Lớp chất lỏng hữu cơ (${o.agitation > 0.3 ? 'đang trộn lẫn, để yên cho tách lớp' : org.onTop ? 'nổi ở trên' : 'chìm ở dưới'})</div>

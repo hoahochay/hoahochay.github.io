@@ -9,13 +9,29 @@ export function symbolsIn(formula: string): Set<string> {
   return new Set(formula.match(SYMBOL) ?? []);
 }
 
+/** Chất có id không phải công thức hóa học (tên chất hữu cơ, viết tắt): ghi rõ nguyên tố */
+const ELEMENTS_OF_ID: Record<string, string[]> = {
+  starch: ['C', 'H', 'O'], glucose: ['C', 'H', 'O'], saccharose: ['C', 'H', 'O'], glycerol: ['C', 'H', 'O'],
+  cellulose: ['C', 'H', 'O'], cellulose_nitrate: ['C', 'H', 'O', 'N'], triolein: ['C', 'H', 'O'],
+  carotene: ['C', 'H'], protein: ['C', 'H', 'O', 'N', 'S'], H3Cit: ['C', 'H', 'O'], VitC: ['C', 'H', 'O'],
+  // Cánh hoa: vật liệu tự nhiên, không tính là một hóa chất có công thức
+  petal: [],
+};
+
+/** Nguyên tố trong một chất, theo id của chất trong engine */
+function elementsOfId(id: string): string[] {
+  return ELEMENTS_OF_ID[id] ?? [...symbolsIn(id)];
+}
+
 /** Nguyên tố có trong một hóa chất của kho (không tính nước dung môi) */
 export function elementsOf(e: ChemEntry): Set<string> {
-  if (e.solid) return symbolsIn(e.solid.id);
+  if (e.solid) return new Set(elementsOfId(e.solid.id));
   if (e.reagent && !e.reagent.indicator) {
     if (e.key === 'water') return new Set(['H', 'O']);
     const s = new Set<string>();
-    for (const f of Object.keys(e.reagent.solutes)) for (const x of symbolsIn(f)) s.add(x);
+    // Chất lỏng hữu cơ (hexane, ester, dầu ăn…) là dung môi, không nằm trong danh sách chất tan
+    const ids = [...Object.keys(e.reagent.solutes), ...(e.reagent.organic ? [e.reagent.organic] : [])];
+    for (const f of ids) for (const x of elementsOfId(f)) s.add(x);
     return s;
   }
   return new Set();

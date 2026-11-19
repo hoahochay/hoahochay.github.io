@@ -20,7 +20,8 @@ export function hydrogenAtoms(mix: Mixture): number {
 
 /** Nhiệt dung của chất lỏng trong hỗn hợp, J/K */
 export function liquidHeatCapacity(mix: Mixture): number {
-  let c = CP_WATER * mix.get('H2O');
+  // Ethanol, acetic acid tan trong nước chiếm chỗ của nước: tính nhiệt dung mol riêng của chúng (J/(mol·K))
+  let c = CP_WATER * mix.get('H2O') + 112 * mix.get('C2H5OH') + 123 * (mix.get('CH3COOH') + mix.get('CH3COO-'));
   // Lớp chất lỏng hữu cơ (hexane, toluene…): nhiệt dung riêng ≈ 2 J/(g·K)
   for (const [id, n] of mix.moles) {
     const s = species(id);

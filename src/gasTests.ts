@@ -26,7 +26,11 @@ export interface Atmosphere {
 /** Thành phần khí ở miệng dụng cụ */
 export function atmosphere(v: Vessel): Atmosphere {
   const f = headspaceFractions(v.mix, v.spec);
-  const produced = Object.values(f).reduce((a, b) => a + b, 0);
+  let produced = Object.values(f).reduce((a, b) => a + b, 0);
+  if (produced > 1) {
+    for (const id of Object.keys(f)) f[id] /= produced;
+    produced = 1;
+  }
   const air = Math.max(0, 1 - produced);
   return {
     O2: (f.O2 ?? 0) + AIR.O2 * air,
@@ -91,7 +95,8 @@ export function testBurningSplint(v: Vessel): BurningSplintResult {
 /** pH của lớp nước mỏng trên giấy quỳ ẩm, cân bằng với khí ở miệng dụng cụ */
 export function litmusPH(v: Vessel): number {
   const a = atmosphere(v);
-  const T = v.mix.tempK;
+  // Mẩu giấy ẩm ở miệng ống: nhiệt độ gần nhiệt độ phòng (dù đáy ống đang được nung nóng)
+  const T = Math.min(v.mix.tempK, v.roomK + 15);
   const film = new Mixture();
   film.volumeL = 1e-5;
   film.tempK = T;

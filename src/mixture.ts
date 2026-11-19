@@ -33,6 +33,8 @@ export class Mixture {
   readonly saturation = new Map<string, number>();
   /** [H+] sau lần cân bằng gần nhất */
   h = 1e-7;
+  /** Cường độ dòng điện chạy qua dung dịch khi điện phân, A (0: không điện phân) */
+  current = 0;
   /** Khí trong khoảng trống phía trên chất lỏng, mol (không tính không khí) */
   readonly headspace = new Map<string, number>();
 
@@ -43,7 +45,12 @@ export class Mixture {
   set(id: string, n: number): void {
     species(id); // kiểm tra id hợp lệ
     if (n > 0) this.moles.set(id, n);
-    else this.moles.delete(id);
+    else {
+      this.moles.delete(id);
+      // Chất rắn đã hết (tan hết, phản ứng hết): kết tủa tạo lại sau đó là kết tủa mới
+      this.formFactor.delete(id);
+      this.suspended.delete(id);
+    }
   }
 
   add(id: string, n: number): void {

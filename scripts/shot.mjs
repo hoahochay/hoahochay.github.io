@@ -34,6 +34,10 @@ const scenarios = {
   },
 };
 const [name, arg] = scenario.split(':');
-await scenarios[name](arg);
-console.log('errors:', errors.length ? errors : 'none');
-await browser.close();
+try {
+  if (!scenarios[name]) throw new Error(`Không có kịch bản chụp "${name}"`);
+  await scenarios[name](arg);
+  console.log('errors:', errors.length ? errors : 'none');
+} finally {
+  await browser.close();
+}

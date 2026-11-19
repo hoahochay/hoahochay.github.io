@@ -76,7 +76,10 @@ export class MeasurePanel {
     const reset = this.root.querySelector<HTMLButtonElement>('.g-reset');
     if (reset) reset.onclick = () => this.o.reset?.();
     if (o.extra) this.root.querySelector<HTMLButtonElement>('.g-extra')!.onclick = () => o.extra!.onClick();
-    this.root.querySelector<HTMLButtonElement>('.g-min')!.onclick = () => this.root.classList.toggle('mini');
+    this.root.querySelector<HTMLButtonElement>('.g-min')!.onclick = () => {
+      this.root.classList.toggle('mini');
+      this.dirty = true; // mở rộng lại: vẽ đồ thị ngay
+    };
     this.root.querySelector<HTMLButtonElement>('.g-csv')!.onclick = () => this.downloadCsv();
   }
 

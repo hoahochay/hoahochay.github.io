@@ -2,11 +2,12 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Burette, bleachRate, burnSulfurIn, contentsMassG, flameTest, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { Burette, bleachRate, burnSulfurIn, cellReading, contentsMassG, flameTest, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { BURETTES, BuretteTool, CHEMICALS, isBurette, ChemEntry, ReagentDef, reagentMixture, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
 import { fmtDuration } from './narration';
+import { ElectrolysisView, VoltmeterView } from './electroView';
 import { BuretteAction, RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
@@ -210,7 +211,18 @@ scene.add(drop);
 /** Vật thể tạm của hoạt ảnh (lọ, mẫu rắn), để dọn khi hủy hoạt ảnh */
 const temps = new Set<THREE.Object3D>();
 const addTemp = (o: THREE.Object3D) => { scene.add(o); temps.add(o); };
-const removeTemp = (o: THREE.Object3D) => { scene.remove(o); temps.delete(o); };
+/** Gỡ vật thể tạm (lọ hóa chất khi rót, mẫu chất rắn…) và giải phóng bộ nhớ đồ họa của nó */
+const removeTemp = (o: THREE.Object3D) => {
+  scene.remove(o);
+  temps.delete(o);
+  o.traverse((x) => {
+    if (!(x instanceof THREE.Mesh || x instanceof THREE.Sprite)) return;
+    if (x instanceof THREE.Mesh) x.geometry.dispose();
+    // Chỉ giải phóng ảnh vẽ riêng (nhãn lọ); vật liệu và ảnh dùng chung thì giữ lại
+    const mats = Array.isArray(x.material) ? x.material : [x.material];
+    for (const m of mats) if ((m as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture) (m as THREE.MeshBasicMaterial).map!.dispose();
+  });
+};
 
 const pending = new Map<VesselView, number>();
 const pendingML = (v: VesselView) => pending.get(v) ?? 0;
@@ -339,6 +351,8 @@ const TOOL_NAME: Record<ToolKind, string> = {
   burette: 'burette chứa dung dịch NaOH',
   burette_kmno4: 'burette chứa dung dịch thuốc tím',
   flame_wire: 'dây platinum',
+  voltmeter: 'vôn kế',
+  dc_power: 'nguồn điện một chiều',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -406,8 +420,11 @@ const LITMUS_SAYS: Record<string, string> = {
 
 /** Lấy mẩu quỳ đang nhúng trong dụng cụ ra (bỏ đi); cùng lúc lấy ống khỏi cốc ngâm (trừ khi chỉ nhúng thêm quỳ) */
 function removeDipped(v: VesselView, keepBath = false) {
-  removeXCard(v);
-  if (!keepBath) removeBath(v);
+  // keepBath: chỉ thay mẩu giấy đang nhúng, giữ nguyên cốc nước ngâm và thẻ chữ X
+  if (!keepBath) {
+    removeXCard(v);
+    removeBath(v);
+  }
   const d = dipped.get(v);
   if (!d) return;
   v.group.remove(d.p.group);
@@ -451,6 +468,7 @@ const BATH_NAME: Record<BathKind, string> = { ice: 'cốc nước đá', warm: '
 
 function toggleBath(view: VesselView, kind: BathKind) {
   if (view.kind.type !== 'tube') return log('Chỉ ngâm được ống nghiệm vào cốc nước.', 'warning', view.name);
+  if (isOnBalance(view)) return log('Lấy ống khỏi cân trước khi ngâm vào cốc nước.', 'warning', view.name);
   if (heatingView === view) return log('Ống đang được đun, hãy tắt đèn cồn trước.', 'warning', view.name);
   if (view.vessel.inverted) return log('Lật ngửa ống trước khi ngâm.', 'warning', view.name);
   const was = baths.get(view)?.kind;
@@ -542,6 +560,8 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   if (kind === 'dish_burn') return dishBurn(view);
   if (isBurette(kind)) return toggleBurette(view, kind);
   if (kind === 'flame_wire') return flameWire(view);
+  if (kind === 'voltmeter') return toggleVoltmeter(view);
+  if (kind === 'dc_power') return toggleElectrolysis(view);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
   const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
@@ -801,6 +821,66 @@ function toggleBurette(view: VesselView, tool: BuretteTool) {
   scene.add(bv.group);
   burettes.set(view, { b: new Burette(view.vessel, def.solutes), view: bv, disp: 0, tool });
   log(`Lắp burette chứa ${def.desc} phía trên dụng cụ, chỉnh mức dung dịch về vạch 0`, 'action', view.name);
+}
+
+// ── Pin điện và điện phân (SGK Hóa 12 Chương 5) ──
+const voltmeters = new Map<VesselView, VoltmeterView>();
+const electrolyzers = new Map<VesselView, ElectrolysisView>();
+/** Cường độ dòng điện khi điện phân (nguồn 6 V, hai điện cực than chì), A */
+const ELECTROLYSIS_A = 0.5;
+const mouthRadius = (view: VesselView) => (view.kind.type === 'beaker' ? 2.6 : view.kind.type === 'tube' ? 0.75 : 1.1);
+
+function toggleVoltmeter(view: VesselView) {
+  const old = voltmeters.get(view);
+  if (old) {
+    view.group.remove(old.group);
+    old.dispose();
+    voltmeters.delete(view);
+    return log('Tháo vôn kế', 'action', view.name);
+  }
+  if (electrolyzers.has(view)) return log('Dụng cụ đang được điện phân, tháo nguồn điện trước.', 'warning', view.name);
+  const vm = new VoltmeterView(view.kind.profile.height, mouthRadius(view));
+  view.group.add(vm.group);
+  voltmeters.set(view, vm);
+  const r = cellReading(view.vessel.mix);
+  vm.set(r?.volts ?? 0);
+  log('Nối hai cực của vôn kế với hai thanh kim loại trong dụng cụ', 'action', view.name);
+  if (!r) log('Vôn kế chỉ 0 V: cần hai thanh kim loại khác nhau cắm trong dung dịch chất điện li', 'phenomenon', view.name);
+  else if (r.anode === r.cathode || r.volts === 0) log('Vôn kế chỉ 0 V: hai điện cực cùng một kim loại (hoặc dung dịch không dẫn điện) thì không tạo thành pin', 'phenomenon', view.name);
+  else log(`Vôn kế chỉ khoảng ${r.volts.toFixed(2).replace('.', ',')} V. Thanh ${r.anodeName} là cực âm (anode), thanh ${r.cathodeName} là cực dương (cathode)`, 'phenomenon', view.name);
+}
+
+function toggleElectrolysis(view: VesselView) {
+  if (electrolyzers.has(view)) {
+    removeElectro(view);
+    return log('Ngắt nguồn điện, lấy hai điện cực ra', 'action', view.name);
+  }
+  if (view.kind.type === 'flask') return log('Miệng bình nón hẹp, không nhúng được hai điện cực. Dùng cốc hoặc ống nghiệm.', 'warning', view.name);
+  if (view.vessel.mix.volumeL < 1e-5) return log('Cho dung dịch vào trước khi điện phân.', 'warning', view.name);
+  if (view.vessel.inverted || view.vessel.outlet || view.vessel.stoppered) return log('Mở miệng dụng cụ trước khi nhúng điện cực.', 'warning', view.name);
+  const vm = voltmeters.get(view);
+  if (vm) toggleVoltmeter(view);
+  const ev = new ElectrolysisView(view.kind.profile.height, mouthRadius(view));
+  view.group.add(ev.group);
+  electrolyzers.set(view, ev);
+  view.vessel.mix.current = ELECTROLYSIS_A;
+  log('Nhúng hai điện cực than chì vào dung dịch, nối với nguồn điện một chiều 6 V: điện cực nối cực dương là anode, nối cực âm là cathode', 'action', view.name);
+}
+
+function removeElectro(view: VesselView) {
+  const ev = electrolyzers.get(view);
+  if (ev) {
+    view.group.remove(ev.group);
+    ev.dispose();
+    electrolyzers.delete(view);
+  }
+  view.vessel.mix.current = 0;
+  const vm = voltmeters.get(view);
+  if (vm) {
+    view.group.remove(vm.group);
+    vm.dispose();
+    voltmeters.delete(view);
+  }
 }
 
 function removeBurette(view: VesselView) {
@@ -1131,6 +1211,8 @@ function placeOnBalance(v: VesselView, toggle = true) {
   if (isOnBalance(v)) return toggle ? takeOffBalance(v) : undefined;
   if (heatingView === v) return log('Tắt đèn cồn và lấy dụng cụ khỏi giá đun trước khi cân.', 'warning', v.name);
   if (v.vessel.inverted) return log('Lật ngửa ống trước khi đặt lên cân.', 'warning', v.name);
+  if (burettes.has(v)) return log('Tháo burette trước khi đặt dụng cụ lên cân.', 'warning', v.name);
+  removeBath(v);
   const fits = v.kind.type === 'tube' && onBalance.length < 2 && onBalance.every((o) => o.kind.type === 'tube');
   if (!fits) takeOffBalance(undefined, true);
   onBalance.push(v);
@@ -1159,6 +1241,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false, limitML?: 
     return true;
   }
   const why = heatingView === src || heatingView === dst ? 'Tắt đèn cồn trước khi đổ.'
+    : burettes.has(src) ? 'Tháo burette trước khi đổ chất lỏng ra.'
     : src.vessel.inverted || dst.vessel.inverted ? 'Lật ngửa ống trước khi đổ.'
     : src.vessel.outlet || dst.vessel.outlet || [...tubes.values()].some((t) => t.dst === src || t.dst === dst) ? 'Tháo ống dẫn khí trước khi đổ.'
     : src.vessel.mix.liquidL() < 1e-5 ? `${src.name} không có chất lỏng để đổ.`
@@ -1251,6 +1334,7 @@ function connect(src: VesselView, dst: VesselView | SyringeView) {
   hud.hint(null);
   if (src === dst) return;
   if (dst instanceof SyringeView) return connectSyringe(src);
+  if (burettes.has(src) || burettes.has(dst)) return log('Tháo burette trước khi lắp ống dẫn khí.', 'warning', src.name);
   if (dst.vessel.outlet || tubes.has(dst)) {
     log(`${dst.name} đang dẫn khí đi nơi khác, không nhận khí được.`, 'warning', dst.name);
     return;
@@ -1271,6 +1355,7 @@ function connectSyringe(src: VesselView) {
   connectFrom = null;
   hud.hint(null);
   if (src.vessel.inverted) return log('Lật ngửa ống trước khi nối với xi lanh.', 'warning', src.name);
+  if (burettes.has(src)) return log('Tháo burette trước khi lắp ống dẫn khí.', 'warning', src.name);
   if (tubes.get(src)?.dst === syringeView) return;
   for (const [s, t] of tubes) if (t.dst === syringeView) disconnect(s);
   disconnect(src, true);
@@ -1310,6 +1395,7 @@ function invert(v = requireSelected(), quiet = false) {
   if (v.kind.type !== 'tube') return log('Chỉ úp ngược được ống nghiệm.', 'warning', v.name);
   if (!v.vessel.inverted && v.vessel.mix.liquidL() > 5e-5) return log('Hãy đổ hết chất lỏng trước khi úp ngược ống.', 'warning', v.name);
   if (heatingView === v) return log('Không úp ống đang đun.', 'warning', v.name);
+  if (isOnBalance(v)) return log('Lấy ống khỏi cân trước khi úp ngược.', 'warning', v.name);
   if (v.vessel.outlet) return log('Ống đang được nút để phát khí, không úp được.', 'warning', v.name);
   const toInverted = !v.vessel.inverted;
   rec({ kind: 'invert', vessel: idx(v) });
@@ -1402,6 +1488,7 @@ function startHeat(v: VesselView) {
   if (heatingView === v) return;
   if (v.vessel.inverted) return log('Không đun ống đang úp ngược.', 'warning', v.name);
   if (isOnBalance(v)) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
+  if (burettes.has(v)) return log('Tháo burette trước khi đun.', 'warning', v.name);
   if (heatingView) stopHeat();
   rec({ kind: 'heat', vessel: idx(v), on: true });
   removeBath(v);
@@ -1446,6 +1533,11 @@ function empty() {
   if (v.vessel.inverted) return invert(v);
   rec({ kind: 'empty', vessel: idx(v) });
   removeDipped(v);
+  removeElectro(v);
+  if (burettes.has(v)) {
+    removeBurette(v);
+    log('Tháo burette', 'action', v.name);
+  }
   if (v.vessel.stoppered) {
     v.vessel.stoppered = false;
     log('Mở nút ống, khí bên trong bay ra ngoài', 'action', v.name);
@@ -1650,8 +1742,16 @@ function dropZone(x: number, y: number, p: THREE.Vector3, v?: VesselView): DropZ
 function settle(v: VesselView) {
   animator.run(call(() => {
     const want = heatingView === v ? heatPose(v) : restPose(v);
-    if (v.group.position.distanceTo(want) > 0.05) animator.run(moveVessel(v, () => want, 0.5));
+    if (v.group.position.distanceTo(want) > 0.05) animator.run(moveVessel(v, () => want, 0.5), call(() => showStand(v)));
+    else showStand(v);
   }));
+}
+
+/** Dụng cụ đang đun: hiện lại kẹp (ống nghiệm) hoặc kiềng (cốc, bình) đã ẩn khi kéo đi */
+function showStand(v: VesselView) {
+  if (heatingView !== v) return;
+  if (v.kind.type === 'tube') stand.clamp.visible = true;
+  else stand.tripod.visible = true;
 }
 
 function finishDrag(v: VesselView, zone: DropZone) {
@@ -1744,6 +1844,14 @@ renderer.domElement.addEventListener('pointercancel', (e) => {
   pourTarget = null;
   drag = null;
   controls.enabled = true;
+});
+
+// Bấm vào dụng cụ rồi thả chuột ngoài khung hình (chưa kéo): mở lại điều khiển góc nhìn
+window.addEventListener('pointerup', (e) => {
+  if (drag && !drag.started && e.pointerId === drag.pointerId) {
+    drag = null;
+    controls.enabled = true;
+  }
 });
 
 let downAt: { x: number; y: number } | null = null;
@@ -1907,6 +2015,7 @@ function resetAll() {
   for (const v of views) disconnect(v, true);
   for (const v of views) removeDipped(v);
   for (const v of views) removeBurette(v);
+  for (const v of views) removeElectro(v);
   syringeView.reset();
   syringePanel.show(false);
   onBalance = [];
@@ -2222,6 +2331,12 @@ function frame() {
     updateDipped(v, o.pH, dt);
     updateXCard(v, o.turbidity);
     baths.get(v)?.update(dt);
+    voltmeters.get(v)?.set(cellReading(v.vessel.mix)?.volts ?? 0);
+    const ev = electrolyzers.get(v);
+    if (ev) {
+      if (v.vessel.mix.volumeL < 1e-6) v.vessel.mix.current = 0;
+      ev.update(v.vessel.mix.current > 0, Math.min(1, v.vessel.mix.get('Cu') / 3e-4));
+    }
     const bm = burettes.get(v);
     if (bm) {
       bm.view.update(dt, bm.b, bm.disp, v.surfaceWorld().y - bm.view.group.position.y);

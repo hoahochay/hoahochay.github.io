@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SPECIES, species } from '../src';
 import { ReagentDef, SolidItem } from './catalog';
 import { darkMetal, darkWood, glassMaterial, labelTexture, metal, setRGB, wood } from './materials';
 
@@ -214,9 +215,11 @@ export function solidPiece(item: SolidItem): THREE.Object3D {
 
 function dishSample(item: SolidItem): THREE.Object3D {
   const col = new THREE.Color();
-  const sp = { Mg: [0.78, 0.78, 0.78], Zn: [0.62, 0.64, 0.67], Fe: [0.4, 0.4, 0.42], Cu: [0.72, 0.42, 0.2], Na: [0.82, 0.82, 0.8], Li: [0.75, 0.75, 0.76], K: [0.8, 0.8, 0.84], CaCO3: [0.95, 0.95, 0.93], MnO2: [0.1, 0.1, 0.1], NaHCO3: [0.97, 0.97, 0.96], S: [0.96, 0.84, 0.18], NaCl: [0.97, 0.97, 0.97], CuSO4: [0.2, 0.45, 0.9], starch: [0.97, 0.96, 0.92], VitC: [0.98, 0.93, 0.62], CuO: [0.08, 0.08, 0.09], CaO: [0.95, 0.94, 0.9], KMnO4: [0.22, 0.05, 0.25], NH4Cl: [0.97, 0.97, 0.97], KNO3: [0.97, 0.97, 0.97], Na2O: [0.97, 0.97, 0.96], MgO: [0.97, 0.97, 0.97], P2O5: [0.98, 0.98, 0.98], CaCl2: [0.97, 0.97, 0.96], KClO3: [0.98, 0.98, 0.97] }[item.id] ?? [0.8, 0.8, 0.8];
+  const sp = ({ Mg: [0.78, 0.78, 0.78], Zn: [0.62, 0.64, 0.67], Fe: [0.4, 0.4, 0.42], Cu: [0.72, 0.42, 0.2], Na: [0.82, 0.82, 0.8], Li: [0.75, 0.75, 0.76], K: [0.8, 0.8, 0.84], CaCO3: [0.95, 0.95, 0.93], MnO2: [0.1, 0.1, 0.1], NaHCO3: [0.97, 0.97, 0.96], S: [0.96, 0.84, 0.18], NaCl: [0.97, 0.97, 0.97], CuSO4: [0.2, 0.45, 0.9], starch: [0.97, 0.96, 0.92], VitC: [0.98, 0.93, 0.62], CuO: [0.08, 0.08, 0.09], CaO: [0.95, 0.94, 0.9], KMnO4: [0.22, 0.05, 0.25], NH4Cl: [0.97, 0.97, 0.97], KNO3: [0.97, 0.97, 0.97], Na2O: [0.97, 0.97, 0.96], MgO: [0.97, 0.97, 0.97], P2O5: [0.98, 0.98, 0.98], CaCl2: [0.97, 0.97, 0.96], KClO3: [0.98, 0.98, 0.97] } as Record<string, number[]>)[item.id] ?? (item.id in SPECIES ? species(item.id).color : undefined) ?? [0.8, 0.8, 0.8];
+  // Chỉ kim loại mới có ánh kim (bông, cánh hoa, muối… thì không)
+  const sp0: Record<string, number> = { Mg: 1, Zn: 1, Fe: 1, Cu: 1, Na: 1, Li: 1, K: 1, Al: 1, Ag: 1, Pt: 1 };
   setRGB(col, sp as [number, number, number]);
-  const metallic = !['CaCO3', 'MnO2', 'NaHCO3', 'S', 'NaCl', 'CuSO4', 'starch', 'VitC', 'CuO', 'CaO', 'KMnO4', 'NH4Cl', 'KNO3', 'Na2O', 'MgO', 'P2O5', 'CaCl2', 'KClO3'].includes(item.id) && item.shape !== 'powder';
+  const metallic = item.id in sp0 && item.shape !== 'powder';
   const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metallic ? 0.75 : 0, roughness: metallic ? 0.35 : 0.9 });
   const g = new THREE.Group();
   const add = (geo: THREE.BufferGeometry, x = 0, z = 0, ry = 0) => {

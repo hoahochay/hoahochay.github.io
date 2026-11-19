@@ -63,17 +63,21 @@ export function runKinetics(mix: Mixture, dt: number, reactions: KineticReaction
   const ctx = context(mix);
   // "Ngân sách" H+/OH- trong bước này, để nhiều phản ứng không dùng quá lượng có sẵn
   const budget = new Map([['H+', mix.get('H+')], ['OH-', mix.get('OH-')]]);
+  let waterLeft = mix.get('H2O');
   for (const r of reactions) {
     const rate = r.rate(ctx);
     if (!(rate > 0)) continue;
     let dXi = rate * dt;
     for (const [id, nu] of Object.entries(r.reactants)) {
-      if (id === 'H2O') continue;
+      // Nước không bị trừ trực tiếp (bảo toàn H tính lại sau), nhưng không thể dùng quá lượng nước đang có:
+      // kim loại kiềm trong ống khô hay trong dầu hỏa không phản ứng
+      if (id === 'H2O') { dXi = Math.min(dXi, (0.5 * waterLeft) / nu); continue; }
       const avail = budget.has(id) ? 0.5 * budget.get(id)! : mix.get(id);
       dXi = Math.min(dXi, avail / nu);
     }
     if (!(dXi > 0)) continue;
     for (const [id, nu] of Object.entries(r.reactants)) {
+      if (id === 'H2O') waterLeft -= nu * dXi;
       if (budget.has(id)) budget.set(id, budget.get(id)! - nu * dXi);
       if (!IMPLICIT.has(id)) mix.add(id, -nu * dXi);
     }

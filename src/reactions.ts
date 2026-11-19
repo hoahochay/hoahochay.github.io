@@ -7,6 +7,7 @@
  */
 import { KineticReaction, massAction } from './kinetics';
 import type { Mixture } from './mixture';
+import { ELECTROLYSIS } from './electro';
 import { arrhenius } from './thermo';
 
 /** Lượng phức [CuCl₄]²⁻ còn thiếu so với cân bằng (mol, âm nếu dư), chia cho thời gian hồi phục 1 s */
@@ -19,7 +20,8 @@ function cucl4Excess(mix: Mixture): number {
 /** Lượng xà phòng còn thiếu so với trạng thái cân bằng muối kết (mol/s, thời gian hồi phục 2 s) */
 function soapExcess(mix: Mixture): number {
   const ol = mix.get('oleate'), sp = mix.get('soap');
-  if (ol + sp <= 0) return 0;
+  // Không có nước: xà phòng khô không phân li
+  if (ol + sp <= 0 || mix.volumeL <= 1e-7) return 0;
   const K = (mix.conc('Na+') / 3) ** 6 * Math.exp(-(mix.tempK - 298) / 10);
   return (((ol + sp) * K) / (1 + K) - sp) / 2;
 }
@@ -215,7 +217,7 @@ export const REACTIONS: KineticReaction[] = [
   {
     id: 'cac2_water', name: 'Calcium carbide tác dụng với nước',
     equation: 'CaC₂ + 2H₂O → C₂H₂↑ + Ca(OH)₂',
-    reactants: { CaC2: 1 }, products: { C2H2: 1, 'Ca^2+': 1, 'OH-': 2 },
+    reactants: { CaC2: 1, H2O: 2 }, products: { C2H2: 1, 'Ca^2+': 1, 'OH-': 2 },
     rate: massAction({ k25: 8e-5, Ea: 30000, surface: 'CaC2' }),
   },
   {
@@ -529,5 +531,21 @@ export const REACTIONS: KineticReaction[] = [
     equation: '(C₆H₁₀O₅)ₙ tan trong dung dịch [Cu(NH₃)₄](OH)₂',
     reactants: { cellulose: 1 }, products: { 'cellulose(sw)': 1 },
     rate: (ctx) => 2e-4 * ctx.surface('cellulose') * Math.min(1, ctx.conc('Cu(NH3)4^2+') / 0.2),
+  },
+
+  // ════ Lớp 12 · Chương 5: điện phân ═══════════════════════════════════════
+  ...ELECTROLYSIS,
+  // Chlorine sinh ra ở anode gặp OH⁻ sinh ra ở cathode (không có màng ngăn): tạo nước Javel
+  {
+    id: 'cl2_naoh', name: 'Chlorine tác dụng với dung dịch kiềm',
+    equation: 'Cl₂ + 2NaOH → NaCl + NaClO + H₂O',
+    reactants: { Cl2: 1, 'OH-': 2 }, products: { 'Cl-': 1, 'ClO-': 1, H2O: 1 },
+    rate: massAction({ k25: 50, Ea: 20000, orders: { Cl2: 1, 'OH-': 1 } }),
+  },
+  {
+    id: 'petal_bleach', name: 'Cánh hoa bị tẩy màu',
+    equation: 'NaClO (Cl₂, HClO) oxi hóa chất màu của cánh hoa',
+    reactants: { petal: 1 }, products: { 'petal(bleached)': 1 },
+    rate: ({ mix }) => 3 * (mix.conc('ClO-') + mix.conc('Cl2')) * mix.get('petal'),
   },
 ];

@@ -13,8 +13,13 @@ export type Route =
   | { view: 'lab'; tab: 'chem' | 'recipes'; recipe?: string; shared?: string }
   | { view: 'table'; element?: string };
 
+/** Link gõ sai (vd. dấu % lẻ) không được làm hỏng cả ứng dụng */
+function safeDecode(x: string): string {
+  try { return decodeURIComponent(x); } catch { return x; }
+}
+
 export function parseHash(hash: string): Route {
-  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(safeDecode);
   if (parts[0] === 'bang-tuan-hoan') return { view: 'table', element: parts[1] };
   if (parts[0] === 'chia-se' && parts[1]) return { view: 'lab', tab: 'recipes', shared: parts[1] };
   if (parts[0] === 'thi-nghiem') return { view: 'lab', tab: 'recipes', recipe: parts[1] };

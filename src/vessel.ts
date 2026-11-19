@@ -180,9 +180,12 @@ export class Vessel implements GasReceiver {
 
   addSolid(id: string, mol: number, form: SolidForm = 'granule'): this {
     if (species(id).phase !== 's') throw new Error(`${id} không phải chất rắn`);
+    const old = this.mix.get(id);
+    const s = this.mix.suspended.get(id) ?? 0;
     this.mix.add(id, mol);
     this.mix.setForm(id, form);
-    this.mix.suspended.set(id, 0); // chất rắn bỏ vào thì nằm dưới đáy
+    // Chất rắn bỏ vào thì nằm dưới đáy; phần kết tủa đang lơ lửng (nếu có) vẫn lơ lửng
+    this.mix.suspended.set(id, (s * old) / (old + mol));
     this.process(0);
     return this;
   }

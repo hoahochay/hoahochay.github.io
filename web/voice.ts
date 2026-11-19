@@ -68,7 +68,10 @@ export class Narrator {
   pause(paused: boolean): void {
     if (!this.audio) return;
     if (paused) this.audio.pause();
-    else void this.audio.play().catch(() => this.finish());
+    else {
+      const a = this.audio;
+      void a.play().catch(() => { if (this.audio === a) this.finish(); });
+    }
   }
 
   stop(): void {

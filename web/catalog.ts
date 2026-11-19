@@ -1,5 +1,5 @@
 /** Danh mục hóa chất trên kệ và chất rắn trên khay */
-import { gramsToMol, indicatorDrops, makeOrganic, makeSolution, Mixture, RGB, solutionColor, SolidForm } from '../src';
+import { gramsToMol, indicatorDrops, makeOrganic, makeSolution, Mixture, RGB, solutionColor, SolidForm, species } from '../src';
 import type { ToolKind } from './probes';
 
 export type LabTool = ToolKind | 'delivery' | 'syringe' | 'balance';
@@ -134,6 +134,8 @@ export const REAGENTS: ReagentDef[] = [
   reagent('agno3_1', 'AgNO₃', '1%', 'silver nitrate', { AgNO3: 0.059 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
   reagent('cuso4_2', 'CuSO₄', '2%', 'copper(II) sulfate', { CuSO4: 0.13 }),
+  reagent('nuoc_cung_tam_thoi', 'Nước cứng', 'tạm thời', 'nước chứa Ca(HCO₃)₂', { CaHCO32: 0.004, H2CO3: 0.01 }, { aka: 'nuoc cung tam thoi canxi hidrocacbonat ca(hco3)2' }),
+  reagent('nuoc_cung_vinh_cuu', 'Nước cứng', 'vĩnh cửu', 'nước chứa CaCl₂ và MgSO₄', { CaCl2: 0.01, MgSO4: 0.01 }, { aka: 'nuoc cung vinh cuu cacl2 mgso4' }),
   reagent('cuso4_01', 'CuSO₄', '0,1M', 'copper(II) sulfate', { CuSO4: 0.1 }),
   reagent('cuso4_1m', 'CuSO₄', '1M', 'copper(II) sulfate', { CuSO4: 1 }),
   reagent('cuso4_5', 'CuSO₄', '5%', 'copper(II) sulfate', { CuSO4: 0.32 }),
@@ -198,6 +200,9 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'caco3', id: 'CaCO3', label: 'Đá vôi', aka: 'calcium carbonate da voi vien', grams: 0.5, form: 'granule', shape: 'granule' },
   { key: 'caco3_powder', id: 'CaCO3', label: 'Đá vôi (bột)', aka: 'calcium carbonate da voi bot dap nho', grams: 1, form: 'powder', shape: 'powder' },
   { key: 'fe_powder', id: 'Fe', label: 'Bột sắt', aka: 'iron powder', grams: 0.7, form: 'powder', shape: 'powder' },
+  { key: 'canh_hoa', id: 'petal', label: 'Cánh hoa hồng', aka: 'canh hoa hong mau hong tay mau', grams: 0.05, form: 'strip', shape: 'ribbon' },
+  { key: 'zn_strip', id: 'Zn', label: 'Thanh kẽm', aka: 'zinc thanh kem la kem dien cuc', grams: 2, form: 'strip', shape: 'ribbon' },
+  { key: 'cu_strip', id: 'Cu', label: 'Thanh đồng', aka: 'copper thanh dong la dong dien cuc', grams: 2, form: 'strip', shape: 'ribbon' },
   { key: 'bong', id: 'cellulose', label: 'Bông (cellulose)', aka: 'bong gon cellulose xenlulozo', grams: 0.05, form: 'granule', shape: 'chunk' },
   { key: 'bong_nitrat', id: 'cellulose_nitrate', label: 'Bông đã nitrate hóa', aka: 'cellulose trinitrate xenlulozo trinitrat thuoc sung khong khoi', grams: 0.05, form: 'granule', shape: 'chunk' },
   { key: 'al_powder', id: 'Al', label: 'Nhôm (bột)', aka: 'aluminium nhom bot al', grams: 0.1, form: 'powder', shape: 'powder' },
@@ -271,6 +276,8 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
+/** Công thức hiển thị của chất rắn: bảng riêng, rồi nhãn của chất trong engine */
+const solidFormula = (id: string) => SOLID_FORMULA[id] ?? species(id).label ?? id;
 const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', CaC2: 'CaC₂', C12H22O11: 'C₁₂H₂₂O₁₁', NH4Cl: 'NH₄Cl', KNO3: 'KNO₃', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
@@ -284,9 +291,9 @@ export const CHEMICALS: ChemEntry[] = [
     };
   }),
   ...SOLID_ITEMS.map((i): ChemEntry => ({
-    key: i.key, kind: 'solid', title: i.label, formula: SOLID_FORMULA[i.id] ?? i.id, sub: 'chất rắn',
+    key: i.key, kind: 'solid', title: i.label, formula: solidFormula(i.id), sub: 'chất rắn',
     unit: 'g', defaultAmount: i.grams, step: 0.05, max: 10,
-    solid: i, search: searchText(`${i.label} ${i.aka ?? ''} ${SOLID_FORMULA[i.id] ?? i.id} ${i.id} chat ran kim loai`),
+    solid: i, search: searchText(`${i.label} ${i.aka ?? ''} ${solidFormula(i.id)} ${i.id} chat ran kim loai`),
   })),
   ...([
     ['splint_glow', 'glowing', 'Que đóm còn tàn đỏ', 'Thử khí O₂', 'oxygen o2'],
@@ -301,6 +308,8 @@ export const CHEMICALS: ChemEntry[] = [
     ['no2_tube', 'no2_tube', 'Khí NO₂ (nút kín)', 'Nạp khí nitrogen dioxide vào ống khô rồi đậy nút', 'khi no2 nitrogen dioxide nito dioxit n2o4 nau do can bang ong nut kin'],
     ['burette', 'burette', 'Burette NaOH (≈ 0,1 M)', 'Lắp burette 25 mL chứa NaOH nồng độ khoảng 0,1 M lên bình nón để chuẩn độ', 'burette buret chuan do naoh acid base'],
     ['burette_kmno4', 'burette_kmno4', 'Burette KMnO₄ 0,02 M', 'Lắp burette 25 mL chứa thuốc tím 0,02 M lên bình nón để chuẩn độ (vd. muối Fe(II))', 'burette buret chuan do kmno4 thuoc tim permanganat fe2 sat'],
+    ['voltmeter', 'voltmeter', 'Vôn kế', 'Nối với hai thanh kim loại cắm trong dung dịch (pin đơn giản): đo hiệu điện thế của pin', 'von ke dong ho do dien the pin dien hoa pin chanh suat dien dong'],
+    ['dc_power', 'dc_power', 'Nguồn điện một chiều', 'Hai điện cực than chì nối với nguồn điện 6 V: nhúng vào dung dịch để điện phân', 'nguon dien mot chieu dien phan dien cuc than chi graphite anode cathode'],
     ['flame_wire', 'flame_wire', 'Dây platinum', 'Nhúng vào dung dịch muối rồi hơ trên ngọn lửa: thử màu ngọn lửa của ion kim loại', 'day platinum bach kim thu mau ngon lua li na k ca sr ba nhan biet ion kim loai kiem'],
     ['dish_burn', 'dish_burn', 'Bát sứ + que đóm', 'Rót khoảng 1 mL chất lỏng ra bát sứ rồi châm lửa (hexane, cồn…)', 'bat su dot chay chat long que dom hexane con ethanol'],
     ['spoon_s', 'spoon_s', 'Muôi sắt + lưu huỳnh', 'Đốt lưu huỳnh trên đèn cồn rồi đưa vào bình (vd. bình oxygen)', 'muoi sat dot luu huynh sulfur chay binh oxygen so2'],

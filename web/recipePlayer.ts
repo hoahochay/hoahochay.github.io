@@ -130,6 +130,8 @@ export class RecipePlayer {
     this.lab.resetAll();
     this.setSpeed(1);
     await this.voice.load();
+    // Trong lúc tải giọng đọc, người dùng có thể đã dừng hoặc chuyển sang bài khác
+    if (id !== this.runId) return;
     try {
       for (let i = 0; i < r.steps.length; i++) {
         const step = r.steps[i];

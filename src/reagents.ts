@@ -32,6 +32,8 @@ export const COMPOUNDS: Record<string, Compound> = {
   FeSO4: { name: 'iron(II) sulfate', ions: { 'Fe^2+': 1, 'SO4^2-': 1 } },
   FeCl3: { name: 'iron(III) chloride', ions: { 'Fe^3+': 1, 'Cl-': 3 } },
   MgCl2: { name: 'magnesium chloride', ions: { 'Mg^2+': 1, 'Cl-': 2 } },
+  MgSO4: { name: 'magnesium sulfate', ions: { 'Mg^2+': 1, 'SO4^2-': 1 } },
+  CaHCO32: { name: 'calcium hydrogencarbonate', ions: { 'Ca^2+': 1, 'HCO3-': 2 } },
   CaCl2: { name: 'calcium chloride', ions: { 'Ca^2+': 1, 'Cl-': 2 } },
   SrCl2: { name: 'strontium chloride', ions: { 'Sr^2+': 1, 'Cl-': 2 } },
   LiCl: { name: 'lithium chloride', ions: { 'Li+': 1, 'Cl-': 1 } },
