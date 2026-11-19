@@ -52,7 +52,7 @@ function helpHtml(phone: boolean): string {
         <h3>🔧 Dụng cụ thí nghiệm</h3>
         <p>Cũng nằm trong kho, mục <b>Dụng cụ</b>. ${pick('Kéo thả', 'Kéo thả hoặc chạm chọn rồi chạm')} vào dụng cụ chứa:</p>
         <ul>
-          <li><b>Que đóm, giấy quỳ ẩm</b>: đưa vào miệng ống để thử khí.</li>
+          <li><b>Que đóm, giấy quỳ ẩm, giấy pH ẩm</b>: đưa vào miệng ống để thử khí.</li>
           <li><b>Mẩu giấy màu ẩm</b>: đưa vào trong dụng cụ chứa khí; giấy mất màu nếu có khí chlorine (chlorine ẩm có tính tẩy màu).</li>
           <li><b>Giấy quỳ tím</b> (thử dung dịch): thả vào dụng cụ để nhúng đầu mẩu quỳ vào dung dịch; quỳ hóa đỏ với acid, hóa xanh với base. Mẩu quỳ để luôn trong dụng cụ và tiếp tục đổi màu khi dung dịch thay đổi; đổ bỏ dung dịch thì quỳ cũng được bỏ đi.</li>
           <li><b>Giấy pH</b>: dùng như giấy quỳ, giấy đổi màu theo bảng màu chuẩn pH 1 – 14; nhật ký ghi số pH đọc được.</li>

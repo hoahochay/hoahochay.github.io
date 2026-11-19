@@ -39,13 +39,17 @@ export const REAGENTS: ReagentDef[] = [
   reagent('h2so4', 'H₂SO₄', '0,5M', 'sulfuric acid loãng', { H2SO4: 0.5 }),
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
   // Giấm ăn: acetic acid khoảng 5% (≈ 0,83 M)
+  reagent('ch3cooh_10', 'CH₃COOH', '10%', 'acetic acid', { CH3COOH: 1.67 }, { aka: 'acetic acid 10% axit axetic' }),
   reagent('vinegar', 'CH₃COOH', '5%', 'giấm ăn', { CH3COOH: 0.83 }, { aka: 'vinegar acetic acid giam' }),
   reagent('h2so4_01', 'H₂SO₄', '0,1M', 'sulfuric acid loãng', { H2SO4: 0.1 }),
   reagent('h2so4_2', 'H₂SO₄', '2M', 'sulfuric acid', { H2SO4: 2 }),
   reagent('naoh', 'NaOH', '1M', 'sodium hydroxide', { NaOH: 1 }),
   reagent('naoh05', 'NaOH', '0,5M', 'sodium hydroxide', { NaOH: 0.5 }),
+  reagent('naoh_10', 'NaOH', '10%', 'sodium hydroxide', { NaOH: 2.75 }),
+  reagent('naoh_20', 'NaOH', '20%', 'sodium hydroxide', { NaOH: 6.1 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
+  reagent('na2co3_10', 'Na₂CO₃', '10%', 'sodium carbonate', { Na2CO3: 0.94 }),
   reagent('naf', 'NaF', '0,1M', 'sodium fluoride', { NaF: 0.1 }),
   reagent('nacl', 'NaCl', '0,1M', 'sodium chloride', { NaCl: 0.1 }),
   reagent('nabr', 'NaBr', '0,1M', 'sodium bromide', { NaBr: 0.1 }),
@@ -64,11 +68,15 @@ export const REAGENTS: ReagentDef[] = [
   reagent('lemon', 'Nước chanh', '', 'đồ uống, chứa citric acid', { H3Cit: 0.25 }, { aka: 'chanh lemon citric acid nuoc qua', color: [0.97, 0.95, 0.72] }),
   reagent('soda', 'Nước ngọt có gas', '', 'đồ uống, chứa khí carbon dioxide', { H2CO3: 0.1, H3Cit: 0.01 }, { aka: 'nuoc ngot co ga soda carbonic' }),
   reagent('dishsoap', 'Nước rửa bát', '', 'chất tẩy rửa dùng trong gia đình', { NaHCO3: 0.01, Na2CO3: 0.0005 }, { aka: 'nuoc rua bat xa phong chat tay rua', color: [0.75, 0.92, 0.7] }),
+  reagent('ethanol', 'C₂H₅OH', '96°', 'ethanol (cồn)', { C2H5OH: 16.4 }, { aka: 'ethanol con ruou ancol etylic' }),
+  reagent('glycerol', 'C₃H₅(OH)₃', '', 'glycerol', { glycerol: 13.7 }, { aka: 'glycerol glixerol glyxerin' }),
   reagent('h2o2', 'H₂O₂', '3%', 'nước oxy già', { H2O2: 0.88 }, { amber: true, aka: 'hydrogen peroxide' }),
   reagent('h2o2_10', 'H₂O₂', '10%', 'hydrogen peroxide', { H2O2: 2.94 }, { amber: true, aka: 'nuoc oxy gia hydrogen peroxide 10' }),
   reagent('agno3', 'AgNO₃', '0,1M', 'silver nitrate', { AgNO3: 0.1 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
+  reagent('cuso4_2', 'CuSO₄', '2%', 'copper(II) sulfate', { CuSO4: 0.13 }),
   reagent('fecl3', 'FeCl₃', '0,1M', 'iron(III) chloride', { FeCl3: 0.1 }),
+  reagent('alcl3', 'AlCl₃', '0,1M', 'aluminium chloride', { AlCl3: 0.1 }),
   reagent('feso4', 'FeSO₄', '0,1M', 'iron(II) sulfate', { FeSO4: 0.1 }),
   reagent('bacl2', 'BaCl₂', '0,1M', 'barium chloride', { BaCl2: 0.1 }),
   reagent('na2so4', 'Na₂SO₄', '0,1M', 'sodium sulfate', { Na2SO4: 0.1 }),
@@ -121,6 +129,8 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'vitc', id: 'VitC', label: 'Viên vitamin C sủi', aka: 'vitamin c sui vien sui c sui citric acid', grams: 0.25, form: 'granule', shape: 'chunk' },
   { key: 'kclo3', id: 'KClO3', label: 'Potassium chlorate', aka: 'kali clorat kclo3 dieu che oxygen oxi', grams: 0.5, form: 'powder', shape: 'powder' },
   { key: 'cacl2_solid', id: 'CaCl2', label: 'Calcium chloride khan', aka: 'canxi clorua cacl2 ran khan', grams: 5, form: 'powder', shape: 'powder' },
+  { key: 'nh4cl', id: 'NH4Cl', label: 'Phân đạm ammonium chloride', aka: 'nh4cl amoni clorua phan dam', grams: 1, form: 'powder', shape: 'powder' },
+  { key: 'kno3', id: 'KNO3', label: 'Phân bón potassium nitrate', aka: 'kno3 kali nitrat phan bon diem tieu', grams: 1, form: 'powder', shape: 'powder' },
   { key: 'kmno4', id: 'KMnO4', label: 'Thuốc tím', aka: 'potassium permanganate kmno4 thuoc tim kali pemanganat', grams: 0.2, form: 'powder', shape: 'powder' },
   { key: 'cao', id: 'CaO', label: 'Vôi sống (cục)', aka: 'calcium oxide cao voi song', grams: 1, form: 'granule', shape: 'chunk' },
   { key: 'na2o', id: 'Na2O', label: 'Sodium oxide', aka: 'natri oxit na2o', grams: 0.1, form: 'powder', shape: 'powder' },
@@ -179,7 +189,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', NH4Cl: 'NH₄Cl', KNO3: 'KNO₃', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {
@@ -202,6 +212,7 @@ export const CHEMICALS: ChemEntry[] = [
     ['litmus', 'litmus', 'Giấy quỳ tím ẩm', 'Thử khí acid / base', 'quy tim nh3 ammonia co2 acid base'],
     ['litmus_sol', 'litmus_sol', 'Giấy quỳ tím', 'Thử dung dịch acid / base', 'quy tim dung dich acid base axit bazo thu mau'],
     ['ph_paper', 'ph_paper', 'Giấy pH', 'Đo pH dung dịch theo bảng màu', 'giay ph thang ph chi thi van nang do ph'],
+    ['ph_moist', 'ph_moist', 'Giấy pH ẩm', 'Thử khí: đưa vào miệng ống, đọc pH', 'giay ph am thu khi nh3 ammonia miệng ong mieng ong'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
     ['dye_paper', 'dye_paper', 'Mẩu giấy màu ẩm', 'Thử tính tẩy màu của khí chlorine', 'giay mau am tay mau chlorine clo cl2'],
     ['xcard', 'xcard', 'Tờ giấy kẻ chữ X', 'Bấm giờ đến khi dung dịch đục che khuất chữ X', 'giay chu x dong ho bam gio toc do phan ung do duc luu huynh thiosulfate'],
@@ -228,6 +239,7 @@ export const SOLID_COLOR_NAME: Record<string, string> = {
   AgBr: 'vàng nhạt',
   AgI: 'vàng',
   'S(coll)': 'trắng ngà',
+  'Al(OH)3': 'trắng keo',
   Cu: 'đỏ',
   Ag: 'xám bạc',
 };

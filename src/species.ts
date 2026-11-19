@@ -5,6 +5,12 @@ export type RGB = [number, number, number];
 /** Chất chỉ thị: màu phụ thuộc pH, nồng độ rất nhỏ nên bỏ qua trong cân bằng điện tích */
 export interface IndicatorDef {
   pKa: number;
+  /**
+   * Dạng màu tạo ra do ion OH⁻ cộng vào phân tử chỉ thị (phenolphthalein): màu theo [OH⁻]
+   * chứ không theo [H⁺], nên khi đun nóng dung dịch base yếu (Kw tăng) màu đậm hơn.
+   * pKa khi đó là giá trị ở 25 °C, quy về thang pH = 14 + lg[OH⁻].
+   */
+  viaOH?: boolean;
   /** Hệ số hấp thụ mol (L/mol/cm) của dạng acid theo R, G, B */
   acidEps: RGB;
   /** Hệ số hấp thụ mol của dạng base */
@@ -59,6 +65,8 @@ sp('OH-', 'ion hydroxide', 'aq', -1, 1, -229.99, 17.007);
 sp('Na+', 'ion sodium', 'aq', 1, 0, -240.12, 22.99);
 sp('Li+', 'ion lithium', 'aq', 1, 0, -278.49, 6.94);
 sp('K+', 'ion potassium', 'aq', 1, 0, -252.38, 39.1);
+sp('Al^3+', 'ion aluminium', 'aq', 3, 0, -538.4, 26.98);
+sp('AlOH^2+', 'ion AlOH2+', 'aq', 2, 1, -767.0, 43.99);
 sp('Cl-', 'ion chloride', 'aq', -1, 0, -167.16, 35.45);
 sp('I-', 'ion iodide', 'aq', -1, 0, -55.19, 126.9);
 sp('Br-', 'ion bromide', 'aq', -1, 0, -121.55, 79.9);
@@ -106,6 +114,11 @@ sp('NH3', 'ammonia', 'aq', 0, 3, -80.29, 17.03);
 
 // ── Phân tử tan trung hòa ────────────────────────────────────────────────
 sp('H2O2', 'hydrogen peroxide', 'aq', 0, 2, -191.17, 34.01);
+// Alcohol (tan vô hạn trong nước)
+sp('C2H5OH', 'ethanol', 'aq', 0, 6, -288.3, 46.07);
+sp('glycerol', 'glycerol', 'aq', 0, 8, -676.5, 92.09, { label: 'C₃H₅(OH)₃' });
+// Phức của Cu²⁺ với glycerol (polyalcohol có nhóm –OH liền kề): dung dịch xanh lam đậm
+sp('Cu(glycerol)', 'phức copper(II) glycerate', 'aq', 0, 14, -1231.4, 245.7, { epsilon: [30, 5, 0.5], label: '[C₃H₅(OH)₂O]₂Cu' });
 // Halogen tan trong nước: nước chlorine vàng lục nhạt, nước bromine vàng cam, iodine (cùng I⁻ tạo I₃⁻) nâu
 sp('Cl2', 'chlorine', 'aq', 0, 0, -23.4, 70.9, { epsilon: [0.3, 0.2, 2.5] });
 sp('Br2', 'bromine', 'aq', 0, 0, -2.59, 159.8, { epsilon: [1, 20, 110] });
@@ -116,7 +129,7 @@ sp('I2-starch', 'phức iodine – tinh bột', 'aq', 0, 0, 22.6, 253.8, { epsil
 
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
 sp('phenolphthalein', 'phenolphthalein', 'aq', 0, 0, 0, 318.3, {
-  indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2 },
+  indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2, viaOH: true },
 });
 sp('methyl orange', 'methyl orange', 'aq', 0, 0, 0, 327.3, {
   indicator: { pKa: 3.47, acidEps: [300, 25000, 12000], baseEps: [0, 3000, 25000] },
@@ -155,6 +168,9 @@ sp('AgCl', 'silver chloride', 's', 0, 0, -127.07, 143.32, { color: WHITE });
 sp('AgBr', 'silver bromide', 's', 0, 0, -100.37, 187.77, { color: [0.97, 0.94, 0.74] });
 sp('AgI', 'silver iodide', 's', 0, 0, -61.84, 234.77, { color: [0.98, 0.88, 0.42] });
 sp('Cu(OH)2', 'copper(II) hydroxide', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });
+sp('Al(OH)3', 'aluminium hydroxide', 's', 0, 3, -1276, 78.0, { color: WHITE });
+sp('NH4Cl', 'ammonium chloride', 's', 0, 4, -314.43, 53.49, { color: [0.97, 0.97, 0.97] });
+sp('KNO3', 'potassium nitrate', 's', 0, 0, -494.63, 101.1, { color: [0.97, 0.97, 0.97] });
 sp('Fe(OH)2', 'iron(II) hydroxide', 's', 0, 2, -569.0, 89.86, { color: [0.6, 0.72, 0.62] });
 sp('Fe(OH)3', 'iron(III) hydroxide', 's', 0, 3, -823.0, 106.87, { color: [0.6, 0.28, 0.1] });
 sp('KClO3', 'potassium chlorate', 's', 0, 0, -397.73, 122.55, { color: [0.98, 0.98, 0.97] });

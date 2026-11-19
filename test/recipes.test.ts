@@ -112,7 +112,10 @@ function runRecipe(r: PlayScript): RunResult {
         else if (s.tool === 'xcard') probes.push('xcard');
         else if (s.tool === 'dye_paper') probes.push('dye-' + testDyePaper(v));
         else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
-        else if (s.tool === 'litmus_sol') probes.push('litmus_sol-' + litmusVerdict(v.observe().pH));
+        else if (s.tool === 'ph_moist') {
+          run(5);
+          probes.push('ph_moist-' + Math.round(litmusPH(v)));
+        } else if (s.tool === 'litmus_sol') probes.push('litmus_sol-' + litmusVerdict(v.observe().pH));
         else {
           run(5);
           probes.push('litmus-' + litmusVerdict(litmusPH(v)));
@@ -153,6 +156,45 @@ describe('Thí nghiệm mẫu', () => {
     expect(res.probes).toEqual(['magnet-attracted', 'magnet-none']);
     expect(res.vessels[1].mix.get('FeS')).toBeGreaterThan(0.012);
     expect(res.vessels[0].mix.get('FeS')).toBeLessThan(1e-8);
+  });
+
+  it('Hóa 11 Bài 2 – môi trường dung dịch muối: nước 7, Na2CO3 base, AlCl3 và FeCl3 acid', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'moi-truong-dung-dich-muoi')!);
+    console.log('pH muối', res.probes);
+    const [water, na2co3, alcl3, fecl3] = res.probes.map((p) => Number(p.slice(3)));
+    expect(water).toBe(7);
+    expect(na2co3).toBeGreaterThanOrEqual(11);
+    expect(alcl3).toBeGreaterThanOrEqual(3);
+    expect(alcl3).toBeLessThanOrEqual(4);
+    expect(fecl3).toBeLessThan(alcl3);
+  });
+
+  it('Hóa 11 Bài 5 – nhận biết NH4+: chỉ ống phân ammonium làm giấy pH ẩm hóa xanh', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'nhan-biet-ion-ammonium')!);
+    console.log('pH ẩm', res.probes);
+    expect(Number(res.probes[0].split('-')[1])).toBeGreaterThanOrEqual(5);
+    expect(Number(res.probes[0].split('-')[1])).toBeLessThanOrEqual(7);
+    expect(Number(res.probes[1].split('-')[1])).toBeGreaterThanOrEqual(9);
+  });
+
+  it('Hóa 11 Bài 8 – nhận biết SO4: cả hai ống có BaSO4', () => {
+    const v = run('nhan-biet-ion-sulfate');
+    expect(v[0].mix.get('BaSO4')).toBeGreaterThan(1e-5);
+    expect(v[1].mix.get('BaSO4')).toBeGreaterThan(1e-5);
+  });
+
+  it('Hóa 11 Bài 20 – glycerol hòa tan Cu(OH)2, ethanol thì không', () => {
+    const v = run('cuoh2-glycerol');
+    expect(v[0].mix.get('Cu(OH)2')).toBeGreaterThan(1e-4);
+    expect(v[1].mix.get('Cu(OH)2')).toBeLessThan(1e-6);
+    expect(v[1].mix.get('Cu(glycerol)')).toBeGreaterThan(1e-4);
+  });
+
+  it('Hóa 11 Bài 24 – acetic acid: quỳ đỏ, Mg tạo H2, Na2CO3 tạo CO2', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'tinh-acid-acetic-acid')!);
+    expect(res.probes).toEqual(['litmus_sol-acid']);
+    expect(res.vessels[0].gasTotal.get('H2') ?? 0).toBeGreaterThan(1.5e-4);
+    expect(res.vessels[1].gasTotal.get('CO2') ?? 0).toBeGreaterThan(5e-4);
   });
 
   it('CTST Bài 2 – làm đục nước vôi trong: có CaCO3 trong ống 2', () => {

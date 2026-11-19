@@ -19,6 +19,8 @@ export const FAMILIES: AcidBaseFamily[] = [
   { id: 'sulfate', forms: ['HSO4-', 'SO4^2-'], pKa: [1.99] },
   // Hydrofluoric acid là acid yếu (các HX khác là acid mạnh, phân li hoàn toàn)
   { id: 'fluoride', forms: ['HF', 'F-'], pKa: [3.17] },
+  // Ion Al³⁺ bị thủy phân: dung dịch muối aluminium có môi trường acid
+  { id: 'aluminium', forms: ['Al^3+', 'AlOH^2+'], pKa: [4.97] },
   { id: 'phosphate', forms: ['H3PO4', 'H2PO4-', 'HPO4^2-', 'PO4^3-'], pKa: [2.15, 7.20, 12.35] },
   { id: 'citrate', forms: ['H3Cit', 'H2Cit-', 'HCit^2-', 'Cit^3-'], pKa: [3.13, 4.76, 6.40] },
   // Thủy phân ion kim loại: [M(H2O)]n+ ⇌ [M(OH)](n-1)+ + H+
@@ -54,6 +56,10 @@ export const SOLIDS: SolidDef[] = [
   { id: 'AgBr', ions: { 'Ag+': 1, 'Br-': 1 }, Ksp: 5.35e-13, dissolution: { k: 1e-6, Ea: 40000 } },
   { id: 'AgI', ions: { 'Ag+': 1, 'I-': 1 }, Ksp: 8.52e-17, dissolution: { k: 1e-6, Ea: 40000 } },
   { id: 'Cu(OH)2', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2.2e-20, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
+  { id: 'Al(OH)3', ions: { 'Al^3+': 1, 'OH-': 3 }, Ksp: 3e-34, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
+  // Phân bón dạng rắn, tan tốt trong nước
+  { id: 'NH4Cl', ions: { 'NH4+': 1, 'Cl-': 1 }, Ksp: 50, dissolution: { k: 3e-4, Ea: 20000 } },
+  { id: 'KNO3', ions: { 'K+': 1, 'NO3-': 1 }, Ksp: 16, dissolution: { k: 3e-4, Ea: 20000 } },
   { id: 'Fe(OH)2', ions: { 'Fe^2+': 1, 'OH-': 2 }, Ksp: 4.87e-17, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   // Fe(OH)3 mới kết tủa (vô định hình) tan nhiều hơn dạng tinh thể
   { id: 'Fe(OH)3', ions: { 'Fe^3+': 1, 'OH-': 3 }, Ksp: 4e-38, dissolution: { k: 1e-7, kH: 3e-5, Ea: 45000 } },

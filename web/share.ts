@@ -94,7 +94,7 @@ function pack(s: Step): Packed | null {
   }
 }
 
-const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper'];
+const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist'];
 
 class Bad extends Error {}
 

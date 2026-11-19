@@ -326,6 +326,7 @@ const TOOL_NAME: Record<ToolKind, string> = {
   litmus: 'giấy quỳ tím ẩm',
   litmus_sol: 'giấy quỳ tím',
   ph_paper: 'giấy pH',
+  ph_moist: 'giấy pH ẩm',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -470,7 +471,7 @@ function xcardText(v: VesselView): string | undefined {
 
 function probe(kind: ToolKind, view: VesselView, queued = false) {
   const dip = kind === 'litmus_sol' || kind === 'ph_paper';
-  const phPaper = kind === 'ph_paper';
+  const phPaper = kind === 'ph_paper' || kind === 'ph_moist';
   // Đang rót hóa chất vào: thử dung dịch sau khi rót xong (lúc đó mới có dung dịch để kiểm tra)
   if (dip && animator.busy && !queued) {
     animator.run(call(() => probe(kind, view, true)));
@@ -483,7 +484,7 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   if (kind === 'xcard') return placeXCard(view);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
-  const isPaper = kind === 'litmus' || dip || dye;
+  const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
   const holdTime = dye ? 8 : dip ? 3 : isPaper ? 5 : 3;
   /** Giấy màu ẩm: mức đã bị tẩy màu (0 → 1), không phục hồi */
   let bleached = 0;
@@ -592,7 +593,12 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
             : 'Mẩu giấy màu ẩm không đổi màu', 'phenomenon', view.name);
       } else if (isPaper) {
         const verdict = litmusVerdict(paperPH());
-        if (phPaper) log(phSays(paperPH()), 'phenomenon', view.name);
+        if (phPaper && !dip) {
+          const n = phReading(paperPH());
+          log(n >= 8 ? `Giấy pH ẩm chuyển màu xanh, pH ≈ ${n} → khí thoát ra có tính base (như NH₃)`
+            : n <= 4 ? `Giấy pH ẩm chuyển màu đỏ, pH ≈ ${n} → khí thoát ra có tính acid (như CO₂)`
+              : `Giấy pH ẩm gần như không đổi màu (pH ≈ ${n}, như nước cất để ngoài không khí)`, 'phenomenon', view.name);
+        } else if (phPaper) log(phSays(paperPH()), 'phenomenon', view.name);
         else if (dip) log(verdict === 'base' ? 'Giấy quỳ tím chuyển màu xanh → dung dịch có tính base'
           : verdict === 'acid' ? 'Giấy quỳ tím chuyển màu đỏ → dung dịch có tính acid'
             : 'Giấy quỳ tím không đổi màu → dung dịch trung tính', 'phenomenon', view.name);

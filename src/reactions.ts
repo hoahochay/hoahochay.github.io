@@ -15,6 +15,14 @@ export const REACTIONS: KineticReaction[] = [
     reactants: { Mg: 1, 'H+': 2 }, products: { 'Mg^2+': 1, H2: 1 },
     rate: massAction({ k25: 2.8e-5, Ea: 40000, orders: { 'H+': 1 }, surface: 'Mg' }),
   },
+  // Acid yếu (acetic acid) còn tấn công trực tiếp bề mặt kim loại bằng phân tử chưa phân li,
+  // nên Mg vẫn sủi bọt rõ dù [H⁺] nhỏ; vẫn chậm hơn nhiều so với acid mạnh cùng nồng độ
+  {
+    id: 'mg_acetic', name: 'Magnesium tác dụng với acetic acid',
+    equation: 'Mg + 2CH₃COOH → (CH₃COO)₂Mg + H₂↑',
+    reactants: { Mg: 1, CH3COOH: 2 }, products: { 'Mg^2+': 1, 'CH3COO-': 2, H2: 1 },
+    rate: massAction({ k25: 3e-6, Ea: 40000, orders: { CH3COOH: 1 }, surface: 'Mg' }),
+  },
   {
     id: 'zn_acid', name: 'Kẽm tác dụng với acid',
     equation: 'Zn + 2H⁺ → Zn²⁺ + H₂↑',
@@ -136,6 +144,14 @@ export const REACTIONS: KineticReaction[] = [
     equation: '2KMnO₄ + 16HCl → 2KCl + 2MnCl₂ + 5Cl₂↑ + 8H₂O',
     reactants: { 'MnO4-': 1, 'H+': 8, 'Cl-': 5 }, products: { 'Mn^2+': 1, Cl2: 2.5, H2O: 4 },
     rate: massAction({ k25: 5e-5, Ea: 40000, orders: { 'MnO4-': 1, 'H+': 2, 'Cl-': 1 } }),
+  },
+
+  // ── Polyalcohol có nhóm –OH liền kề hòa tan Cu(OH)₂ tạo dung dịch xanh lam đậm (SGK Hóa 11 Bài 20) ──
+  {
+    id: 'cuoh2_glycerol', name: 'Glycerol hòa tan copper(II) hydroxide',
+    equation: '2C₃H₅(OH)₃ + Cu(OH)₂ → [C₃H₅(OH)₂O]₂Cu + 2H₂O',
+    reactants: { 'Cu(OH)2': 1, glycerol: 2 }, products: { 'Cu(glycerol)': 1, H2O: 2 },
+    rate: massAction({ k25: 3e-6, Ea: 30000, orders: { glycerol: 1 }, surface: 'Cu(OH)2' }),
   },
 
   // ── Thiosulfate + acid: lưu huỳnh hạt mịn làm dung dịch đục dần (SGK Hóa 10 Bài 19) ──

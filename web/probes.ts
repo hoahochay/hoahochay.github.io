@@ -6,7 +6,7 @@ import { setRGB, softCircleTexture } from './materials';
 /** litmus: giấy quỳ ẩm thử khí ở miệng ống; litmus_sol: giấy quỳ thử dung dịch (nhúng đầu mẩu quỳ vào dung dịch) */
 /** xcard: tờ giấy kẻ chữ X đặt sau ống, kèm đồng hồ bấm giờ (xem xcard.ts) */
 /** dye_paper: mẩu giấy màu ẩm thử tính tẩy màu của khí chlorine */
-export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'magnet' | 'xcard' | 'dye_paper';
+export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'ph_moist' | 'magnet' | 'xcard' | 'dye_paper';
 /** Màu ban đầu của mẩu giấy màu ẩm */
 export const DYE_PAPER_COLOR: RGB = [0.86, 0.16, 0.3];
 
@@ -81,7 +81,7 @@ export class ProbeView {
       this.setPaperColor(kind === 'ph_paper' ? PH_PAPER_DRY : [0.56, 0.32, 0.62]);
       return;
     }
-    if (kind === 'litmus' || kind === 'dye_paper') {
+    if (kind === 'litmus' || kind === 'dye_paper' || kind === 'ph_moist') {
       this.paper = new THREE.Mesh(
         new THREE.PlaneGeometry(0.55, 3.4).translate(0, 1.7, 0),
         new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide }),
@@ -91,7 +91,7 @@ export class ProbeView {
         new THREE.MeshStandardMaterial({ color: 0x3a3d42, metalness: 0.6, roughness: 0.4 }),
       );
       this.group.add(this.paper, clip);
-      this.setPaperColor(kind === 'dye_paper' ? DYE_PAPER_COLOR : [0.56, 0.32, 0.62]);
+      this.setPaperColor(kind === 'dye_paper' ? DYE_PAPER_COLOR : kind === 'ph_moist' ? PH_PAPER_DRY : [0.56, 0.32, 0.62]);
       return;
     }
     // Que đóm: tâm ở đầu que, thân que chéo lên trên

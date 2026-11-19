@@ -12,6 +12,7 @@ const PROBE_NAME: Record<ToolKind, string> = {
   litmus: 'mẩu giấy quỳ tím ẩm',
   litmus_sol: 'mẩu giấy quỳ tím',
   ph_paper: 'mẩu giấy pH',
+  ph_moist: 'mẩu giấy pH ẩm',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
