@@ -33,7 +33,7 @@ export interface LabApi {
   /** Đổ bỏ, tráng sạch dụng cụ */
   empty(vessel: number): void;
   /** Đổ hết chất lỏng từ dụng cụ này sang dụng cụ khác */
-  pour(src: number, dst: number): void;
+  pour(src: number, dst: number, mL?: number): void;
   focus(vessels: number[] | null): void;
   resetAll(): void;
   setSpeed(s: number): void;
@@ -292,7 +292,7 @@ export class RecipePlayer {
         return;
       case 'pour':
         this.ui.progress(null);
-        this.lab.pour(s.src, s.dst);
+        this.lab.pour(s.src, s.dst, s.mL);
         return this.untilIdle(id);
       case 'probe':
         this.ui.progress(null);

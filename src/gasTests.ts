@@ -16,6 +16,7 @@ export interface Atmosphere {
   CO2: number;
   NH3: number;
   Cl2: number;
+  SO2: number;
   /** Phần không khí còn lại */
   air: number;
 }
@@ -31,6 +32,7 @@ export function atmosphere(v: Vessel): Atmosphere {
     CO2: (f.CO2 ?? 0) + AIR.CO2 * air,
     NH3: f['NH3(g)'] ?? 0,
     Cl2: f['Cl2(g)'] ?? 0,
+    SO2: f['SO2(g)'] ?? 0,
     air,
   };
 }
@@ -86,6 +88,7 @@ export function litmusPH(v: Vessel): number {
   film.set('H2O', film.volumeL * WATER_PER_L);
   film.add('H2CO3', henryK(GAS_INDEX.get('CO2')!, T) * a.CO2 * film.volumeL);
   film.add('NH3', henryK(GAS_INDEX.get('NH3(g)')!, T) * a.NH3 * film.volumeL);
+  film.add('SO2', henryK(GAS_INDEX.get('SO2(g)')!, T) * a.SO2 * film.volumeL);
   equilibrate(film);
   return -Math.log10(film.h);
 }
@@ -117,4 +120,22 @@ export const MAGNET_MIN_FE_G = 0.02;
 /** Đưa nam châm lại gần: sắt tự do bị hút; hợp chất của sắt như FeS thì không */
 export function testMagnet(v: Vessel): 'attracted' | 'none' {
   return v.mix.get('Fe') * 55.85 >= MAGNET_MIN_FE_G ? 'attracted' : 'none';
+}
+
+/** Lượng lưu huỳnh trên muôi sắt (khoảng 0,05 g), mol */
+export const SPOON_SULFUR_MOL = 0.05 / 32.06;
+
+/**
+ * Muôi sắt chứa lưu huỳnh đang cháy được đưa vào dụng cụ trong dt giây: S + O₂ → SO₂.
+ * Tốc độ cháy tỉ lệ với phần mol O₂ ở chỗ ngọn lửa; trả về phần mol O₂ đó (độ sáng ngọn lửa).
+ */
+export function burnSulfurIn(v: Vessel, dt: number): number {
+  const o2 = atmosphere(v).O2;
+  const n = 4e-5 * o2 * dt;
+  const hs = v.mix.headspace;
+  // O₂ thu được (nếu có) bị tiêu thụ trước; phần còn lại lấy từ không khí trong bình
+  const fromO2 = Math.min(n, hs.get('O2') ?? 0);
+  if (fromO2 > 0) hs.set('O2', (hs.get('O2') ?? 0) - fromO2);
+  hs.set('SO2(g)', (hs.get('SO2(g)') ?? 0) + n);
+  return o2;
 }

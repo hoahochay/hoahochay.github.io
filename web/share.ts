@@ -87,14 +87,14 @@ function pack(s: Step): Packed | null {
     case 'connect': return ['c', s.src, s.dst];
     case 'invert': return ['i', s.vessel];
     case 'weigh': return s.off ? ['x', s.vessel] : ['g', s.vessel];
-    case 'pour': return ['o', s.src, s.dst];
+    case 'pour': return s.mL ? ['o', s.src, s.dst, s.mL] : ['o', s.src, s.dst];
     case 'empty': return ['e', s.vessel];
     case 'predict': return ['q'];
     default: return null; // lời thuyết minh, focus: không cần cho thí nghiệm tự làm
   }
 }
 
-const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist'];
+const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist', 'ice_bath', 'hot_bath', 'no2_tube', 'spoon_s'];
 
 class Bad extends Error {}
 
@@ -139,7 +139,7 @@ function unpack(p: unknown): Step {
     case 'i': return { kind: 'invert', vessel: vessel(p[1]) };
     case 'g': return { kind: 'weigh', vessel: p[1] === null ? null : vessel(p[1]) };
     case 'x': return { kind: 'weigh', vessel: vessel(p[1]), off: true };
-    case 'o': return { kind: 'pour', src: vessel(p[1]), dst: vessel(p[2]) };
+    case 'o': return { kind: 'pour', src: vessel(p[1]), dst: vessel(p[2]), ...(typeof p[3] === 'number' && p[3] > 0 ? { mL: p[3] } : {}) };
     case 'e': return { kind: 'empty', vessel: vessel(p[1]) };
     case 'q': return { kind: 'predict' };
     default: throw new Bad('loại bước không biết');

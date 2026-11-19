@@ -12,7 +12,7 @@ export interface ReagentDef {
   conc: string;
   name: string;
   solutes: Record<string, number>;
-  indicator?: 'phenolphthalein' | 'methyl orange';
+  indicator?: 'phenolphthalein' | 'methyl orange' | 'anthocyanin';
   /** Tên khác để ô tìm kiếm hiểu (vd. tên IUPAC của chất ghi tên đời thường) */
   aka?: string;
   /** Lọ thủy tinh màu nâu (hóa chất nhạy sáng) */
@@ -43,21 +43,29 @@ export const REAGENTS: ReagentDef[] = [
   reagent('vinegar', 'CH₃COOH', '5%', 'giấm ăn', { CH3COOH: 0.83 }, { aka: 'vinegar acetic acid giam' }),
   reagent('h2so4_01', 'H₂SO₄', '0,1M', 'sulfuric acid loãng', { H2SO4: 0.1 }),
   reagent('h2so4_2', 'H₂SO₄', '2M', 'sulfuric acid', { H2SO4: 2 }),
+  reagent('h2so4_70', 'H₂SO₄', '70%', 'sulfuric acid đặc', { H2SO4: 11.5 }, { aka: 'axit sunfuric dac h2so4 dac sulfuric acid dac' }),
   reagent('naoh', 'NaOH', '1M', 'sodium hydroxide', { NaOH: 1 }),
   reagent('naoh05', 'NaOH', '0,5M', 'sodium hydroxide', { NaOH: 0.5 }),
   reagent('naoh_10', 'NaOH', '10%', 'sodium hydroxide', { NaOH: 2.75 }),
+  reagent('naoh_2m', 'NaOH', '2M', 'sodium hydroxide', { NaOH: 2 }),
   reagent('naoh_20', 'NaOH', '20%', 'sodium hydroxide', { NaOH: 6.1 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
+  reagent('nh3_5', 'NH₃', '5%', 'dung dịch ammonia', { NH3: 2.9 }),
+  reagent('ch3coona', 'CH₃COONa', '0,5M', 'sodium acetate', { CH3COONa: 0.5 }, { aka: 'natri axetat sodium acetate' }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
   reagent('na2co3_10', 'Na₂CO₃', '10%', 'sodium carbonate', { Na2CO3: 0.94 }),
+  reagent('na2co3_2m', 'Na₂CO₃', '2M', 'sodium carbonate', { Na2CO3: 2 }),
   reagent('naf', 'NaF', '0,1M', 'sodium fluoride', { NaF: 0.1 }),
   reagent('nacl', 'NaCl', '0,1M', 'sodium chloride', { NaCl: 0.1 }),
+  reagent('saltwater', 'Nước muối', '', 'muối ăn pha nước', { NaCl: 0.15 }, { aka: 'nuoc muoi an sinh li nacl' }),
+  reagent('soda_water', 'Nước soda', '', 'soda (sodium carbonate) pha nước', { Na2CO3: 0.1 }, { aka: 'nuoc soda so da na2co3 sodium carbonate tay rua' }),
   reagent('nabr', 'NaBr', '0,1M', 'sodium bromide', { NaBr: 0.1 }),
   reagent('nai', 'NaI', '0,1M', 'sodium iodide', { NaI: 0.1 }),
   reagent('na2s2o3_005', 'Na₂S₂O₃', '0,05M', 'sodium thiosulfate', { Na2S2O3: 0.05 }),
   reagent('na2s2o3_01', 'Na₂S₂O₃', '0,10M', 'sodium thiosulfate', { Na2S2O3: 0.1 }),
   reagent('na2s2o3_03', 'Na₂S₂O₃', '0,30M', 'sodium thiosulfate', { Na2S2O3: 0.3 }),
   reagent('cl2_water', 'Nước Cl₂', '0,05M', 'nước chlorine', { Cl2: 0.05 }, { amber: true, aka: 'nuoc clo chlorine cl2' }),
+  reagent('br2_sat', 'Nước Br₂', 'bão hòa', 'nước bromine bão hòa', { Br2: 0.2 }, { amber: true, aka: 'nuoc brom bromine br2 bao hoa' }),
   reagent('br2_water', 'Nước Br₂', '0,02M', 'nước bromine loãng', { Br2: 0.02 }, { amber: true, aka: 'nuoc brom bromine br2' }),
   reagent('starch_sol', 'Hồ tinh bột', '1%', 'thuốc thử iodine', { starch: 0.06 }, { aka: 'ho tinh bot starch' }),
   reagent('cano3', 'Ca(NO₃)₂', '0,5M', 'calcium nitrate', { 'Ca(NO3)2': 0.5 }),
@@ -69,12 +77,17 @@ export const REAGENTS: ReagentDef[] = [
   reagent('soda', 'Nước ngọt có gas', '', 'đồ uống, chứa khí carbon dioxide', { H2CO3: 0.1, H3Cit: 0.01 }, { aka: 'nuoc ngot co ga soda carbonic' }),
   reagent('dishsoap', 'Nước rửa bát', '', 'chất tẩy rửa dùng trong gia đình', { NaHCO3: 0.01, Na2CO3: 0.0005 }, { aka: 'nuoc rua bat xa phong chat tay rua', color: [0.75, 0.92, 0.7] }),
   reagent('ethanol', 'C₂H₅OH', '96°', 'ethanol (cồn)', { C2H5OH: 16.4 }, { aka: 'ethanol con ruou ancol etylic' }),
+  reagent('phenol_sat', 'C₆H₅OH', 'bão hòa', 'dung dịch phenol bão hòa (trắng đục)', { C6H5OH: 1.2 }, { aka: 'phenol bao hoa c6h5oh axit phenic' }),
+  reagent('phenol_5', 'C₆H₅OH', '5%', 'dung dịch phenol', { C6H5OH: 0.53 }, { aka: 'phenol c6h5oh axit phenic' }),
+  reagent('ch3cho_5', 'CH₃CHO', '5%', 'acetaldehyde (ethanal)', { CH3CHO: 1.13 }, { aka: 'acetaldehyde ethanal andehit axetic anđehit aldehyde' }),
   reagent('glycerol', 'C₃H₅(OH)₃', '', 'glycerol', { glycerol: 13.7 }, { aka: 'glycerol glixerol glyxerin' }),
   reagent('h2o2', 'H₂O₂', '3%', 'nước oxy già', { H2O2: 0.88 }, { amber: true, aka: 'hydrogen peroxide' }),
   reagent('h2o2_10', 'H₂O₂', '10%', 'hydrogen peroxide', { H2O2: 2.94 }, { amber: true, aka: 'nuoc oxy gia hydrogen peroxide 10' }),
   reagent('agno3', 'AgNO₃', '0,1M', 'silver nitrate', { AgNO3: 0.1 }, { amber: true }),
+  reagent('agno3_1', 'AgNO₃', '1%', 'silver nitrate', { AgNO3: 0.059 }, { amber: true }),
   reagent('cuso4', 'CuSO₄', '0,5M', 'copper(II) sulfate', { CuSO4: 0.5 }),
   reagent('cuso4_2', 'CuSO₄', '2%', 'copper(II) sulfate', { CuSO4: 0.13 }),
+  reagent('cuso4_5', 'CuSO₄', '5%', 'copper(II) sulfate', { CuSO4: 0.32 }),
   reagent('fecl3', 'FeCl₃', '0,1M', 'iron(III) chloride', { FeCl3: 0.1 }),
   reagent('alcl3', 'AlCl₃', '0,1M', 'aluminium chloride', { AlCl3: 0.1 }),
   reagent('feso4', 'FeSO₄', '0,1M', 'iron(II) sulfate', { FeSO4: 0.1 }),
@@ -84,6 +97,9 @@ export const REAGENTS: ReagentDef[] = [
   reagent('ki', 'KI', '0,02M', 'potassium iodide', { KI: 0.02 }),
   reagent('phenol', 'Phenolphthalein', 'chỉ thị', 'phenolphthalein', {}, {
     indicator: 'phenolphthalein', color: [0.97, 0.97, 0.97],
+  }),
+  reagent('cabbage', 'Dịch bắp cải tím', 'chỉ thị', 'chất chỉ thị tự làm từ bắp cải tím', {}, {
+    indicator: 'anthocyanin', color: [0.42, 0.2, 0.62], aka: 'bap cai tim hoa dau biec anthocyanin chat chi thi tu nhien',
   }),
   reagent('mo', 'Methyl orange', 'chỉ thị', 'methyl orange', {}, {
     indicator: 'methyl orange', color: [0.95, 0.45, 0.08],
@@ -114,6 +130,7 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'mg_powder', id: 'Mg', label: 'Magnesium (bột)', grams: 0.05, form: 'powder', shape: 'powder' },
   { key: 'zn', id: 'Zn', label: 'Kẽm viên', aka: 'zinc', grams: 0.5, form: 'granule', shape: 'granule' },
   { key: 'fe', id: 'Fe', label: 'Đinh sắt', aka: 'iron', grams: 2, form: 'strip', shape: 'nail' },
+  { key: 'cu_foil', id: 'Cu', label: 'Lá đồng (cắt nhỏ)', aka: 'copper la dong phoi bao', grams: 0.15, form: 'strip', shape: 'ribbon' },
   { key: 'cu', id: 'Cu', label: 'Dây đồng', aka: 'copper', grams: 1, form: 'strip', shape: 'wire' },
   { key: 'na', id: 'Na', label: 'Sodium (mẩu)', grams: 0.1, form: 'granule', shape: 'chunk', floats: true },
   { key: 'li', id: 'Li', label: 'Lithium (mẩu)', grams: 0.02, form: 'granule', shape: 'chunk', floats: true },
@@ -213,6 +230,10 @@ export const CHEMICALS: ChemEntry[] = [
     ['litmus_sol', 'litmus_sol', 'Giấy quỳ tím', 'Thử dung dịch acid / base', 'quy tim dung dich acid base axit bazo thu mau'],
     ['ph_paper', 'ph_paper', 'Giấy pH', 'Đo pH dung dịch theo bảng màu', 'giay ph thang ph chi thi van nang do ph'],
     ['ph_moist', 'ph_moist', 'Giấy pH ẩm', 'Thử khí: đưa vào miệng ống, đọc pH', 'giay ph am thu khi nh3 ammonia miệng ong mieng ong'],
+    ['ice_bath', 'ice_bath', 'Cốc nước đá', 'Ngâm ống nghiệm ở khoảng 0 °C (thả lần nữa để lấy ra)', 'coc nuoc da lanh ngam ong lam lanh nhiet do can bang'],
+    ['hot_bath', 'hot_bath', 'Cốc nước nóng', 'Ngâm ống nghiệm ở khoảng 80 °C (thả lần nữa để lấy ra)', 'coc nuoc nong ngam ong cach thuy dun nhiet do can bang'],
+    ['no2_tube', 'no2_tube', 'Khí NO₂ (nút kín)', 'Nạp khí nitrogen dioxide vào ống khô rồi đậy nút', 'khi no2 nitrogen dioxide nito dioxit n2o4 nau do can bang ong nut kin'],
+    ['spoon_s', 'spoon_s', 'Muôi sắt + lưu huỳnh', 'Đốt lưu huỳnh trên đèn cồn rồi đưa vào bình (vd. bình oxygen)', 'muoi sat dot luu huynh sulfur chay binh oxygen so2'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
     ['dye_paper', 'dye_paper', 'Mẩu giấy màu ẩm', 'Thử tính tẩy màu của khí chlorine', 'giay mau am tay mau chlorine clo cl2'],
     ['xcard', 'xcard', 'Tờ giấy kẻ chữ X', 'Bấm giờ đến khi dung dịch đục che khuất chữ X', 'giay chu x dong ho bam gio toc do phan ung do duc luu huynh thiosulfate'],
@@ -240,6 +261,11 @@ export const SOLID_COLOR_NAME: Record<string, string> = {
   AgI: 'vàng',
   'S(coll)': 'trắng ngà',
   'Al(OH)3': 'trắng keo',
+  'C6H5OH(l)': 'trắng đục',
+  C6H2Br3OH: 'trắng',
+  Ag2O: 'nâu đen',
+  'Ag(mirror)': 'sáng bạc',
+  Cu2O: 'đỏ gạch',
   Cu: 'đỏ',
   Ag: 'xám bạc',
 };

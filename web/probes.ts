@@ -6,7 +6,8 @@ import { setRGB, softCircleTexture } from './materials';
 /** litmus: giấy quỳ ẩm thử khí ở miệng ống; litmus_sol: giấy quỳ thử dung dịch (nhúng đầu mẩu quỳ vào dung dịch) */
 /** xcard: tờ giấy kẻ chữ X đặt sau ống, kèm đồng hồ bấm giờ (xem xcard.ts) */
 /** dye_paper: mẩu giấy màu ẩm thử tính tẩy màu của khí chlorine */
-export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'ph_moist' | 'magnet' | 'xcard' | 'dye_paper';
+export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'ph_moist' | 'magnet' | 'xcard' | 'dye_paper'
+  | 'ice_bath' | 'hot_bath' | 'no2_tube' | 'spoon_s';
 /** Màu ban đầu của mẩu giấy màu ẩm */
 export const DYE_PAPER_COLOR: RGB = [0.86, 0.16, 0.3];
 

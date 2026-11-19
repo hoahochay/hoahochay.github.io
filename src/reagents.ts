@@ -39,6 +39,8 @@ export const COMPOUNDS: Record<string, Compound> = {
   Na2SO4: { name: 'sodium sulfate', ions: { 'Na+': 2, 'SO4^2-': 1 } },
   AlCl3: { name: 'aluminium chloride', ions: { 'Al^3+': 1, 'Cl-': 3 } },
   C2H5OH: { name: 'ethanol', ions: { C2H5OH: 1 } },
+  C6H5OH: { name: 'phenol', ions: { C6H5OH: 1 } },
+  CH3CHO: { name: 'acetaldehyde', ions: { CH3CHO: 1 } },
   glycerol: { name: 'glycerol', ions: { glycerol: 1 } },
   Na2CO3: { name: 'sodium carbonate', ions: { 'Na+': 2, 'CO3^2-': 1 } },
   NaHCO3: { name: 'sodium hydrogencarbonate', ions: { 'Na+': 1, 'HCO3-': 1 } },
@@ -53,6 +55,7 @@ export const COMPOUNDS: Record<string, Compound> = {
   H3Cit: { name: 'citric acid', ions: { H3Cit: 1 } },
   H2CO3: { name: 'carbonic acid', ions: { H2CO3: 1 } },
   phenolphthalein: { name: 'phenolphthalein', ions: { phenolphthalein: 1 } },
+  anthocyanin: { name: 'anthocyanin', ions: { anthocyanin: 1 } },
   'methyl orange': { name: 'methyl orange', ions: { 'methyl orange': 1 } },
 };
 
@@ -82,7 +85,7 @@ export function water(volumeL: number, tempK = T25): Mixture {
 }
 
 /** Vài giọt chất chỉ thị (1 giọt ≈ 0,05 mL dung dịch 1%) */
-export function indicatorDrops(name: 'phenolphthalein' | 'methyl orange', drops = 2): Mixture {
+export function indicatorDrops(name: 'phenolphthalein' | 'methyl orange' | 'anthocyanin', drops = 2): Mixture {
   const molarity = 10 / species(name).molarMass; // 1% ≈ 10 g/L
   return makeSolution({ [name]: molarity }, drops * 5e-5);
 }
@@ -90,3 +93,4 @@ export function indicatorDrops(name: 'phenolphthalein' | 'methyl orange', drops 
 export function gramsToMol(id: string, grams: number): number {
   return grams / species(id).molarMass;
 }
+

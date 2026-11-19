@@ -21,6 +21,8 @@ export const TUBE: VesselKind = { type: 'tube', spec: VESSELS.testTube, profile:
 export const BEAKER: VesselKind = { type: 'beaker', spec: VESSELS.beaker100, profile: beakerProfile(2.6, 7.4), wall: 0.12, solidScale: 1.8 };
 export const FLASK: VesselKind = { type: 'flask', spec: VESSELS.flask100, profile: flaskProfile(3.3, 1.1, 7.2, 10.2), wall: 0.1, solidScale: 1.5 };
 
+/** Bạc từ phản ứng tráng bạc: vẽ thành lớp gương trên thành ống */
+const MIRROR_ID = 'Ag(mirror)';
 const MAX_BUBBLES = 180;
 const MAX_PARTICLES = 320;
 const MAX_STEAM = 28;
@@ -69,6 +71,10 @@ export class VesselView {
   private readonly liquid: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   /** Khí có màu (chlorine vàng lục) trong khoảng khí phía trên chất lỏng */
   private readonly gasFill: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  private readonly stopper: THREE.Mesh;
+  /** Lớp bạc sáng bám thành trong (phản ứng tráng bạc) */
+  private readonly mirror: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  private mirrorTop = 0;
   private gasFrom = -1;
   private readonly sediment: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
   /** Quầng sáng khi lớp bột khô nóng đỏ */
@@ -124,6 +130,23 @@ export class VesselView {
     this.gasFill.renderOrder = 3;
     this.gasFill.visible = false;
     this.group.add(this.gasFill);
+    // Nút cao su đậy kín miệng ống (ống chứa khí NO₂)
+    const rTop = this.kind.profile.radius(this.kind.profile.height);
+    this.stopper = new THREE.Mesh(
+      new THREE.CylinderGeometry(rTop + 0.12, rTop - 0.08, 1.1, 24).translate(0, this.kind.profile.height - 0.25, 0),
+      new THREE.MeshStandardMaterial({ color: 0x6b3426, roughness: 0.85 }),
+    );
+    this.stopper.visible = false;
+    this.group.add(this.stopper);
+    this.mirror = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshStandardMaterial({
+        color: 0xdfe3e8, metalness: 1, roughness: 0.12, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+      }),
+    );
+    this.mirror.renderOrder = 3;
+    this.mirror.visible = false;
+    this.group.add(this.mirror);
 
     this.sediment = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ roughness: 0.95 }));
     this.sediment.visible = false;
@@ -291,9 +314,22 @@ export class VesselView {
     // Dung dịch màu đậm: giảm phản chiếu môi trường, nếu không lớp dung dịch mỏng (đáy bình nón) trông bạc trắng
     this.liquid.material.envMapIntensity = 0.8 * (1 - 0.85 * strength);
 
-    // ── Khí chlorine màu vàng lục đọng trong dụng cụ ──
+    // ── Khí có màu trong dụng cụ: chlorine vàng lục, nitrogen dioxide nâu đỏ ──
+    this.stopper.visible = this.vessel.stoppered;
     const cl2 = o.headspace['Cl2(g)'] ?? 0;
-    this.gasFill.visible = cl2 > 0.01 && !this.vessel.inverted;
+    const no2 = this.vessel.mix.headspace.get('NO2(g)') ?? 0;
+    this.gasFill.visible = (cl2 > 0.01 || no2 > 1e-7) && !this.vessel.inverted;
+    if (this.gasFill.visible && no2 > 1e-7) {
+      // Beer–Lambert theo nồng độ NO₂ (mol/L), quang trình ≈ đường kính ống
+      const c = no2 / Math.max(5e-4, this.vessel.spec.volumeL - this.vessel.mix.volumeL);
+      const eps = species('NO2(g)').epsilon!;
+      const path = 2 * p.radius(p.height);
+      const t = eps.map((e) => 10 ** (-e * c * path)) as RGB;
+      const strength = 1 - (t[0] + t[1] + t[2]) / 3;
+      // Khí đặc: tối lại thành nâu đỏ (lớp phủ trong suốt không tự làm tối nền sáng phía sau)
+      setRGB(this.gasFill.material.color, t.map((x) => x * (1 - 0.45 * strength)) as RGB);
+      this.gasFill.material.opacity = Math.min(0.85, 0.12 + 0.8 * strength);
+    } else if (this.gasFill.visible) this.gasFill.material.color.set(0xc8d84a);
     if (this.gasFill.visible) {
       const from = Math.max(h, 0.05);
       if (Math.abs(from - this.gasFrom) > 0.01) {
@@ -301,14 +337,35 @@ export class VesselView {
         this.gasFill.geometry.dispose();
         this.gasFill.geometry = filledLathe(p, from, p.height * 0.97, 0.02);
       }
-      this.gasFill.material.opacity = Math.min(0.35, 0.08 + 0.6 * cl2);
+      if (no2 <= 1e-7) this.gasFill.material.opacity = Math.min(0.35, 0.08 + 0.6 * cl2);
     }
 
+    this.updateMirror(h);
     this.updateSediment(o);
     this.updateSolids(o, dt);
     this.updateBubbles(o, dt, speed);
     this.updateParticles(o, dt);
     this.updateSteam(o, dt);
+  }
+
+  /** Bạc bám thành ống tới mực chất lỏng cao nhất lúc phản ứng; đủ khoảng 4 mg thì thành gương sáng */
+  private updateMirror(liquidH: number): void {
+    const g = this.vessel.mix.get(MIRROR_ID) * 107.87;
+    this.mirror.visible = g > 1e-4;
+    if (!this.mirror.visible) { this.mirrorTop = 0; return; }
+    const top = Math.max(this.mirrorTop, liquidH);
+    if (top - this.mirrorTop > 0.05) {
+      this.mirrorTop = top;
+      const p = this.kind.profile;
+      const pts: THREE.Vector2[] = [];
+      for (let i = 0; i <= 16; i++) {
+        const y = (top * i) / 16;
+        pts.push(new THREE.Vector2(Math.max(0.01, p.radius(y) - 0.012), y));
+      }
+      this.mirror.geometry.dispose();
+      this.mirror.geometry = new THREE.LatheGeometry(pts, 40);
+    }
+    this.mirror.material.opacity = Math.min(0.96, 0.15 + g / 0.004);
   }
 
   private updateSediment(o: Observation): void {
@@ -317,6 +374,7 @@ export class VesselView {
     // Ống khô có bột: các loại bột nằm trộn lẫn thành một lớp, màu theo tỉ lệ khối lượng
     this.dryBed = o.volumeML < 0.05 && o.solids.some((s) => (this.vessel.mix.formFactor.get(s.id) ?? 0) >= POWDER);
     for (const s of o.solids) {
+      if (s.id === MIRROR_ID) continue;
       const ff = this.vessel.mix.formFactor.get(s.id) ?? 0;
       if (ff < (this.dryBed ? POWDER : FINE)) continue;
       const g = this.dryBed ? s.grams : s.grams * (1 - s.suspended);
@@ -352,6 +410,7 @@ export class VesselView {
     let depositG = 0;
     const depositCol: RGB = [0, 0, 0];
     for (const s of o.solids) {
+      if (s.id === MIRROR_ID) continue;
       if (this.solids.has(s.id) || (mix.formFactor.get(s.id) ?? 0) >= (this.dryBed ? POWDER : FINE)) continue;
       depositG += s.grams;
       for (let i = 0; i < 3; i++) depositCol[i] += s.grams * s.color[i];

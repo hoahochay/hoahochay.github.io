@@ -11,6 +11,11 @@ export interface IndicatorDef {
    * pKa khi đó là giá trị ở 25 °C, quy về thang pH = 14 + lg[OH⁻].
    */
   viaOH?: boolean;
+  /**
+   * Chỉ thị nhiều nấc màu (anthocyanin của bắp cải tím): pKa nối tiếp và hệ số hấp thụ của
+   * từng dạng, từ dạng acid nhất. Khi có, bỏ qua pKa / acidEps / baseEps.
+   */
+  forms?: { pKa: number[]; eps: RGB[] };
   /** Hệ số hấp thụ mol (L/mol/cm) của dạng acid theo R, G, B */
   acidEps: RGB;
   /** Hệ số hấp thụ mol của dạng base */
@@ -78,6 +83,8 @@ sp('MnO4-', 'ion permanganate', 'aq', -1, 0, -541.4, 118.94, { epsilon: [250, 24
 sp('Mn^2+', 'ion manganese(II)', 'aq', 2, 0, -220.75, 54.94);
 // Sulfur dioxide tan trong nước (rất dễ tan); không tách riêng H₂SO₃ vì dung dịch đã có acid mạnh
 sp('SO2', 'sulfur dioxide', 'aq', 0, 0, -322.98, 64.07);
+sp('HSO3-', 'ion hydrogensulfite', 'aq', -1, 1, -626.22, 81.07);
+sp('SO3^2-', 'ion sulfite', 'aq', -2, 0, -635.5, 80.06);
 // Phosphoric acid: acid ba nấc, độ mạnh trung bình
 sp('H3PO4', 'phosphoric acid', 'aq', 0, 3, -1288.34, 97.99);
 sp('H2PO4-', 'ion dihydrogenphosphate', 'aq', -1, 2, -1296.29, 96.99);
@@ -114,6 +121,19 @@ sp('NH3', 'ammonia', 'aq', 0, 3, -80.29, 17.03);
 
 // ── Phân tử tan trung hòa ────────────────────────────────────────────────
 sp('H2O2', 'hydrogen peroxide', 'aq', 0, 2, -191.17, 34.01);
+// Phenol: acid rất yếu, ít tan ở nhiệt độ thường (8,4 g/100 g nước); phần dư tách thành giọt nhỏ làm dung dịch trắng đục
+sp('C6H5OH', 'phenol', 'aq', 0, 6, -152.0, 94.11);
+sp('C6H5O-', 'ion phenolate', 'aq', -1, 5, -128.4, 93.1);
+sp('C6H5OH(l)', 'phenol (giọt nhỏ không tan)', 's', 0, 6, -165.1, 94.11, { color: [0.98, 0.98, 0.97], label: 'C₆H₅OH', settleTime: 1e6, scatter: 6 });
+// Kết tủa trắng 2,4,6-tribromophenol
+sp('C6H2Br3OH', '2,4,6-tribromophenol', 's', 0, 3, -180, 330.8, { color: [0.98, 0.98, 0.95], label: 'C₆H₂Br₃OH', scatter: 3 });
+// Aldehyde, thuốc thử Tollens và sản phẩm
+sp('CH3CHO', 'acetaldehyde (ethanal)', 'aq', 0, 4, -212.2, 44.05);
+sp('Ag2O', 'silver(I) oxide', 's', 0, 0, -31.1, 231.74, { color: [0.3, 0.22, 0.15] });
+sp('Ag(NH3)2+', 'ion diamminesilver(I)', 'aq', 1, 6, -111.3, 141.94, { label: '[Ag(NH₃)₂]⁺' });
+// Bạc sinh ra từ phản ứng tráng bạc: bám thành lớp gương trên thành ống, không lơ lửng
+sp('Ag(mirror)', 'silver (lớp bạc sáng bám thành ống)', 's', 0, 0, 0, 107.87, { color: [0.85, 0.86, 0.88], label: 'Ag' });
+sp('Cu2O', 'copper(I) oxide', 's', 0, 0, -168.6, 143.09, { color: [0.72, 0.24, 0.1], scatter: 2 });
 // Alcohol (tan vô hạn trong nước)
 sp('C2H5OH', 'ethanol', 'aq', 0, 6, -288.3, 46.07);
 sp('glycerol', 'glycerol', 'aq', 0, 8, -676.5, 92.09, { label: 'C₃H₅(OH)₃' });
@@ -130,6 +150,17 @@ sp('I2-starch', 'phức iodine – tinh bột', 'aq', 0, 0, 22.6, 253.8, { epsil
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
 sp('phenolphthalein', 'phenolphthalein', 'aq', 0, 0, 0, 318.3, {
   indicator: { pKa: 9.4, acidEps: [0, 0, 0], baseEps: [200, 30000, 600], hill: 2, viaOH: true },
+});
+// Anthocyanin trong dịch bắp cải tím (tính theo cyanidin-3-glucoside):
+// đỏ (pH < 3) → tím (4 – 6) → xanh lam (7 – 8) → xanh lục (9 – 12) → vàng (> 13)
+sp('anthocyanin', 'anthocyanin (dịch bắp cải tím)', 'aq', 0, 0, 0, 449.4, {
+  indicator: {
+    pKa: 0, acidEps: [0, 0, 0], baseEps: [0, 0, 0],
+    forms: {
+      pKa: [3.6, 7.3, 8.8, 12.6],
+      eps: [[50, 700, 330], [190, 560, 120], [620, 360, 70], [560, 110, 470], [25, 110, 700]],
+    },
+  },
 });
 sp('methyl orange', 'methyl orange', 'aq', 0, 0, 0, 327.3, {
   indicator: { pKa: 3.47, acidEps: [300, 25000, 12000], baseEps: [0, 3000, 25000] },
@@ -155,7 +186,7 @@ sp('starch', 'tinh bột', 's', 0, 10, -960, 162.14, { color: [0.97, 0.96, 0.92]
 // Viên vitamin C sủi: mô hình gọn gồm citric acid + sodium hydrogencarbonate theo tỉ lệ 1 : 3
 // (C₆H₈O₇·3NaHCO₃, 444,15 g/mol). Tan trong nước thì acid gặp HCO₃⁻ sinh khí CO₂ (sủi bọt);
 // tan nhanh hơn trong nước nóng. Bỏ qua vitamin C, đường, hương liệu (không tạo khí).
-sp('VitC', 'viên vitamin C sủi', 's', 0, 11, -4396.2, 444.15, { color: [0.98, 0.93, 0.62], label: 'Vitamin C sủi' });
+sp('VitC', 'viên vitamin C sủi', 's', 0, 10, -3448.0, 360.14, { color: [0.98, 0.93, 0.62], label: 'Vitamin C sủi' });
 sp('S', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.96, 0.84, 0.18] });
 // Lưu huỳnh sinh ra trong dung dịch (thiosulfate + acid): hạt rất mịn, lơ lửng lâu, làm dung dịch đục trắng ngà
 sp('S(coll)', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.97, 0.95, 0.8], label: 'S', settleTime: 3600, scatter: 40 });
@@ -194,6 +225,10 @@ sp('O2', 'khí oxygen', 'g', 0, 0, 0, 32.0);
 sp('CO2', 'khí carbon dioxide', 'g', 0, 0, -393.51, 44.01);
 sp('NH3(g)', 'khí ammonia', 'g', 0, 3, -45.94, 17.03);
 sp('Cl2(g)', 'khí chlorine', 'g', 0, 0, 0, 70.9);
+sp('SO2(g)', 'khí sulfur dioxide', 'g', 0, 0, -296.84, 64.07, { label: 'SO₂' });
+// Nitrogen dioxide (nâu đỏ) ⇌ dinitrogen tetroxide (không màu); hệ số hấp thụ của khí, L/mol/cm
+sp('NO2(g)', 'khí nitrogen dioxide', 'g', 0, 0, 33.2, 46.01, { epsilon: [1.5, 22, 160], label: 'NO₂' });
+sp('N2O4(g)', 'khí dinitrogen tetroxide', 'g', 0, 0, 9.16, 92.01, { label: 'N₂O₄' });
 
 export const SPECIES: Readonly<Record<string, SpeciesDef>> = Object.fromEntries(
   list.map((s) => [s.id, s]),

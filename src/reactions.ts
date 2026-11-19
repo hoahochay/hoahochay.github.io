@@ -154,6 +154,52 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 3e-6, Ea: 30000, orders: { glycerol: 1 }, surface: 'Cu(OH)2' }),
   },
 
+  // ── Phenol + nước bromine: thế 3 nguyên tử H ở vòng, kết tủa trắng (SGK Hóa 11 Bài 21) ──
+  {
+    id: 'phenol_br2', name: 'Phenol tác dụng với nước bromine',
+    equation: 'C₆H₅OH + 3Br₂ → C₆H₂Br₃OH↓ + 3HBr',
+    reactants: { C6H5OH: 1, Br2: 3 }, products: { C6H2Br3OH: 1, 'H+': 3, 'Br-': 3 },
+    rate: massAction({ k25: 50, Ea: 20000, orders: { C6H5OH: 1, Br2: 1 } }),
+  },
+
+  // ── Sulfuric acid đặc, nóng oxi hóa copper, giải phóng SO₂ (SGK Hóa 11 Bài 8) ──
+  // Chỉ phân tử / ion HSO₄⁻ trong acid đặc mới oxi hóa được Cu: tốc độ ∝ [H⁺]²[HSO₄⁻] nên acid loãng gần như không phản ứng
+  {
+    id: 'cu_h2so4_dac', name: 'Copper tác dụng với sulfuric acid đặc, nóng',
+    equation: 'Cu + 2H₂SO₄ (đặc) → CuSO₄ + SO₂↑ + 2H₂O',
+    reactants: { Cu: 1, 'H+': 3, 'HSO4-': 1 }, products: { 'Cu^2+': 1, SO2: 1 },
+    rate: massAction({ k25: 1e-12, Ea: 90000, orders: { 'H+': 2, 'HSO4-': 1 }, surface: 'Cu' }),
+  },
+
+  // ── Thuốc thử Tollens: Ag₂O (hoặc Ag⁺) tan trong ammonia tạo phức [Ag(NH₃)₂]⁺ ──
+  {
+    id: 'ag2o_nh3', name: 'Silver(I) oxide tan trong dung dịch ammonia',
+    equation: 'Ag₂O + 4NH₃ + H₂O → 2[Ag(NH₃)₂]⁺ + 2OH⁻',
+    reactants: { Ag2O: 1, NH3: 4 }, products: { 'Ag(NH3)2+': 2, 'OH-': 2 },
+    rate: massAction({ k25: 2e-3, Ea: 20000, orders: { NH3: 1 }, surface: 'Ag2O' }),
+  },
+  {
+    id: 'ag_nh3', name: 'Ion silver tạo phức với ammonia',
+    equation: 'Ag⁺ + 2NH₃ → [Ag(NH₃)₂]⁺',
+    reactants: { 'Ag+': 1, NH3: 2 }, products: { 'Ag(NH3)2+': 1 },
+    rate: massAction({ k25: 1e4, Ea: 10000, orders: { 'Ag+': 1, NH3: 1 } }),
+  },
+  // ── Phản ứng tráng bạc (SGK Hóa 11 Bài 23): chậm ở nhiệt độ phòng, nhanh trong nước nóng 70 – 80 °C ──
+  {
+    id: 'tollens', name: 'Aldehyde khử thuốc thử Tollens (tráng bạc)',
+    equation: 'CH₃CHO + 2[Ag(NH₃)₂]⁺ + 3OH⁻ → CH₃COO⁻ + 2Ag↓ + 4NH₃ + 2H₂O',
+    reactants: { CH3CHO: 1, 'Ag(NH3)2+': 2, 'OH-': 3 }, products: { 'CH3COO-': 1, 'Ag(mirror)': 2, NH3: 4 },
+    rate: massAction({ k25: 5e-3, Ea: 60000, orders: { CH3CHO: 1, 'Ag(NH3)2+': 1 } }),
+    productForm: 'strip',
+  },
+  // ── Aldehyde khử copper(II) hydroxide trong môi trường kiềm khi đun nóng: Cu₂O đỏ gạch ──
+  {
+    id: 'aldehyde_cuoh2', name: 'Aldehyde khử copper(II) hydroxide',
+    equation: 'CH₃CHO + 2Cu(OH)₂ + OH⁻ → CH₃COO⁻ + Cu₂O↓ + 3H₂O',
+    reactants: { CH3CHO: 1, 'Cu(OH)2': 2, 'OH-': 1 }, products: { 'CH3COO-': 1, Cu2O: 1 },
+    rate: massAction({ k25: 1.5e-10, Ea: 80000, orders: { CH3CHO: 1 }, surface: 'Cu(OH)2' }),
+  },
+
   // ── Thiosulfate + acid: lưu huỳnh hạt mịn làm dung dịch đục dần (SGK Hóa 10 Bài 19) ──
   // Tốc độ tỉ lệ nồng độ thiosulfate: nồng độ gấp đôi thì thời gian đục che khuất chữ X giảm một nửa
   {

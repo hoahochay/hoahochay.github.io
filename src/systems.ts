@@ -19,6 +19,8 @@ export const FAMILIES: AcidBaseFamily[] = [
   { id: 'sulfate', forms: ['HSO4-', 'SO4^2-'], pKa: [1.99] },
   // Hydrofluoric acid là acid yếu (các HX khác là acid mạnh, phân li hoàn toàn)
   { id: 'fluoride', forms: ['HF', 'F-'], pKa: [3.17] },
+  { id: 'sulfite', forms: ['SO2', 'HSO3-', 'SO3^2-'], pKa: [1.86, 7.2] },
+  { id: 'phenol', forms: ['C6H5OH', 'C6H5O-'], pKa: [9.95] },
   // Ion Al³⁺ bị thủy phân: dung dịch muối aluminium có môi trường acid
   { id: 'aluminium', forms: ['Al^3+', 'AlOH^2+'], pKa: [4.97] },
   { id: 'phosphate', forms: ['H3PO4', 'H2PO4-', 'HPO4^2-', 'PO4^3-'], pKa: [2.15, 7.20, 12.35] },
@@ -55,10 +57,14 @@ export const SOLIDS: SolidDef[] = [
   // AgBr vàng nhạt, AgI vàng: càng ít tan theo thứ tự Cl → Br → I. AgF tan tốt nên không kết tủa
   { id: 'AgBr', ions: { 'Ag+': 1, 'Br-': 1 }, Ksp: 5.35e-13, dissolution: { k: 1e-6, Ea: 40000 } },
   { id: 'AgI', ions: { 'Ag+': 1, 'I-': 1 }, Ksp: 8.52e-17, dissolution: { k: 1e-6, Ea: 40000 } },
+  // AgOH không bền, tách thành Ag₂O màu nâu đen: Ksp theo [Ag⁺]²[OH⁻]²
+  { id: 'Ag2O', ions: { 'Ag+': 2, 'OH-': 2 }, Ksp: 4e-16, dissolution: { k: 1e-6, Ea: 40000 } },
   { id: 'Cu(OH)2', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2.2e-20, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   { id: 'Al(OH)3', ions: { 'Al^3+': 1, 'OH-': 3 }, Ksp: 3e-34, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   // Phân bón dạng rắn, tan tốt trong nước
   { id: 'NH4Cl', ions: { 'NH4+': 1, 'Cl-': 1 }, Ksp: 50, dissolution: { k: 3e-4, Ea: 20000 } },
+  // Phenol tan khoảng 0,89 M ở 25 °C, tan vô hạn trên 66 °C; giọt phenol dư tan nhanh khi lắc
+  { id: 'C6H5OH(l)', ions: { C6H5OH: 1 }, Ksp: 0.89, dissolution: { k: 3e-3, Ea: 20000 } },
   { id: 'KNO3', ions: { 'K+': 1, 'NO3-': 1 }, Ksp: 16, dissolution: { k: 3e-4, Ea: 20000 } },
   { id: 'Fe(OH)2', ions: { 'Fe^2+': 1, 'OH-': 2 }, Ksp: 4.87e-17, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   // Fe(OH)3 mới kết tủa (vô định hình) tan nhiều hơn dạng tinh thể
@@ -88,7 +94,7 @@ export const SOLIDS: SolidDef[] = [
   { id: 'CuSO4', ions: { 'Cu^2+': 1, 'SO4^2-': 1 }, Ksp: 1.7, dissolution: { k: 4e-7, Ea: 20000 } },
   // Viên sủi: luôn tan hết (acid và HCO₃⁻ phản ứng ngay nên không bão hòa). Tan trong khoảng
   // một phút ở nhiệt độ phòng, nhanh hơn vài lần trong nước nóng (Ea lớn hơn muối thường)
-  { id: 'VitC', ions: { H3Cit: 1, 'Na+': 3, 'HCO3-': 3 }, Ksp: 1e6, dissolution: { k: 3e-5, Ea: 30000 } },
+  { id: 'VitC', ions: { H3Cit: 1, 'Na+': 2, 'HCO3-': 2 }, Ksp: 1e6, dissolution: { k: 3e-5, Ea: 30000 } },
   // Oxide base: CuO + 2H⁺ → Cu²⁺ + H₂O. Không tan trong nước, tan dần trong acid (vài chục giây khi lắc)
   { id: 'CuO', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2e-21, dissolution: { k: 1e-9, kH: 6e-7, Ea: 50000 } },
   { id: 'PbI2', ions: { 'Pb^2+': 1, 'I-': 2 }, Ksp: 9.8e-9, dissolution: { k: 1e-6, Ea: 40000 } },

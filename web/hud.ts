@@ -114,7 +114,7 @@ export class Hud {
       el.innerHTML = '<div class="muted">Bấm vào một ống nghiệm hoặc cốc để chọn.</div>';
       return;
     }
-    const empty = o.volumeML < 0.005 && o.solids.length === 0;
+    const empty = o.volumeML < 0.005 && o.solids.length === 0 && !Object.values(o.headspace).some((x) => x > 0.005);
     const dissolved = Object.entries(o.dissolved)
       .filter(([id]) => id !== 'H+' && id !== 'OH-' && !species(id).indicator && o.dissolved[id] > 1e-5)
       .sort((a, b) => b[1] - a[1])
@@ -146,12 +146,14 @@ export class Hud {
         <div class="meter"><div class="k">pH</div><div class="val">${o.volumeML > 0.005 ? o.pH.toFixed(2) : '–'}</div></div>
         <div class="meter"><div class="k">Thể tích</div><div class="val">${o.volumeML.toFixed(o.volumeML < 10 ? 2 : 1)}<small> mL</small></div></div>
       </div>
-      <div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>
-      ${stopwatch ? `<div class="row"><span class="k">Đồng hồ</span><b>${stopwatch}</b></div>` : ''}
+      ${o.volumeML < 0.005 ? '' : `<div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>`}
+      ${stopwatch ? `<div class="row"><span class="k">${/^[⏱⏹]/.test(stopwatch) ? 'Đồng hồ' : 'Ngâm'}</span><b>${stopwatch}</b></div>` : ''}
       ${dissolved ? `<div class="sec">Chất tan</div><div class="chips">${dissolved}</div>` : ''}
       ${solids ? `<div class="sec">Chất rắn</div><div class="chips">${solids}</div>` : ''}
       ${gases ? `<div class="sec">Khí thoát ra</div><div class="chips">${gases}</div>` : ''}
-      ${head ? `<div class="sec">Khí ở miệng ống</div><div class="chips">${head}<span class="chip muted">còn lại: không khí</span></div>` : ''}
+      ${head ? (view.vessel.stoppered
+        ? `<div class="sec">Khí trong ống (nút kín)</div><div class="chips">${head}</div>`
+        : `<div class="sec">Khí ở miệng ống</div><div class="chips">${head}<span class="chip muted">còn lại: không khí</span></div>`) : ''}
       ${rx.length ? `<div class="sec">Phản ứng đang xảy ra</div>${rx.map((r) => `<div class="eq">${r}</div>`).join('')}` : ''}
       `}`;
   }

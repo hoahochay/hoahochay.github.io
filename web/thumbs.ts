@@ -8,6 +8,9 @@ import { balanceModel } from './balance';
 import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 import { XCard } from './xcard';
+import { BathView } from './bath';
+import { spoonModel } from './burn';
+import { glassMaterial } from './materials';
 
 export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, string> {
   const out = new Map<string, string>();
@@ -35,6 +38,13 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = balanceModel();
     } else if (e.tool === 'xcard') {
       obj = new XCard().group;
+    } else if (e.tool === 'ice_bath' || e.tool === 'hot_bath') {
+      obj = new BathView(e.tool === 'ice_bath' ? 'ice' : 'hot').group;
+    } else if (e.tool === 'spoon_s') {
+      obj = spoonModel().group;
+      obj.rotation.z = -0.5;
+    } else if (e.tool === 'no2_tube') {
+      obj = gasTubeModel();
     } else if (e.tool) {
       const p = new ProbeView(e.tool);
       p.update(0.016);
@@ -58,4 +68,19 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
   renderer.dispose();
   renderer.forceContextLoss();
   return out;
+}
+
+/** Ống nghiệm chứa khí nâu đỏ, đậy nút (ảnh thu nhỏ của "Khí NO₂") */
+function gasTubeModel(): THREE.Group {
+  const g = new THREE.Group();
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 9, 24, 1, true).translate(0, 4.5, 0), glassMaterial(0xffffff, 0.25));
+  const gas = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.72, 0.72, 8.2, 24).translate(0, 4.3, 0),
+    new THREE.MeshBasicMaterial({ color: 0xb4521c, transparent: true, opacity: 0.75 }),
+  );
+  const bottom = new THREE.Mesh(new THREE.SphereGeometry(0.8, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), glassMaterial(0xffffff, 0.25));
+  const stopper = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.72, 1.2, 24).translate(0, 9.2, 0), new THREE.MeshStandardMaterial({ color: 0x6b3426, roughness: 0.85 }));
+  g.add(gas, glass, bottom, stopper);
+  g.rotation.z = -0.35;
+  return g;
 }

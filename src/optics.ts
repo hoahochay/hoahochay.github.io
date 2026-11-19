@@ -4,19 +4,33 @@
  */
 import { Mixture } from './mixture';
 import { RGB, species } from './species';
+import { alphas, constantsAt } from './equilibrium';
+import { KW25 } from './constants';
 
 /** Màu ánh sáng truyền qua dung dịch (0..1), độ dày lớp chất lỏng pathCm */
 export function solutionColor(mix: Mixture, pathCm: number): RGB {
   const A: RGB = [0, 0, 0];
   if (mix.volumeL <= 0) return [1, 1, 1];
   const pH = -Math.log10(mix.h);
+  /** pH quy đổi theo [OH⁻] với Kw ở 25 °C (cho chỉ thị đổi màu theo OH⁻) */
+  const pHviaOH = pH + Math.log10(constantsAt(mix.tempK).Kw / KW25);
   for (const [id, n] of mix.moles) {
     const s = species(id);
     if (s.phase !== 'aq') continue;
     const c = n / mix.volumeL;
     if (s.epsilon) for (let i = 0; i < 3; i++) A[i] += s.epsilon[i] * c * pathCm;
     if (s.indicator) {
-      const f = 1 / (1 + 10 ** ((s.indicator.hill ?? 1) * (s.indicator.pKa - pH))); // phần dạng base
+      if (s.indicator.forms) {
+        const a = alphas(s.indicator.forms.pKa, -pH);
+        for (let i = 0; i < 3; i++) {
+          let e = 0;
+          for (let k = 0; k < a.length; k++) e += a[k] * s.indicator.forms.eps[k][i];
+          A[i] += e * c * pathCm;
+        }
+        continue;
+      }
+      const x = s.indicator.viaOH ? pHviaOH : pH;
+      const f = 1 / (1 + 10 ** ((s.indicator.hill ?? 1) * (s.indicator.pKa - x))); // phần dạng base
       for (let i = 0; i < 3; i++) {
         A[i] += ((1 - f) * s.indicator.acidEps[i] + f * s.indicator.baseEps[i]) * c * pathCm;
       }

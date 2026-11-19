@@ -2,7 +2,7 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { bleachRate, contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { bleachRate, burnSulfurIn, contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
@@ -14,7 +14,8 @@ import { setRGB } from './materials';
 import { DeliveryTubeView } from './deliveryTube';
 import { blueFlame, DYE_PAPER_COLOR, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
 import { X_HIDDEN_TURBIDITY, XCard } from './xcard';
-import { burnOutcome, burnRefusal, TongsView } from './burn';
+import { BATH_TEMP_C, BathKind, BathView } from './bath';
+import { burnOutcome, burnRefusal, spoonModel, TongsView } from './burn';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
 import './style.css';
@@ -327,6 +328,10 @@ const TOOL_NAME: Record<ToolKind, string> = {
   litmus_sol: 'giấy quỳ tím',
   ph_paper: 'giấy pH',
   ph_moist: 'giấy pH ẩm',
+  ice_bath: 'cốc nước đá',
+  hot_bath: 'cốc nước nóng',
+  no2_tube: 'khí NO₂',
+  spoon_s: 'muôi sắt đựng lưu huỳnh',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -392,9 +397,10 @@ const LITMUS_SAYS: Record<string, string> = {
   neutral: 'Giấy quỳ trong dung dịch trở lại màu tím → dung dịch trung tính',
 };
 
-/** Lấy mẩu quỳ đang nhúng trong dụng cụ ra (bỏ đi) */
-function removeDipped(v: VesselView) {
+/** Lấy mẩu quỳ đang nhúng trong dụng cụ ra (bỏ đi); cùng lúc lấy ống khỏi cốc ngâm (trừ khi chỉ nhúng thêm quỳ) */
+function removeDipped(v: VesselView, keepBath = false) {
   removeXCard(v);
+  if (!keepBath) removeBath(v);
   const d = dipped.get(v);
   if (!d) return;
   v.group.remove(d.p.group);
@@ -430,6 +436,47 @@ function placeXCard(view: VesselView) {
   view.group.add(card.group);
   xcards.set(view, { card, start: null, doneAt: null });
   log('Đặt tờ giấy kẻ chữ X phía sau, đồng hồ bấm giờ bắt đầu chạy khi rót chất tiếp theo vào', 'action', view.name);
+}
+
+// ── Cốc nước đá / nước nóng để ngâm ống nghiệm ──
+const baths = new Map<VesselView, BathView>();
+const BATH_NAME: Record<BathKind, string> = { ice: 'cốc nước đá', hot: 'cốc nước nóng' };
+
+function toggleBath(view: VesselView, kind: BathKind) {
+  if (view.kind.type !== 'tube') return log('Chỉ ngâm được ống nghiệm vào cốc nước.', 'warning', view.name);
+  if (heatingView === view) return log('Ống đang được đun, hãy tắt đèn cồn trước.', 'warning', view.name);
+  if (view.vessel.inverted) return log('Lật ngửa ống trước khi ngâm.', 'warning', view.name);
+  const was = baths.get(view)?.kind;
+  removeBath(view);
+  if (was === kind) return log(`Lấy ống ra khỏi ${BATH_NAME[kind]}`, 'action', view.name);
+  const b = new BathView(kind);
+  // Đáy cốc đặt trên đế giá ống nghiệm, ngay dưới đáy ống
+  b.group.position.y = -0.12;
+  view.group.add(b.group);
+  baths.set(view, b);
+  view.vessel.bathK = 273.15 + BATH_TEMP_C[kind];
+  log(`Ngâm ống vào ${BATH_NAME[kind]} (khoảng ${BATH_TEMP_C[kind]} °C)`, 'action', view.name);
+}
+
+function removeBath(v: VesselView) {
+  const b = baths.get(v);
+  v.vessel.bathK = null;
+  if (!b) return;
+  v.group.remove(b.group);
+  b.dispose();
+  baths.delete(v);
+}
+
+function bathText(v: VesselView): string | undefined {
+  const b = baths.get(v);
+  return b ? `${b.kind === 'ice' ? '🧊' : '♨️'} ${BATH_NAME[b.kind]} (${BATH_TEMP_C[b.kind]} °C)` : undefined;
+}
+
+/** Nạp khí NO₂ vào ống nghiệm khô và đậy nút kín */
+function fillNO2(view: VesselView) {
+  if (view.kind.type !== 'tube') return log('Chỉ nạp khí NO₂ vào ống nghiệm.', 'warning', view.name);
+  if (!view.vessel.fillNO2()) return log('Cần một ống nghiệm khô, sạch (chưa có hóa chất) để nạp khí NO₂.', 'warning', view.name);
+  log('Nạp đầy khí NO₂ vào ống rồi đậy nút kín: trong ống có khí màu nâu đỏ', 'action', view.name);
 }
 
 function removeXCard(v: VesselView) {
@@ -482,6 +529,9 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   rec({ kind: 'probe', tool: kind, vessel: idx(view) });
   if (kind === 'magnet') return magnetTest(view);
   if (kind === 'xcard') return placeXCard(view);
+  if (kind === 'ice_bath' || kind === 'hot_bath') return toggleBath(view, kind === 'ice_bath' ? 'ice' : 'hot');
+  if (kind === 'no2_tube') return fillNO2(view);
+  if (kind === 'spoon_s') return sulfurSpoon(view);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
   const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
@@ -546,7 +596,7 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
     tween(0.3, (t) => p.group.scale.setScalar(t), {
       onStart: () => {
         const m = view.mouthWorld();
-        if (dip) removeDipped(view);
+        if (dip) removeDipped(view, true);
         if (dip) {
           // Nhúng đầu dải quỳ ngập khoảng 0,6 dưới mặt dung dịch
           at = new THREE.Vector3(m.x, Math.max(view.surfaceWorld().y - 0.6, view.group.position.y + 0.15), m.z);
@@ -628,6 +678,78 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
 }
 
 const LAMP_NAME = 'Đèn cồn';
+
+// ── Muôi sắt: đốt lưu huỳnh trên đèn cồn rồi đưa vào dụng cụ (bình chứa oxygen) ──
+function sulfurSpoon(view: VesselView) {
+  if (heatingView) return log('Đèn cồn đang dùng để đun. Tắt đèn trước rồi mới đốt lưu huỳnh.', 'warning', LAMP_NAME);
+  if (view.vessel.inverted || view.vessel.outlet || view.vessel.stoppered) return log('Mở miệng dụng cụ (tháo nút, ống dẫn khí) trước khi đưa muôi vào.', 'warning', view.name);
+  const { group: g, sulfur } = spoonModel();
+  const flame = blueFlame();
+  flame.material.color.set(0x5f7dff);
+  flame.visible = false;
+  g.add(flame);
+  const light = new THREE.PointLight(0x6a86ff, 0, 40, 2);
+  let away = new THREE.Vector3(), inLamp = new THREE.Vector3(), above = new THREE.Vector3(), inside = new THREE.Vector3();
+  let time = 0, o2 = 0, decided = false;
+  const phase = (dur: number, fn: (k: number, dt: number) => void): AnimStep => {
+    let e = 0;
+    return (dt) => { e += dt; time += dt; fn(Math.min(1, e / dur), dt); return e >= dur; };
+  };
+  const setFlame = (size: number) => {
+    const flick = 1 + 0.12 * Math.sin(time * 37) + 0.08 * Math.sin(time * 61);
+    flame.visible = size > 0.01;
+    flame.scale.setScalar(Math.max(0.001, size * flick));
+    flame.material.opacity = Math.min(0.85, 0.35 + 0.4 * size);
+    light.intensity = 160 * size * flick;
+    light.position.copy(g.localToWorld(new THREE.Vector3(0, 0.6, 0)));
+  };
+  animator.run(
+    call(() => {
+      inLamp = lamp.group.localToWorld(lamp.flameTip.clone()).add(new THREE.Vector3(0, -0.6, 0));
+      away = inLamp.clone().add(new THREE.Vector3(2, 6, 3));
+      const m = view.mouthWorld();
+      above = m.clone().add(new THREE.Vector3(0, 3, 0));
+      inside = m.clone().add(new THREE.Vector3(0, -Math.min(5, view.kind.profile.height * 0.5), 0));
+      g.position.copy(away);
+      addTemp(g);
+      addTemp(light);
+      lamp.setLit(true);
+      log('Dùng muôi sắt lấy một ít bột lưu huỳnh, hơ trên ngọn lửa đèn cồn', 'action', LAMP_NAME);
+    }),
+    tween(0.9, (t) => g.position.lerpVectors(away, inLamp, t)),
+    phase(2.2, (k) => {
+      // Lưu huỳnh nóng chảy (vàng → nâu đỏ) rồi bắt cháy
+      sulfur.material.color.setRGB(0.95 - 0.35 * k, 0.82 - 0.55 * k, 0.18 - 0.1 * k);
+      setFlame(k > 0.6 ? 0.35 * (k - 0.6) / 0.4 : 0);
+    }),
+    call(() => log('Lưu huỳnh nóng chảy rồi cháy trong không khí với ngọn lửa nhỏ màu xanh nhạt, khó nhìn thấy', 'phenomenon', LAMP_NAME)),
+    phase(1.2, () => setFlame(0.35)),
+    call(() => { lamp.setLit(false); select(view); }),
+    phase(1, (k) => { g.position.lerpVectors(inLamp, above, k); setFlame(0.35); }),
+    phase(0.8, (k) => { g.position.lerpVectors(above, inside, k); setFlame(0.35); }),
+    call(() => { o2 = burnSulfurIn(view.vessel, 0); }),
+    phase(6, (k, dt) => {
+      o2 = burnSulfurIn(view.vessel, dt);
+      // Ngọn lửa lớn và sáng dần theo lượng oxygen quanh muôi
+      const target = 0.35 + 1.1 * Math.max(0, (o2 - 0.21) / 0.79);
+      setFlame(0.35 + (target - 0.35) * Math.min(1, k * 4));
+      if (k > 0.15 && !decided) {
+        decided = true;
+        hud.log({
+          t: simTime, vessel: view.name, kind: 'phenomenon', color: [1, 1, 1], equation: 'S + O₂ →(t°) SO₂',
+          text: o2 > 0.5 ? 'Trong bình oxygen, lưu huỳnh cháy mãnh liệt hơn hẳn với ngọn lửa màu xanh sáng'
+            : 'Lưu huỳnh vẫn cháy với ngọn lửa nhỏ màu xanh nhạt như ngoài không khí',
+        });
+      }
+    }),
+    phase(1, (k) => { g.position.lerpVectors(inside, above.clone().add(new THREE.Vector3(1, 3, 2)), k); setFlame(0.35 * (1 - k)); }),
+    call(() => {
+      removeTemp(g);
+      removeTemp(light);
+      log('Trong bình có khí sulfur dioxide không màu, mùi hắc', 'phenomenon', view.name);
+    }),
+  );
+}
 
 // ── Đốt mẩu kim loại trên ngọn lửa đèn cồn (cầm bằng kẹp sắt) ───────────
 function burnInFlame(item: SolidItem) {
@@ -791,11 +913,11 @@ function placeOnBalance(v: VesselView, toggle = true) {
  * Đổ toàn bộ chất lỏng (kèm kết tủa đang lơ lửng) từ dụng cụ này sang dụng cụ khác.
  * Dụng cụ nguồn được nhấc lên, nghiêng miệng trên miệng dụng cụ nhận, rồi đặt lại chỗ cũ.
  */
-function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
+function pourVessel(src: VesselView, dst: VesselView, queued = false, limitML?: number): boolean {
   if (src === dst) return false;
   // Đang có hoạt ảnh (vd. còn đang rót hóa chất vào): đổ sau khi xong, lúc đó mới kiểm tra
   if (animator.busy && !queued) {
-    animator.run(call(() => void pourVessel(src, dst, true)));
+    animator.run(call(() => void pourVessel(src, dst, true, limitML)));
     return true;
   }
   const why = heatingView === src || heatingView === dst ? 'Tắt đèn cồn trước khi đổ.'
@@ -804,7 +926,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
     : src.vessel.mix.volumeL < 1e-5 ? `${src.name} không có chất lỏng để đổ.`
     : null;
   if (why) { log(why, 'warning', src.name); return false; }
-  let mL = src.vessel.mix.volumeL * 1000;
+  let mL = Math.min(src.vessel.mix.volumeL * 1000, limitML ?? Infinity);
   const room = dst.capacityML - dst.vessel.mix.volumeL * 1000 - pendingML(dst);
   if (room < 0.05) { log(`${dst.name} đã đầy.`, 'warning', dst.name); return false; }
   if (mL > room) {
@@ -812,7 +934,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
     log(`Chỉ đổ được ${fmt(mL)} mL, ${dst.name.toLowerCase()} sẽ đầy.`, 'warning', src.name);
   }
   addPending(dst, mL);
-  rec({ kind: 'pour', src: idx(src), dst: idx(dst) });
+  rec({ kind: 'pour', src: idx(src), dst: idx(dst), ...(limitML ? { mL: Math.round(mL * 100) / 100 } : {}) });
   removeDipped(src);
   const theta = -1.85;
   const h = src.kind.profile.height;
@@ -994,6 +1116,10 @@ function dropEntry(entry: ChemEntry, amount: number, view: VesselView) {
     log('Ống đang úp ngược, hãy lật ngửa trước khi cho hóa chất vào.', 'warning', view.name);
     return;
   }
+  if (view.vessel.stoppered) {
+    log('Ống đang đậy nút kín. Bấm "Đổ bỏ" để mở nút trước.', 'warning', view.name);
+    return;
+  }
   if (!(amount > 0)) {
     log('Lượng phải lớn hơn 0.', 'warning', view.name);
     return;
@@ -1040,6 +1166,7 @@ function startHeat(v: VesselView) {
   if (isOnBalance(v)) return log('Lấy dụng cụ khỏi cân trước khi đun.', 'warning', v.name);
   if (heatingView) stopHeat();
   rec({ kind: 'heat', vessel: idx(v), on: true });
+  removeBath(v);
   heatingView = v;
   v.heating = true;
   hud.setHeating(true);
@@ -1081,6 +1208,10 @@ function empty() {
   if (v.vessel.inverted) return invert(v);
   rec({ kind: 'empty', vessel: idx(v) });
   removeDipped(v);
+  if (v.vessel.stoppered) {
+    v.vessel.stoppered = false;
+    log('Mở nút ống, khí bên trong bay ra ngoài', 'action', v.name);
+  }
   if (heatingView === v) toggleHeat();
   disconnect(v);
   animator.run(
@@ -1563,7 +1694,7 @@ const player = new RecipePlayer({
   invert: (vessel) => invert(views[vessel]),
   weigh: (vessel, off) => (vessel === null ? takeOffBalance() : off ? takeOffBalance(views[vessel]) : placeOnBalance(views[vessel], false)),
   empty: (vessel) => { select(views[vessel]); empty(); },
-  pour: (src, dst) => void pourVessel(views[src], views[dst]),
+  pour: (src, dst, mL) => void pourVessel(views[src], views[dst], false, mL),
   focus: (vs) => panTo(vs ? vs.map((i) => views[i]) : null),
   resetAll: () => clearLab(),
   setSpeed: (s) => { speed = s; hud.setSpeed(s); },
@@ -1843,6 +1974,7 @@ function frame() {
     v.update(o, dt, speed);
     updateDipped(v, o.pH, dt);
     updateXCard(v, o.turbidity);
+    baths.get(v)?.update(dt);
     for (const e of tracker.check(v, o)) hud.log({ ...e, t: simTime });
     if (v === selected) selObs = o;
   }
@@ -1852,7 +1984,7 @@ function frame() {
   const g = balanceReading();
   balanceView.display(g);
   balancePanel.record(simTime, g);
-  hud.panel(selected, selObs, realTime, selected ? xcardText(selected) : undefined);
+  hud.panel(selected, selObs, realTime, selected ? xcardText(selected) ?? bathText(selected) : undefined);
   hud.setTime(simTime);
   lamp.update(dt);
   controls.update();

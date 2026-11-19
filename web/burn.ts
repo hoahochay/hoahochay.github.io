@@ -144,3 +144,19 @@ export class TongsView {
     }
   }
 }
+
+/** Muôi sắt (môi đốt hóa chất) đựng một ít bột lưu huỳnh; gốc tọa độ ở lòng muôi */
+export function spoonModel(): { group: THREE.Group; sulfur: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> } {
+  const g = new THREE.Group();
+  const iron = new THREE.MeshStandardMaterial({ color: 0x4d5258, metalness: 0.7, roughness: 0.45 });
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 11, 8).translate(0, 5.5 + 0.2, 0), iron);
+  const cup = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), iron);
+  const sulfur = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.45, 1).translate(0, -0.08, 0),
+    new THREE.MeshStandardMaterial({ color: 0xf2d22e, roughness: 0.8 }),
+  );
+  // Cán muôi cắm xuyên qua nút cao su (đậy miệng bình khi đưa muôi vào)
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.6, 0.9, 20).translate(0, 7, 0), new THREE.MeshStandardMaterial({ color: 0x6b3426, roughness: 0.85 }));
+  g.add(rod, cup, sulfur, lid);
+  return { group: g, sulfur };
+}

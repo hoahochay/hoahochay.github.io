@@ -26,6 +26,10 @@ export const GASES: GasDef[] = [
   { id: 'NH3(g)', D: 0.23, dissolved: { species: 'NH3', kH: 58 } },
   // Chlorine: nặng hơn không khí (đọng lại trong bình), tan vừa phải (≈ 0,09 M ở 1 atm)
   { id: 'Cl2(g)', D: 0.12, dissolved: { species: 'Cl2', kH: 0.09 } },
+  // Sulfur dioxide: mùi hắc, nặng hơn không khí, tan nhiều (≈ 1,2 M ở 1 atm)
+  { id: 'SO2(g)', D: 0.12, dissolved: { species: 'SO2', kH: 1.2 } },
+  { id: 'NO2(g)', D: 0.14 },
+  { id: 'N2O4(g)', D: 0.09 },
 ];
 export const GAS_INDEX = new Map(GASES.map((g) => [g.id, g]));
 
@@ -122,6 +126,8 @@ export interface VentOptions {
   /** Miệng bị nút kín (có ống dẫn khí): không khuếch tán ra ngoài, chỉ bị đẩy qua ống dẫn */
   sealed?: boolean;
   inverted?: boolean;
+  /** Đậy nút kín, không có ống dẫn: khí không ra, không vào (áp suất có thể khác 1 atm) */
+  closed?: boolean;
 }
 
 /** Hiệu suất hấp thụ khi sục bọt khí qua chất lỏng, phần còn lại bay lên khoảng khí */
@@ -143,6 +149,10 @@ export function ventHeadspace(
   mix: Mixture, spec: GasVesselSpec, dt: number, inflow: Map<string, number>, opts: VentOptions = {},
 ): Map<string, number> {
   const escaped = new Map<string, number>();
+  if (opts.closed) {
+    for (const [id, n] of inflow) mix.headspace.set(id, (mix.headspace.get(id) ?? 0) + n);
+    return escaped;
+  }
   const out = (id: string, n: number) => {
     if (n <= 0) return;
     escaped.set(id, (escaped.get(id) ?? 0) + n);
@@ -173,3 +183,34 @@ export function ventHeadspace(
   return escaped;
 }
 
+
+/** Hằng số phân li N₂O₄ ⇌ 2NO₂ ở 25 °C, Kp (atm) */
+const KD_N2O4 = 0.148;
+
+/** Kp của phản ứng 2NO₂ ⇌ N₂O₄ (atm⁻¹) theo nhiệt độ; phản ứng tỏa nhiệt nên Kp giảm khi nóng */
+export function kpDimerNO2(T: number): number {
+  return 1 / vantHoff(KD_N2O4, reactionEnthalpy('N2O4(g)', { 'NO2(g)': 2 }), T);
+}
+
+/**
+ * Cân bằng 2NO₂ (nâu đỏ) ⇌ N₂O₄ (không màu) trong khoảng khí, đạt gần như tức thời.
+ * Giữ nguyên tổng số nguyên tử N: n(NO₂) + 2n(N₂O₄).
+ */
+export function equilibrateNO2(mix: Mixture, spec: GasVesselSpec): void {
+  const n1 = mix.headspace.get('NO2(g)') ?? 0, n2 = mix.headspace.get('N2O4(g)') ?? 0;
+  const nN = n1 + 2 * n2;
+  if (nN <= 1e-15) return;
+  const a = (R_LATM * mix.tempK) / headspaceL(mix, spec); // atm / mol
+  const k = kpDimerNO2(mix.tempK) * a; // n2 = k·n1²
+  const x = (-1 + Math.sqrt(1 + 8 * k * nN)) / (4 * k);
+  mix.headspace.set('NO2(g)', x);
+  mix.headspace.set('N2O4(g)', (nN - x) / 2);
+}
+
+/** Số mol NO₂ và N₂O₄ để khoảng khí chứa hỗn hợp cân bằng ở tổng áp suất 1 atm */
+export function no2FillMoles(mix: Mixture, spec: GasVesselSpec): { NO2: number; N2O4: number } {
+  const Kp = kpDimerNO2(mix.tempK);
+  const p1 = (-1 + Math.sqrt(1 + 4 * Kp)) / (2 * Kp);
+  const n = headspaceL(mix, spec) / (R_LATM * mix.tempK);
+  return { NO2: p1 * n, N2O4: (1 - p1) * n };
+}

@@ -1,6 +1,6 @@
 import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
-import { bubbleAbsorption, exchangeGases, GAS_INDEX, headspaceFractions, ventHeadspace } from './gas';
+import { bubbleAbsorption, equilibrateNO2, exchangeGases, GAS_INDEX, headspaceFractions, no2FillMoles, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
 import { contentsMassG, FORM_FACTOR, Mixture, SETTLE_TIME, SETTLE_TIME_COARSE, SolidForm } from './mixture';
 import { solutionColor, turbidity } from './optics';
@@ -84,12 +84,17 @@ function lossCoefficient(volumeML: number): number {
  * Mỗi bước thời gian: phản ứng chậm → hòa tan → cân bằng nhanh → bảo toàn H (nước)
  * → nhiệt phản ứng → khí thoát ra → đun nóng / tỏa nhiệt ra môi trường.
  */
+/** Hệ số truyền nhiệt giữa ống nghiệm và nước trong cốc ngâm, W/K (ống 5 mL đạt gần nhiệt độ cốc sau ~1 – 2 phút) */
+export const BATH_W_PER_K = 0.25;
+
 export class Vessel implements GasReceiver {
   readonly mix = new Mixture();
   time = 0;
   /** Công suất đun (W) truyền vào dung dịch; đèn cồn ≈ 30–60 W */
   heaterW = 0;
   roomK = T25;
+  /** Đang ngâm trong cốc nước đá / nước nóng: nhiệt độ của cốc (K), null nếu không ngâm */
+  bathK: number | null = null;
   boiling = false;
   readonly gasRate = new Map<string, number>();
   /** Tổng khí đã thoát khỏi dung dịch (bọt khí), mol */
@@ -98,6 +103,8 @@ export class Vessel implements GasReceiver {
   readonly gasEscaped = new Map<string, number>();
   /** Ống dẫn khí: nút kín miệng dụng cụ này, dẫn khí sang dụng cụ khác */
   outlet: GasReceiver | null = null;
+  /** Đậy nút cao su kín (không có ống dẫn): khí bên trong không thoát ra */
+  stoppered = false;
   /** Úp ngược miệng xuống (để thu khí nhẹ) */
   inverted = false;
   /** Tốc độ khí đi vào từ ống dẫn, mol/s (làm mượt, để vẽ bọt khí ở đầu ống) */
@@ -113,6 +120,17 @@ export class Vessel implements GasReceiver {
     readonly reactions: KineticReaction[] = REACTIONS,
   ) {
     this.mix.tempK = this.roomK;
+  }
+
+  /** Nạp đầy khí NO₂ (cân bằng với N₂O₄, 1 atm) vào ống khô, rồi đậy nút kín */
+  fillNO2(): boolean {
+    if (this.mix.volumeL > 1e-7 || this.mix.moles.size > 1 || this.inverted || this.outlet) return false;
+    const n = no2FillMoles(this.mix, this.spec);
+    this.mix.headspace.clear();
+    this.mix.headspace.set('NO2(g)', n.NO2);
+    this.mix.headspace.set('N2O4(g)', n.N2O4);
+    this.stoppered = true;
+    return true;
   }
 
   /** Không có chất lỏng: chỉ có chất rắn (hoặc trống) */
@@ -273,7 +291,8 @@ export class Vessel implements GasReceiver {
     this.inGas.clear();
     this.inTotal = 0;
     const sealed = this.outlet !== null;
-    const out = ventHeadspace(this.mix, this.spec, dt, inflow, { inflowTotal: total, sealed, inverted: this.inverted });
+    const out = ventHeadspace(this.mix, this.spec, dt, inflow, { inflowTotal: total, sealed, inverted: this.inverted, closed: this.stoppered && !this.outlet });
+    equilibrateNO2(this.mix, this.spec);
     if (this.outlet) {
       // Dụng cụ nút kín: mọi khí bị đẩy ra (lúc đầu chủ yếu là không khí) đi qua ống dẫn
       this.outlet.receiveGas(out, Math.max(total, [...out.values()].reduce((a, b) => a + b, 0)));
@@ -306,7 +325,12 @@ export class Vessel implements GasReceiver {
     this.process(dt);
     const m = this.mix;
     const C = this.heatCapacity();
-    if (C > 0) {
+    if (C > 0 && this.bathK !== null) {
+      // Ngâm trong cốc nước: trao đổi nhiệt mạnh với nước trong cốc (coi nhiệt độ cốc không đổi).
+      // Tính theo nghiệm chính xác để không dao động khi tua nhanh
+      const target = this.bathK + this.heaterW / BATH_W_PER_K;
+      m.tempK = target + (m.tempK - target) * Math.exp((-BATH_W_PER_K * dt) / C);
+    } else if (C > 0) {
       m.tempK += ((this.heaterW - this.heatLoss()) * dt) / C;
       // Bước thời gian lớn khi tua nhanh: không để nguội quá nhiệt độ phòng
       if (this.heaterW === 0 && m.tempK < this.roomK && this.dry) m.tempK = this.roomK;

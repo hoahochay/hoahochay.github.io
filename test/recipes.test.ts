@@ -3,7 +3,7 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { testDyePaper, contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { burnSulfurIn, testDyePaper, contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
 import { X_HIDDEN_TURBIDITY } from '../web/xcard';
 import { BEAKER, CATEGORIES, FLASK, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
@@ -64,6 +64,7 @@ function runRecipe(r: PlayScript): RunResult {
       }
       case 'heat':
         vessels[s.vessel].heaterW = s.on ? (s.vessel >= BEAKER ? 60 : 35) : 0;
+        if (s.on) vessels[s.vessel].bathK = null;
         break;
       case 'stir':
         vessels[s.vessel].stir();
@@ -93,7 +94,7 @@ function runRecipe(r: PlayScript): RunResult {
         break;
       case 'pour': {
         const src = vessels[s.src], dst = vessels[s.dst];
-        dst.add(src.take(src.mix.volumeL));
+        dst.add(src.take(Math.min(src.mix.volumeL, (s.mL ?? Infinity) / 1000)));
         expect(dst.mix.volumeL * 1000, `${r.id}: tràn ${s.dst}`).toBeLessThanOrEqual(dst.spec.capacityL * 1000);
         break;
       }
@@ -112,6 +113,13 @@ function runRecipe(r: PlayScript): RunResult {
         else if (s.tool === 'xcard') probes.push('xcard');
         else if (s.tool === 'dye_paper') probes.push('dye-' + testDyePaper(v));
         else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
+        else if (s.tool === 'ice_bath') v.bathK = 273.15;
+        else if (s.tool === 'hot_bath') v.bathK = 353.15;
+        else if (s.tool === 'spoon_s') {
+          let o2 = 0;
+          for (let i = 0; i < 6; i++) { o2 = burnSulfurIn(v, 1); run(1); }
+          probes.push('spoon-' + (o2 > 0.5 ? 'bright' : 'dim'));
+        } else if (s.tool === 'no2_tube') probes.push('no2-' + v.fillNO2());
         else if (s.tool === 'ph_moist') {
           run(5);
           probes.push('ph_moist-' + Math.round(litmusPH(v)));
@@ -156,6 +164,69 @@ describe('Thí nghiệm mẫu', () => {
     expect(res.probes).toEqual(['magnet-attracted', 'magnet-none']);
     expect(res.vessels[1].mix.get('FeS')).toBeGreaterThan(0.012);
     expect(res.vessels[0].mix.get('FeS')).toBeLessThan(1e-8);
+  });
+
+  it('Hóa 11 Bài 1 – NO2: lạnh nhạt màu, nóng đậm màu', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'nhiet-do-can-bang-no2')!);
+    const no2 = res.vessels.slice(0, 3).map((v) => v.mix.headspace.get('NO2(g)') ?? 0);
+    console.log('NO2 mol', no2);
+    expect(no2[1]).toBeLessThan(no2[0] * 0.5);
+    expect(no2[2]).toBeGreaterThan(no2[0] * 2);
+    expect(res.vessels[0].stoppered).toBe(true);
+  });
+
+  it('Hóa 11 Bài 1 – CH3COONa: nóng hồng đậm hơn, lạnh nhạt hơn', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'nhiet-do-can-bang-ch3coona')!);
+    const green = res.vessels.slice(0, 3).map((v) => v.observe().appearance[1]);
+    console.log('G kênh', green, res.vessels.slice(0, 3).map((v) => v.mix.volumeL * 1000));
+    expect(green[1]).toBeGreaterThan(green[0] + 0.15);
+    expect(green[2]).toBeLessThan(green[0]);
+  });
+
+  it('Hóa 11 Bài 2 – bắp cải tím: giấm đỏ, muối tím, soda xanh lục', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'chi-thi-bap-cai-tim')!);
+    const col = [0, 1, 2, 3, 4].map((i) => res.vessels[i].observe().appearance.map((x) => +x.toFixed(2)));
+    console.log('bắp cải', res.probes, JSON.stringify(col));
+    expect(res.probes).toHaveLength(5);
+    const [vinegar, , , soda, salt] = col;
+    expect(vinegar[0]).toBeGreaterThan(vinegar[1] + 0.3); // đỏ
+    expect(soda[1]).toBeGreaterThan(soda[0] + 0.3); // xanh lục
+    expect(soda[1]).toBeGreaterThan(soda[2] + 0.3);
+    expect(salt[2]).toBeGreaterThan(salt[1] + 0.2); // tím: thiếu xanh lục
+  });
+
+  it('Hóa 11 Bài 21 – phenol tan trong NaOH, Na2CO3; tạo kết tủa với nước bromine', () => {
+    const v = run('phenol-naoh-na2co3');
+    for (const i of [0, 1]) {
+      expect(v[i].mix.get('C6H5OH(l)')).toBeLessThan(1e-7);
+      expect(v[i].observe().turbidity).toBeLessThan(0.02);
+    }
+    expect(v[1].gasTotal.get('CO2') ?? 0).toBeLessThan(1e-6);
+    const b = run('phenol-nuoc-bromine');
+    expect(b[0].mix.get('C6H2Br3OH')).toBeGreaterThan(2e-5);
+    expect(b[0].mix.get('Br2')).toBeLessThan(1e-7);
+  });
+
+  it('Hóa 11 Bài 23 – tráng bạc và Cu2O đỏ gạch', () => {
+    const t = run('trang-bac-tollens');
+    expect(t[0].mix.get('Ag(mirror)')).toBeGreaterThan(5e-5);
+    expect(t[0].mix.get('Ag2O')).toBeLessThan(1e-8);
+    const c = run('aldehyde-cuoh2');
+    expect(c[0].mix.get('Cu2O')).toBeGreaterThan(7e-5);
+    expect(c[0].mix.get('CuO')).toBeLessThan(5e-6);
+  });
+
+  it('Hóa 11 Bài 8 – Cu + H2SO4 đặc nóng tạo SO2, nguội thì không', () => {
+    const v = run('dong-h2so4-dac');
+    expect(v[0].gasTotal.get('SO2(g)') ?? 0).toBeGreaterThan(1e-4);
+    expect(v[0].mix.get('Cu^2+')).toBeGreaterThan(4e-4);
+    expect(v[0].mix.get('Cu')).toBeGreaterThan(5e-4);
+  });
+
+  it('Hóa 11 Bài 7 – lưu huỳnh cháy sáng trong bình oxygen, tạo SO2 làm quỳ ẩm hóa đỏ', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'luu-huynh-chay-oxygen')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.probes).toEqual(['spoon-bright', 'litmus-acid']);
   });
 
   it('Hóa 11 Bài 2 – môi trường dung dịch muối: nước 7, Na2CO3 base, AlCl3 và FeCl3 acid', () => {
