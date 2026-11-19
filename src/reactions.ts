@@ -251,7 +251,8 @@ export const REACTIONS: KineticReaction[] = [
     id: 'hexane_br2', name: 'Bromine hóa hexane',
     equation: 'C₆H₁₄ + Br₂ →(t°) C₆H₁₃Br + HBr',
     reactants: { C6H14: 1, 'Br2(org)': 1 }, products: { C6H13Br: 1, 'H+': 1, 'Br-': 1 },
-    rate: (ctx) => ctx.mix.get('C6H14') > 0 ? arrhenius(4e-4, 110000, ctx.T) * ctx.mix.get('Br2(org)') : 0,
+    // Cần có lớp nước để HBr sinh ra tan vào (không có nước thì không tính để giữ cân bằng điện tích)
+    rate: (ctx) => ctx.mix.get('C6H14') > 0 && ctx.V > 1e-7 ? arrhenius(4e-4, 110000, ctx.T) * ctx.mix.get('Br2(org)') : 0,
   },
 
   // ── Toluene bị KMnO₄ (môi trường acid) oxi hóa nhóm methyl thành benzoic acid khi đun nóng (SGK Hóa 11 Bài 17).

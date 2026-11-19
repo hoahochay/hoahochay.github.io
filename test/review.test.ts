@@ -62,6 +62,20 @@ describe('Nhiệt, khí, chất rắn', () => {
     v.run(1);
     expect(Number.isFinite(v.mix.tempK)).toBe(true);
   });
+  it('đun cạn acid trong dụng cụ có nhiệt dung 0 không làm nhiệt độ thành NaN', () => {
+    const v = new Vessel(VESSELS.foamCup);
+    v.addSolution({ H2SO4: 1 }, 0.005);
+    v.heaterW = 200;
+    v.run(100);
+    expect(Number.isFinite(v.mix.tempK)).toBe(true);
+  });
+  it('hexane + bromine không có nước: không sinh ion lệch điện tích', () => {
+    const v = new Vessel(VESSELS.testTube);
+    v.add(makeOrganic('C6H14', 0.003));
+    v.mix.set('Br2(org)', 1e-4);
+    v.run(60);
+    expect(v.mix.get('Br-')).toBe(0);
+  });
   it('kết tủa tạo lại sau khi viên rắn tan hết là kết tủa mịn', () => {
     const v = new Vessel(VESSELS.testTube);
     v.add(makeSolution({ HCl: 1 }, 0.005));

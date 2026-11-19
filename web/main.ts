@@ -814,6 +814,8 @@ function toggleBurette(view: VesselView, tool: BuretteTool) {
   }
   const def = BURETTES[tool];
   if (view.kind.type === 'tube') return log('Burette lắp trên bình nón hoặc cốc, không lắp trên ống nghiệm.', 'warning', view.name);
+  if (heatingView === view) return log('Tắt đèn cồn, đặt bình về chỗ rồi mới lắp burette.', 'warning', view.name);
+  if (isOnBalance(view)) return log('Lấy bình khỏi cân rồi mới lắp burette.', 'warning', view.name);
   if (view.vessel.inverted || view.vessel.outlet || view.vessel.stoppered) return log('Mở miệng dụng cụ trước khi lắp burette.', 'warning', view.name);
   const tip = view.mouthWorld().add(new THREE.Vector3(0, 1.2, 0));
   const bv = new BuretteView(tip.y - LAMP_POS.y, def.color);

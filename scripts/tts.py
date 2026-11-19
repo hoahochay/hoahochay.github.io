@@ -37,17 +37,19 @@ def main() -> None:
         tts = Vieneu(mode=mode)
         import numpy as np
         tmp = Path(tempfile.mkdtemp())
-        for n, it in enumerate(todo, 1):
-            t0 = time.time()
-            np.random.seed(SEED)
-            wav = tts.infer(it["speech"], voice=voice, seed=SEED)
-            w = tmp / "a.wav"
-            tts.save(wav, str(w))
-            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(w), "-ac", "1", "-ar", rate,
-                            "-b:a", bitrate, str(OUT / f"{it['key']}.mp3")], check=True)
-            clips[it["key"]] = round(len(wav) / tts.sample_rate, 2)
-            print(f"[{n}/{len(todo)}] {clips[it['key']]:5.1f}s ({time.time() - t0:.1f}s) {it['text'][:70]}", file=sys.stderr)
-        shutil.rmtree(tmp, ignore_errors=True)
+        try:
+            for n, it in enumerate(todo, 1):
+                t0 = time.time()
+                np.random.seed(SEED)
+                wav = tts.infer(it["speech"], voice=voice, seed=SEED)
+                w = tmp / "a.wav"
+                tts.save(wav, str(w))
+                subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(w), "-ac", "1", "-ar", rate,
+                                "-b:a", bitrate, str(OUT / f"{it['key']}.mp3")], check=True)
+                clips[it["key"]] = round(len(wav) / tts.sample_rate, 2)
+                print(f"[{n}/{len(todo)}] {clips[it['key']]:5.1f}s ({time.time() - t0:.1f}s) {it['text'][:70]}", file=sys.stderr)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     keep = {it["key"] for it in items}
     clips = {k: v for k, v in clips.items() if k in keep}

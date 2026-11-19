@@ -28,7 +28,12 @@ const scenarios = {
   },
   /** Phát một thí nghiệm mẫu và chụp ảnh giữa chừng: node scripts/shot.mjs <url> <dir> recipe:<id> */
   async recipe(id) {
-    await lab((rid) => { const p = window.__lab.player; p.play(window.__lab.recipes.find((r) => r.id === rid)); }, id);
+    const ok = await lab((rid) => {
+      const r = window.__lab.recipes.find((x) => x.id === rid);
+      if (r) window.__lab.player.play(r);
+      return !!r;
+    }, id);
+    if (!ok) throw new Error(`Không có thí nghiệm "${id}"`);
     await sleep(8000);
     await shot(`recipe-${id}`);
   },

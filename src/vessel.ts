@@ -291,7 +291,8 @@ export class Vessel implements GasReceiver {
     // Bảo toàn nguyên tố H: phần chênh lệch là nước sinh ra hoặc bị tiêu thụ
     m.add('H2O', (A0 - hydrogenAtoms(m)) / 2);
     // Định luật Hess: nhiệt tỏa ra = H_trước − H_sau
-    m.tempK += (H0 - enthalpy(m)) / this.heatCapacity();
+    const C = this.heatCapacity();
+    if (C > 0) m.tempK += (H0 - enthalpy(m)) / C;
 
     // Bọt khí: khí sinh ra trong dung dịch đi vào khoảng khí phía trên
     const inflow = this.collectGases(dt);
