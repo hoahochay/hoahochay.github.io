@@ -59,6 +59,9 @@ sp('Li+', 'ion lithium', 'aq', 1, 0, -278.49, 6.94);
 sp('K+', 'ion potassium', 'aq', 1, 0, -252.38, 39.1);
 sp('Cl-', 'ion chloride', 'aq', -1, 0, -167.16, 35.45);
 sp('I-', 'ion iodide', 'aq', -1, 0, -55.19, 126.9);
+sp('Br-', 'ion bromide', 'aq', -1, 0, -121.55, 79.9);
+sp('F-', 'ion fluoride', 'aq', -1, 0, -332.63, 19.0);
+sp('HF', 'hydrofluoric acid', 'aq', 0, 1, -320.08, 20.01);
 sp('NO3-', 'ion nitrate', 'aq', -1, 0, -205.0, 62.0);
 sp('Ag+', 'ion bạc', 'aq', 1, 0, 105.58, 107.87);
 sp('Fe^2+', 'ion sắt(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
@@ -91,6 +94,13 @@ sp('NH3', 'ammonia', 'aq', 0, 3, -80.29, 17.03);
 
 // ── Phân tử tan trung hòa ────────────────────────────────────────────────
 sp('H2O2', 'hydrogen peroxide', 'aq', 0, 2, -191.17, 34.01);
+// Halogen tan trong nước: nước chlorine vàng lục nhạt, nước bromine vàng cam, iodine (cùng I⁻ tạo I₃⁻) nâu
+sp('Cl2', 'chlorine', 'aq', 0, 0, -23.4, 70.9, { epsilon: [0.4, 0.8, 6] });
+sp('Br2', 'bromine', 'aq', 0, 0, -2.59, 159.8, { epsilon: [1, 20, 110] });
+sp('I2', 'iodine', 'aq', 0, 0, 22.6, 253.8, { epsilon: [60, 160, 600] });
+// Hồ tinh bột (tính theo mắt xích C₆H₁₀O₅) và phức xanh tím với iodine
+sp('amylose', 'hồ tinh bột', 'aq', 0, 10, -960, 162.14);
+sp('I2-starch', 'phức iodine – tinh bột', 'aq', 0, 0, 22.6, 253.8, { epsilon: [70, 300, 20] });
 
 // ── Chất chỉ thị ─────────────────────────────────────────────────────────
 sp('phenolphthalein', 'phenolphthalein', 'aq', 0, 0, 0, 318.3, {
@@ -128,6 +138,8 @@ sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0
 
 // Kết tủa (Ksp xem systems.ts)
 sp('AgCl', 'silver chloride', 's', 0, 0, -127.07, 143.32, { color: WHITE });
+sp('AgBr', 'silver bromide', 's', 0, 0, -100.37, 187.77, { color: [0.97, 0.94, 0.74] });
+sp('AgI', 'silver iodide', 's', 0, 0, -61.84, 234.77, { color: [0.98, 0.88, 0.42] });
 sp('Cu(OH)2', 'copper(II) hydroxide', 's', 0, 2, -449.8, 97.56, { color: [0.35, 0.6, 0.88] });
 sp('Fe(OH)2', 'iron(II) hydroxide', 's', 0, 2, -569.0, 89.86, { color: [0.6, 0.72, 0.62] });
 sp('Fe(OH)3', 'iron(III) hydroxide', 's', 0, 3, -823.0, 106.87, { color: [0.6, 0.28, 0.1] });

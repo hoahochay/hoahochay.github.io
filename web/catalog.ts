@@ -45,7 +45,13 @@ export const REAGENTS: ReagentDef[] = [
   reagent('naoh05', 'NaOH', '0,5M', 'sodium hydroxide', { NaOH: 0.5 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
+  reagent('naf', 'NaF', '0,1M', 'sodium fluoride', { NaF: 0.1 }),
   reagent('nacl', 'NaCl', '0,1M', 'sodium chloride', { NaCl: 0.1 }),
+  reagent('nabr', 'NaBr', '0,1M', 'sodium bromide', { NaBr: 0.1 }),
+  reagent('nai', 'NaI', '0,1M', 'sodium iodide', { NaI: 0.1 }),
+  reagent('cl2_water', 'Nước Cl₂', '0,05M', 'nước chlorine', { Cl2: 0.05 }, { amber: true, aka: 'nuoc clo chlorine cl2' }),
+  reagent('br2_water', 'Nước Br₂', '0,02M', 'nước bromine loãng', { Br2: 0.02 }, { amber: true, aka: 'nuoc brom bromine br2' }),
+  reagent('starch_sol', 'Hồ tinh bột', '1%', 'thuốc thử iodine', { starch: 0.06 }, { aka: 'ho tinh bot starch' }),
   reagent('cano3', 'Ca(NO₃)₂', '0,5M', 'calcium nitrate', { 'Ca(NO3)2': 0.5 }),
   // Nước vôi trong bão hòa ≈ 0,02M; dùng loại pha loãng để thấy rõ cả hai giai đoạn đục → trong
   // (mô hình dung dịch lý tưởng chưa có hệ số hoạt độ, nên đánh giá thấp độ tan của Ca(HCO₃)₂)

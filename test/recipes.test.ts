@@ -380,6 +380,30 @@ describe('Thí nghiệm mẫu', () => {
     expect(vesselsOf('hcl-tac-dung-nahco3')[0].gasTotal.get('CO2') ?? 0).toBeGreaterThan(1e-3);
   });
 
+  it('Lớp 10 – nhận biết ion halide: F⁻ không kết tủa, Cl⁻ Br⁻ I⁻ kết tủa với Ag⁺', () => {
+    const v = vesselsOf('nhan-biet-ion-halide');
+    expect(v[0].observe().turbidity).toBeLessThan(0.01);
+    expect(v[1].mix.get('AgCl')).toBeGreaterThan(2.5e-5);
+    expect(v[2].mix.get('AgBr')).toBeGreaterThan(2.5e-5);
+    expect(v[3].mix.get('AgI')).toBeGreaterThan(2.5e-5);
+    for (const i of [1, 2, 3]) expect(v[i].observe().turbidity).toBeGreaterThan(0.3);
+  });
+
+  it('Lớp 10 – phản ứng thế halide: Cl₂ đẩy Br₂, I₂; Br₂ đẩy I₂; hồ tinh bột hóa xanh', () => {
+    const v = vesselsOf('phan-ung-the-muoi-halide');
+    expect(v[0].mix.get('Br2')).toBeGreaterThan(1.3e-5);
+    expect(v[0].mix.get('Cl2')).toBeLessThan(1e-7);
+    expect(v[2].mix.get('I2')).toBeGreaterThan(5e-6);
+    expect(v[2].mix.get('Br2')).toBeLessThan(1e-7);
+    expect(v[1].mix.get('I2-starch')).toBeGreaterThan(1e-5);
+  });
+
+  it('Lớp 10 – Mg + nước: ống đun nóng hồng nhanh hơn hẳn ống nguội', () => {
+    const v = vesselsOf('nhiet-do-toc-do-hoa10');
+    expect(v[1].observe().solutionColor[1]).toBeLessThan(0.7);
+    expect(v[0].observe().solutionColor[1]).toBeGreaterThan(0.95);
+  });
+
   it('mỗi thí nghiệm thuộc một chủ đề và một mục có trong danh sách; id không trùng', () => {
     for (const r of RECIPES) expect(CATEGORIES[TOPICS[r.topic].cat]).toBeTruthy();
     expect(new Set(RECIPES.map((r) => r.id)).size).toBe(RECIPES.length);

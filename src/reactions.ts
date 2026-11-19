@@ -101,6 +101,44 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 4e-3, Ea: 15000, surface: 'K' }),
   },
 
+  // ── Halogen mạnh đẩy halogen yếu ra khỏi dung dịch muối halide ──────
+  // Xảy ra gần như tức thì khi trộn: Cl₂ > Br₂ > I₂ (tính oxi hóa giảm dần)
+  {
+    id: 'cl2_br', name: 'Chlorine đẩy bromine',
+    equation: 'Cl₂ + 2Br⁻ → 2Cl⁻ + Br₂',
+    reactants: { Cl2: 1, 'Br-': 2 }, products: { 'Cl-': 2, Br2: 1 },
+    rate: massAction({ k25: 2e4, Ea: 20000, orders: { Cl2: 1, 'Br-': 1 } }),
+  },
+  {
+    id: 'cl2_i', name: 'Chlorine đẩy iodine',
+    equation: 'Cl₂ + 2I⁻ → 2Cl⁻ + I₂',
+    reactants: { Cl2: 1, 'I-': 2 }, products: { 'Cl-': 2, I2: 1 },
+    rate: massAction({ k25: 5e4, Ea: 20000, orders: { Cl2: 1, 'I-': 1 } }),
+  },
+  {
+    id: 'br2_i', name: 'Bromine đẩy iodine',
+    equation: 'Br₂ + 2I⁻ → 2Br⁻ + I₂',
+    reactants: { Br2: 1, 'I-': 2 }, products: { 'Br-': 2, I2: 1 },
+    rate: massAction({ k25: 2e4, Ea: 20000, orders: { Br2: 1, 'I-': 1 } }),
+  },
+  // Hồ tinh bột bắt iodine tạo phức màu xanh tím (tinh bột không bị tiêu hao đáng kể)
+  {
+    id: 'i2_starch', name: 'Iodine làm hồ tinh bột hóa xanh',
+    equation: 'I₂ + hồ tinh bột → phức màu xanh tím',
+    reactants: { I2: 1 }, products: { 'I2-starch': 1 },
+    rate: massAction({ k25: 2e3, Ea: 10000, orders: { I2: 1, amylose: 1 } }),
+  },
+
+  // ── Magnesium + nước ─────────────────────────────────────────────────
+  // Nước nguội: rất chậm (vài phút mới thấy phenolphthalein hồng nhạt); nước nóng: nhanh hơn hàng trăm lần.
+  // Mg(OH)₂ ít tan nên dung dịch chỉ có tính base yếu (pH ≈ 10).
+  {
+    id: 'mg_water', name: 'Magnesium tác dụng với nước',
+    equation: 'Mg + 2H₂O → Mg(OH)₂ + H₂↑',
+    reactants: { Mg: 1, H2O: 2 }, products: { 'Mg^2+': 1, 'OH-': 2, H2: 1 },
+    rate: massAction({ k25: 1e-11, Ea: 100000, surface: 'Mg' }),
+  },
+
   // ── Phân hủy H2O2 (xúc tác MnO2) ─────────────────────────────────────
   {
     id: 'h2o2_uncat', name: 'H₂O₂ tự phân hủy (rất chậm)',

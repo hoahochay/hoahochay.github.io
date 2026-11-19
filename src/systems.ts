@@ -17,6 +17,8 @@ export const FAMILIES: AcidBaseFamily[] = [
   { id: 'carbonate', forms: ['H2CO3', 'HCO3-', 'CO3^2-'], pKa: [6.35, 10.33] },
   { id: 'ammonium', forms: ['NH4+', 'NH3'], pKa: [9.25] },
   { id: 'sulfate', forms: ['HSO4-', 'SO4^2-'], pKa: [1.99] },
+  // Hydrofluoric acid là acid yếu (các HX khác là acid mạnh, phân li hoàn toàn)
+  { id: 'fluoride', forms: ['HF', 'F-'], pKa: [3.17] },
   { id: 'citrate', forms: ['H3Cit', 'H2Cit-', 'HCit^2-', 'Cit^3-'], pKa: [3.13, 4.76, 6.40] },
   // Thủy phân ion kim loại: [M(H2O)]n+ ⇌ [M(OH)](n-1)+ + H+
   { id: 'iron3', forms: ['Fe^3+', 'FeOH^2+'], pKa: [2.2] },
@@ -45,6 +47,9 @@ export interface SolidDef {
 
 export const SOLIDS: SolidDef[] = [
   { id: 'AgCl', ions: { 'Ag+': 1, 'Cl-': 1 }, Ksp: 1.77e-10, dissolution: { k: 1e-6, Ea: 40000 } },
+  // AgBr vàng nhạt, AgI vàng: càng ít tan theo thứ tự Cl → Br → I. AgF tan tốt nên không kết tủa
+  { id: 'AgBr', ions: { 'Ag+': 1, 'Br-': 1 }, Ksp: 5.35e-13, dissolution: { k: 1e-6, Ea: 40000 } },
+  { id: 'AgI', ions: { 'Ag+': 1, 'I-': 1 }, Ksp: 8.52e-17, dissolution: { k: 1e-6, Ea: 40000 } },
   { id: 'Cu(OH)2', ions: { 'Cu^2+': 1, 'OH-': 2 }, Ksp: 2.2e-20, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   { id: 'Fe(OH)2', ions: { 'Fe^2+': 1, 'OH-': 2 }, Ksp: 4.87e-17, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
   // Fe(OH)3 mới kết tủa (vô định hình) tan nhiều hơn dạng tinh thể
