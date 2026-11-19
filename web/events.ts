@@ -114,7 +114,8 @@ export class PhenomenaTracker {
       } else if (!hasLiquid && !view.hasSolidVisual(id)) {
         // Phản ứng giữa các chất rắn khi đun (vd. Fe + S → FeS)
         const r = view.vessel.reactions.find((x) => id in x.products);
-        log(`Tạo thành chất rắn màu ${name ?? colorName(species(id).color ?? [0.5, 0.5, 0.5])} ${pretty(id)}`, {
+        const c = name ?? colorName(species(id).color ?? [0.5, 0.5, 0.5]);
+        log(`Tạo thành chất rắn màu ${c === 'không màu' ? 'trắng' : c} ${pretty(id)}`, {
           color: species(id).color, equation: r?.equation,
         });
       }
@@ -141,7 +142,8 @@ export class PhenomenaTracker {
     for (const [id, rate] of Object.entries(o.gasRateML)) {
       if (!st.gases.has(id) && rate > 0.04) {
         st.gases.add(id);
-        log(`Sủi bọt khí ${pretty(id)}`);
+        // Không có dung dịch (vd. nhiệt phân chất rắn): khí thoát ra chứ không sủi bọt
+        log(o.volumeML > 0.01 ? `Sủi bọt khí ${pretty(id)}` : `Có khí ${pretty(id)} thoát ra`);
       }
     }
     for (const id of [...st.gases]) {

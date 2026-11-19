@@ -274,6 +274,49 @@ describe('Thí nghiệm mẫu', () => {
     expect(v[3].mix.get('Cu(OH)2')).toBeGreaterThan(4e-4);
   });
 
+  it('CTST Bài 3 – sắt và lưu huỳnh: chỉ ống đun mới thành FeS', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'phan-ung-sat-luu-huynh')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.vessels[0].mix.get('FeS')).toBeGreaterThan(0.009);
+    expect(res.vessels[1].mix.get('FeS')).toBeLessThan(1e-6);
+  });
+
+  it('CTST Bài 3 – vôi sống tỏa nhiệt, viên sủi thu nhiệt', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'phan-ung-toa-nhiet-thu-nhiet')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.vessels[0].mix.get('Ca(OH)2')).toBeGreaterThan(0.01);
+  });
+
+  it('CTST Bài 4 – bảo toàn khối lượng: có kết tủa BaSO4', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'bao-toan-khoi-luong-ctst')!);
+    expect(res.vessels[1].mix.get('BaSO4')).toBeGreaterThan(4e-4);
+  });
+
+  it('CTST Bài 7 – pha CaCl2 10% và 1M', () => {
+    const b = runRecipe(RECIPES.find((x) => x.id === 'pha-cacl2-10-phan-tram')!);
+    expect(b.timedOut).toEqual([]);
+    const f = runRecipe(RECIPES.find((x) => x.id === 'pha-cacl2-1m')!);
+    expect(f.timedOut).toEqual([]);
+    expect(f.vessels[5].mix.conc('Ca^2+')).toBeCloseTo(1, 1);
+  });
+
+  it('CTST Bài 8 – nồng độ, nhiệt độ, diện tích tiếp xúc', () => {
+    const c = runRecipe(RECIPES.find((x) => x.id === 'nong-do-toc-do-ctst')!).vessels;
+    expect(c[1].mix.get('Mg')).toBeLessThan(c[0].mix.get('Mg') / 5);
+    const t = runRecipe(RECIPES.find((x) => x.id === 'nhiet-do-toc-do-ctst')!);
+    expect(t.timedOut).toEqual([]);
+    expect(t.vessels[0].mix.get('Zn')).toBeLessThan(t.vessels[1].mix.get('Zn'));
+    const s = runRecipe(RECIPES.find((x) => x.id === 'be-mat-toc-do-ctst')!).vessels;
+    expect(s[1].mix.get('CaCO3')).toBeLessThan(s[0].mix.get('CaCO3'));
+  });
+
+  it('CTST Bài 8 – xúc tác MnO2: KClO3 phân hủy sớm hơn', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'xuc-tac-toc-do-ctst')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.probes).toEqual(['relight', 'none', 'relight']);
+    expect(res.vessels[1].mix.get('MnO2') * 86.94).toBeCloseTo(0.1, 3);
+  });
+
   it('mỗi bài học thuộc một bộ sách có trong danh sách', () => {
     for (const r of RECIPES) expect(BOOKS[LESSONS[r.lesson].book]).toBeTruthy();
   });

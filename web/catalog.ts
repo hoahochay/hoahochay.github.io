@@ -37,6 +37,8 @@ export const REAGENTS: ReagentDef[] = [
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
   // Giấm ăn: acetic acid khoảng 5% (≈ 0,83 M)
   reagent('vinegar', 'CH₃COOH', '5%', 'giấm ăn', { CH3COOH: 0.83 }, { aka: 'vinegar acetic acid giam' }),
+  reagent('h2so4_01', 'H₂SO₄', '0,1M', 'sulfuric acid loãng', { H2SO4: 0.1 }),
+  reagent('h2so4_2', 'H₂SO₄', '2M', 'sulfuric acid', { H2SO4: 2 }),
   reagent('naoh', 'NaOH', '1M', 'sodium hydroxide', { NaOH: 1 }),
   reagent('nh3', 'NH₃', '1M', 'dung dịch ammonia', { NH3: 1 }),
   reagent('na2co3', 'Na₂CO₃', '0,5M', 'sodium carbonate', { Na2CO3: 0.5 }),
@@ -103,6 +105,9 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'cuso4_solid', id: 'CuSO4', label: 'Copper(II) sulfate (tinh thể)', aka: 'dong sunfat phen xanh cuso4 ran', grams: 0.75, form: 'powder', shape: 'powder' },
   { key: 'rice_flour', id: 'starch', label: 'Bột gạo', aka: 'tinh bot bot san sua bot', grams: 0.75, form: 'powder', shape: 'powder' },
   { key: 'vitc', id: 'VitC', label: 'Viên vitamin C sủi', aka: 'vitamin c sui vien sui c sui citric acid', grams: 0.25, form: 'granule', shape: 'chunk' },
+  { key: 'kclo3', id: 'KClO3', label: 'Potassium chlorate', aka: 'kali clorat kclo3 dieu che oxygen oxi', grams: 0.5, form: 'powder', shape: 'powder' },
+  { key: 'cacl2_solid', id: 'CaCl2', label: 'Calcium chloride khan', aka: 'canxi clorua cacl2 ran khan', grams: 5, form: 'powder', shape: 'powder' },
+  { key: 'cao', id: 'CaO', label: 'Vôi sống (cục)', aka: 'calcium oxide cao voi song', grams: 1, form: 'granule', shape: 'chunk' },
   { key: 'cuo', id: 'CuO', label: 'Copper(II) oxide (bột)', aka: 'dong oxit cuo bot den oxide base', grams: 0.08, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
@@ -156,7 +161,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', VitC: 'Vitamin C sủi' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {

@@ -62,6 +62,24 @@ export const REACTIONS: KineticReaction[] = [
     productForm: 'powder',
   },
 
+  // ── Nhiệt phân chất rắn ──────────────────────────────────────────────
+  // KClO₃ khan: không xúc tác phải đun rất nóng (nóng chảy ≈ 356 °C, phân hủy rõ trên ≈ 400 °C);
+  // có MnO₂ xúc tác thì phân hủy nhanh ở ≈ 200–250 °C. Phản ứng tỏa nhiệt nhẹ (ΔH ≈ −39 kJ/mol).
+  {
+    id: 'kclo3_heat', name: 'Nhiệt phân potassium chlorate',
+    equation: '2KClO₃ —t°→ 2KCl + 3O₂↑',
+    reactants: { KClO3: 1 }, products: { KCl: 1, O2: 1.5 },
+    rate: massAction({ k25: 1e-28, Ea: 200000, surface: 'KClO3' }),
+    productForm: 'powder',
+  },
+  {
+    id: 'kclo3_mno2', name: 'Nhiệt phân potassium chlorate, xúc tác MnO₂',
+    equation: '2KClO₃ —MnO₂, t°→ 2KCl + 3O₂↑',
+    reactants: { KClO3: 1 }, products: { KCl: 1, O2: 1.5 },
+    rate: massAction({ k25: 5e-15, Ea: 120000, surface: 'MnO2' }),
+    productForm: 'powder',
+  },
+
   // ── Kim loại kiềm + nước ─────────────────────────────────────────────
   {
     id: 'na_water', name: 'Sodium tác dụng với nước',

@@ -50,6 +50,14 @@ export const SOLIDS: SolidDef[] = [
   // Fe(OH)3 mới kết tủa (vô định hình) tan nhiều hơn dạng tinh thể
   { id: 'Fe(OH)3', ions: { 'Fe^3+': 1, 'OH-': 3 }, Ksp: 4e-38, dissolution: { k: 1e-7, kH: 3e-5, Ea: 45000 } },
   { id: 'Mg(OH)2', ions: { 'Mg^2+': 1, 'OH-': 2 }, Ksp: 5.61e-12, dissolution: { k: 1e-6, kH: 1e-4, Ea: 40000 } },
+  // KCl: dễ tan (≈ 34 g/100 g nước)
+  { id: 'KCl', ions: { 'K+': 1, 'Cl-': 1 }, Ksp: 20, dissolution: { k: 1e-6, Ea: 20000 } },
+  // CaCl₂ khan: rất dễ tan (≈ 74 g/100 g nước), tan tỏa nhiều nhiệt
+  { id: 'CaCl2', ions: { 'Ca^2+': 1, 'Cl-': 2 }, Ksp: 1e3, dissolution: { k: 2e-6, Ea: 20000 } },
+  // Ca(OH)₂ ít tan (≈ 1,7 g/L): vôi tôi dư lắng xuống thành vẩn trắng
+  { id: 'Ca(OH)2', ions: { 'Ca^2+': 1, 'OH-': 2 }, Ksp: 5.5e-6, dissolution: { k: 3e-6, kH: 1e-4, Ea: 30000 } },
+  // Vôi sống: CaO + H₂O → Ca(OH)₂, tỏa nhiều nhiệt. Luôn "tan" (Ca(OH)₂ dư kết tủa lại ngay)
+  { id: 'CaO', ions: { 'Ca^2+': 1, 'OH-': 2 }, Ksp: 1e6, dissolution: { k: 2e-4, Ea: 30000 } },
   { id: 'CaCO3', ions: { 'Ca^2+': 1, 'CO3^2-': 1 }, Ksp: 3.36e-9, dissolution: { k: 1e-7, kH: 6e-5, Ea: 35000 } },
   { id: 'BaSO4', ions: { 'Ba^2+': 1, 'SO4^2-': 1 }, Ksp: 1.08e-10, dissolution: { k: 1e-7, Ea: 40000 } },
   // Muối dễ tan (độ tan ≈ 1,1 M): chỉ dùng khi cho bột rắn vào, hòa tan nhanh

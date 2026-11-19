@@ -213,7 +213,9 @@ export class Vessel implements GasReceiver {
         const C = this.heatCapacity();
         if (C > 0) m.tempK += (H0 - enthalpy(m)) / C;
       }
-      if (dt > 0 && (m.headspace.size || this.inTotal > 0 || this.inletRate > 1e-12)) this.vent(dt, new Map());
+      // Khí sinh ra từ chất rắn (vd. nhiệt phân) đi thẳng vào khoảng khí
+      const inflow = this.collectGases(dt);
+      if (dt > 0 && (inflow.size || m.headspace.size || this.inTotal > 0 || this.inletRate > 1e-12)) this.vent(dt, inflow);
       return;
     }
     let H0 = enthalpy(m);
@@ -238,6 +240,13 @@ export class Vessel implements GasReceiver {
     m.tempK += (H0 - enthalpy(m)) / this.heatCapacity();
 
     // Bọt khí: khí sinh ra trong dung dịch đi vào khoảng khí phía trên
+    const inflow = this.collectGases(dt);
+    if (dt > 0 || inflow.size) this.vent(dt, inflow);
+  }
+
+  /** Lấy khí vừa sinh ra khỏi hỗn hợp (để đưa vào khoảng khí), cập nhật tốc độ thoát khí */
+  private collectGases(dt: number): Map<string, number> {
+    const m = this.mix;
     const tau = 0.5; // làm mượt tốc độ thoát khí để hiển thị
     const dtEff = dt > 0 ? dt : 0.05;
     const inflow = new Map<string, number>();
@@ -253,7 +262,7 @@ export class Vessel implements GasReceiver {
       if (next > 1e-12) this.gasRate.set(id, next);
       else this.gasRate.delete(id);
     }
-    if (dt > 0 || inflow.size) this.vent(dt, inflow);
+    return inflow;
   }
 
   private vent(dt: number, inflow: Map<string, number>): void {
