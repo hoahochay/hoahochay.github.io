@@ -2,7 +2,7 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { bleachRate, contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
 import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
@@ -12,7 +12,8 @@ import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
 import { setRGB } from './materials';
 import { DeliveryTubeView } from './deliveryTube';
-import { blueFlame, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
+import { blueFlame, DYE_PAPER_COLOR, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
+import { X_HIDDEN_TURBIDITY, XCard } from './xcard';
 import { burnOutcome, burnRefusal, TongsView } from './burn';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
@@ -274,6 +275,7 @@ function pour(def: ReagentDef, amount: number, view: VesselView) {
     call(() => {
       stream.visible = drop.visible = false;
       addPending(view, -mL);
+      startXCard(view);
       if (def.indicator) view.vessel.add(indicatorDrops(def.indicator, drops));
       else view.vessel.add(makeSolution(def.solutes, mL / 1000, view.vessel.roomK));
       const what = def.indicator
@@ -325,6 +327,8 @@ const TOOL_NAME: Record<ToolKind, string> = {
   litmus_sol: 'giấy quỳ tím',
   ph_paper: 'giấy pH',
   magnet: 'nam châm',
+  xcard: 'tờ giấy kẻ chữ X',
+  dye_paper: 'mẩu giấy màu ẩm',
 };
 
 /** Đưa nam châm lại gần đáy dụng cụ: sắt tự do (bột sắt, đinh sắt) bị hút; FeS thì không */
@@ -389,6 +393,7 @@ const LITMUS_SAYS: Record<string, string> = {
 
 /** Lấy mẩu quỳ đang nhúng trong dụng cụ ra (bỏ đi) */
 function removeDipped(v: VesselView) {
+  removeXCard(v);
   const d = dipped.get(v);
   if (!d) return;
   v.group.remove(d.p.group);
@@ -413,6 +418,56 @@ function updateDipped(v: VesselView, pH: number, dt: number) {
   }
 }
 
+// ── Tờ giấy kẻ chữ X đặt sau dụng cụ + đồng hồ bấm giờ (đo thời gian dung dịch đục che khuất chữ X) ──
+const xcards = new Map<VesselView, { card: XCard; start: number | null; doneAt: number | null }>();
+
+function placeXCard(view: VesselView) {
+  removeXCard(view);
+  const card = new XCard();
+  // Phía sau dụng cụ (camera nhìn từ phía +z), sát thành
+  card.group.position.set(0, 0, -(view.kind.profile.radius(1) + 0.45));
+  view.group.add(card.group);
+  xcards.set(view, { card, start: null, doneAt: null });
+  log('Đặt tờ giấy kẻ chữ X phía sau, đồng hồ bấm giờ bắt đầu chạy khi rót chất tiếp theo vào', 'action', view.name);
+}
+
+function removeXCard(v: VesselView) {
+  const x = xcards.get(v);
+  if (!x) return;
+  v.group.remove(x.card.group);
+  x.card.dispose();
+  xcards.delete(v);
+}
+
+/** Rót thêm chất vào dụng cụ đã có dung dịch: bắt đầu bấm giờ */
+function startXCard(v: VesselView) {
+  const x = xcards.get(v);
+  if (x && x.start === null && v.vessel.mix.volumeL > 1e-5) x.start = simTime;
+}
+
+const fmtS = (s: number) => s.toFixed(1).replace('.', ',') + ' s';
+
+function updateXCard(v: VesselView, turbidity: number) {
+  const x = xcards.get(v);
+  if (!x) return;
+  const t = x.start === null ? 0 : simTime - x.start;
+  if (x.doneAt === null && x.start !== null && turbidity >= X_HIDDEN_TURBIDITY) {
+    x.doneAt = t;
+    log(`Không còn nhìn thấy chữ X: sau ${fmtS(t)} kể từ khi rót`, 'phenomenon', v.name);
+  }
+  // Chữ X còn khá rõ khi mới hơi đục, mờ nhanh khi gần bị che khuất hẳn; đồng hồ dừng lúc chữ X biến mất
+  x.card.set(1 - Math.min(1, turbidity / X_HIDDEN_TURBIDITY) ** 4, x.doneAt !== null ? `⏹ ${fmtS(x.doneAt)}` : `⏱ ${fmtS(t)}`);
+}
+
+/** Dòng "đồng hồ" trong bảng thông tin của dụng cụ đang chọn */
+function xcardText(v: VesselView): string | undefined {
+  const x = xcards.get(v);
+  if (!x) return undefined;
+  if (x.doneAt !== null) return `⏹ ${fmtS(x.doneAt)} · không còn nhìn thấy chữ X`;
+  if (x.start === null) return '⏱ chờ rót chất tiếp theo vào';
+  return `⏱ ${fmtS(simTime - x.start)}`;
+}
+
 function probe(kind: ToolKind, view: VesselView, queued = false) {
   const dip = kind === 'litmus_sol' || kind === 'ph_paper';
   const phPaper = kind === 'ph_paper';
@@ -425,14 +480,18 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   if (dip && view.vessel.mix.volumeL < 1e-5) return log(`Không có dung dịch để thử bằng ${TOOL_NAME[kind]}.`, 'warning', view.name);
   rec({ kind: 'probe', tool: kind, vessel: idx(view) });
   if (kind === 'magnet') return magnetTest(view);
+  if (kind === 'xcard') return placeXCard(view);
   const p = new ProbeView(kind);
-  const isPaper = kind === 'litmus' || dip;
-  const holdTime = dip ? 3 : isPaper ? 5 : 3;
+  const dye = kind === 'dye_paper';
+  const isPaper = kind === 'litmus' || dip || dye;
+  const holdTime = dye ? 8 : dip ? 3 : isPaper ? 5 : 3;
+  /** Giấy màu ẩm: mức đã bị tẩy màu (0 → 1), không phục hồi */
+  let bleached = 0;
   /** pH mà giấy quỳ "thấy": dung dịch (nhúng vào) hoặc lớp nước trên giấy ẩm cân bằng với khí */
   const paperPH = () => (dip ? view.vessel.observe().pH : litmusPH(view.vessel));
   let above = new THREE.Vector3();
   let at = new THREE.Vector3();
-  let paper: RGB = phPaper ? PH_PAPER_DRY : [0.56, 0.32, 0.62];
+  let paper: RGB = phPaper ? PH_PAPER_DRY : dye ? DYE_PAPER_COLOR : [0.56, 0.32, 0.62];
   let decided = false;
   let elapsed = 0;
   const fx: { obj: THREE.Object3D; life: number; age: number; update: (o: THREE.Object3D, t: number) => void }[] = [];
@@ -497,7 +556,8 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
           at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.8 : -0.35, 0));
           above = at.clone().add(new THREE.Vector3(0, -0.5, 6));
         } else {
-          at = m.clone().add(new THREE.Vector3(0, isPaper ? -0.6 : -0.5, 0));
+          // Giấy màu ẩm (gắn ở nút đậy) đưa sâu vào trong bình chứa khí
+          at = m.clone().add(new THREE.Vector3(0, dye ? -Math.min(3, view.kind.profile.height * 0.35) : isPaper ? -0.6 : -0.5, 0));
           above = at.clone().add(new THREE.Vector3(0, 4, 0));
         }
         p.group.position.copy(above);
@@ -510,7 +570,11 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
     (dt) => {
       elapsed += dt;
       p.update(dt);
-      if (isPaper) {
+      if (dye) {
+        bleached = Math.min(1, bleached + bleachRate(view.vessel) * dt);
+        paper = DYE_PAPER_COLOR.map((c) => c + (0.96 - c) * bleached) as RGB;
+        p.setPaperColor(paper);
+      } else if (isPaper) {
         const target = phPaper ? phPaperColor(paperPH()) : litmusColor(paperPH());
         const k = Math.min(1, dt / 1.2);
         paper = paper.map((c, i) => c + (target[i] - c) * k) as RGB;
@@ -522,7 +586,11 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
         if (f.age >= f.life) removeTemp(f.obj);
       }
       if (elapsed < holdTime) return false;
-      if (isPaper) {
+      if (dye) {
+        log(bleached > 0.5 ? 'Mẩu giấy màu ẩm bị mất màu → có khí chlorine (chlorine ẩm có tính tẩy màu)'
+          : bleached > 0.1 ? 'Mẩu giấy màu ẩm nhạt màu đi một chút → có ít khí chlorine'
+            : 'Mẩu giấy màu ẩm không đổi màu', 'phenomenon', view.name);
+      } else if (isPaper) {
         const verdict = litmusVerdict(paperPH());
         if (phPaper) log(phSays(paperPH()), 'phenomenon', view.name);
         else if (dip) log(verdict === 'base' ? 'Giấy quỳ tím chuyển màu xanh → dung dịch có tính base'
@@ -771,7 +839,7 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false): boolean {
       transfer(mL * t);
     }, {
       ease: (t) => t,
-      onStart: () => setRGB(stream.material.color, src.vessel.observe().appearance),
+      onStart: () => { setRGB(stream.material.color, src.vessel.observe().appearance); startXCard(dst); },
     }),
     call(() => {
       stream.visible = false;
@@ -1768,6 +1836,7 @@ function frame() {
     const o = v.vessel.observe();
     v.update(o, dt, speed);
     updateDipped(v, o.pH, dt);
+    updateXCard(v, o.turbidity);
     for (const e of tracker.check(v, o)) hud.log({ ...e, t: simTime });
     if (v === selected) selObs = o;
   }
@@ -1777,7 +1846,7 @@ function frame() {
   const g = balanceReading();
   balanceView.display(g);
   balancePanel.record(simTime, g);
-  hud.panel(selected, selObs, realTime);
+  hud.panel(selected, selObs, realTime, selected ? xcardText(selected) : undefined);
   hud.setTime(simTime);
   lamp.update(dt);
   controls.update();

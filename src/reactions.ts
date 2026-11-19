@@ -129,6 +129,24 @@ export const REACTIONS: KineticReaction[] = [
     rate: massAction({ k25: 2e3, Ea: 10000, orders: { I2: 1, amylose: 1 } }),
   },
 
+  // ── Điều chế chlorine: thuốc tím + hydrochloric acid đặc (SGK Hóa 10 Bài 21) ──
+  // Cần acid đặc: tốc độ tăng rất mạnh theo nồng độ H⁺ và Cl⁻, với HCl loãng gần như không xảy ra
+  {
+    id: 'kmno4_hcl', name: 'Thuốc tím tác dụng với hydrochloric acid đặc',
+    equation: '2KMnO₄ + 16HCl → 2KCl + 2MnCl₂ + 5Cl₂↑ + 8H₂O',
+    reactants: { 'MnO4-': 1, 'H+': 8, 'Cl-': 5 }, products: { 'Mn^2+': 1, Cl2: 2.5, H2O: 4 },
+    rate: massAction({ k25: 5e-5, Ea: 40000, orders: { 'MnO4-': 1, 'H+': 2, 'Cl-': 1 } }),
+  },
+
+  // ── Thiosulfate + acid: lưu huỳnh hạt mịn làm dung dịch đục dần (SGK Hóa 10 Bài 19) ──
+  // Tốc độ tỉ lệ nồng độ thiosulfate: nồng độ gấp đôi thì thời gian đục che khuất chữ X giảm một nửa
+  {
+    id: 'thiosulfate_acid', name: 'Sodium thiosulfate tác dụng với acid',
+    equation: 'Na₂S₂O₃ + H₂SO₄ → Na₂SO₄ + S↓ + SO₂ + H₂O',
+    reactants: { 'S2O3^2-': 1, 'H+': 2 }, products: { 'S(coll)': 1, SO2: 1, H2O: 1 },
+    rate: massAction({ k25: 4.4e-3, Ea: 50000, orders: { 'S2O3^2-': 1, 'H+': 1 } }),
+  },
+
   // ── Magnesium + nước ─────────────────────────────────────────────────
   // Nước nguội: rất chậm (vài phút mới thấy phenolphthalein hồng nhạt); nước nóng: nhanh hơn hàng trăm lần.
   // Mg(OH)₂ ít tan nên dung dịch chỉ có tính base yếu (pH ≈ 10).

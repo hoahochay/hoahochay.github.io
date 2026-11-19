@@ -34,6 +34,7 @@ export const REAGENTS: ReagentDef[] = [
   reagent('hcl', 'HCl', '1M', 'hydrochloric acid', { HCl: 1 }),
   reagent('hcl01', 'HCl', '0,1M', 'hydrochloric acid', { HCl: 0.1 }, { aka: 'hcl loang 0,1m' }),
   reagent('hcl05', 'HCl', '0,5M', 'hydrochloric acid', { HCl: 0.5 }),
+  reagent('hcl_dac', 'HCl', 'đặc', 'hydrochloric acid đặc (≈ 37%)', { HCl: 12 }, { aka: 'hcl dac axit clohidric dac 37%' }),
   reagent('hno3', 'HNO₃', '1M', 'nitric acid loãng', { HNO3: 1 }),
   reagent('h2so4', 'H₂SO₄', '0,5M', 'sulfuric acid loãng', { H2SO4: 0.5 }),
   reagent('acetic', 'CH₃COOH', '1M', 'acetic acid', { CH3COOH: 1 }),
@@ -49,6 +50,9 @@ export const REAGENTS: ReagentDef[] = [
   reagent('nacl', 'NaCl', '0,1M', 'sodium chloride', { NaCl: 0.1 }),
   reagent('nabr', 'NaBr', '0,1M', 'sodium bromide', { NaBr: 0.1 }),
   reagent('nai', 'NaI', '0,1M', 'sodium iodide', { NaI: 0.1 }),
+  reagent('na2s2o3_005', 'Na₂S₂O₃', '0,05M', 'sodium thiosulfate', { Na2S2O3: 0.05 }),
+  reagent('na2s2o3_01', 'Na₂S₂O₃', '0,10M', 'sodium thiosulfate', { Na2S2O3: 0.1 }),
+  reagent('na2s2o3_03', 'Na₂S₂O₃', '0,30M', 'sodium thiosulfate', { Na2S2O3: 0.3 }),
   reagent('cl2_water', 'Nước Cl₂', '0,05M', 'nước chlorine', { Cl2: 0.05 }, { amber: true, aka: 'nuoc clo chlorine cl2' }),
   reagent('br2_water', 'Nước Br₂', '0,02M', 'nước bromine loãng', { Br2: 0.02 }, { amber: true, aka: 'nuoc brom bromine br2' }),
   reagent('starch_sol', 'Hồ tinh bột', '1%', 'thuốc thử iodine', { starch: 0.06 }, { aka: 'ho tinh bot starch' }),
@@ -117,7 +121,11 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'vitc', id: 'VitC', label: 'Viên vitamin C sủi', aka: 'vitamin c sui vien sui c sui citric acid', grams: 0.25, form: 'granule', shape: 'chunk' },
   { key: 'kclo3', id: 'KClO3', label: 'Potassium chlorate', aka: 'kali clorat kclo3 dieu che oxygen oxi', grams: 0.5, form: 'powder', shape: 'powder' },
   { key: 'cacl2_solid', id: 'CaCl2', label: 'Calcium chloride khan', aka: 'canxi clorua cacl2 ran khan', grams: 5, form: 'powder', shape: 'powder' },
+  { key: 'kmno4', id: 'KMnO4', label: 'Thuốc tím', aka: 'potassium permanganate kmno4 thuoc tim kali pemanganat', grams: 0.2, form: 'powder', shape: 'powder' },
   { key: 'cao', id: 'CaO', label: 'Vôi sống (cục)', aka: 'calcium oxide cao voi song', grams: 1, form: 'granule', shape: 'chunk' },
+  { key: 'na2o', id: 'Na2O', label: 'Sodium oxide', aka: 'natri oxit na2o', grams: 0.1, form: 'powder', shape: 'powder' },
+  { key: 'mgo', id: 'MgO', label: 'Magnesium oxide', aka: 'magie oxit mgo', grams: 0.1, form: 'powder', shape: 'powder' },
+  { key: 'p2o5', id: 'P2O5', label: 'Diphosphorus pentoxide', aka: 'diphotpho pentaoxit p2o5 p4o10', grams: 0.1, form: 'powder', shape: 'powder' },
   { key: 'cuo', id: 'CuO', label: 'Copper(II) oxide (bột)', aka: 'dong oxit cuo bot den oxide base', grams: 0.08, form: 'powder', shape: 'powder' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
@@ -171,7 +179,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {
@@ -195,6 +203,8 @@ export const CHEMICALS: ChemEntry[] = [
     ['litmus_sol', 'litmus_sol', 'Giấy quỳ tím', 'Thử dung dịch acid / base', 'quy tim dung dich acid base axit bazo thu mau'],
     ['ph_paper', 'ph_paper', 'Giấy pH', 'Đo pH dung dịch theo bảng màu', 'giay ph thang ph chi thi van nang do ph'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
+    ['dye_paper', 'dye_paper', 'Mẩu giấy màu ẩm', 'Thử tính tẩy màu của khí chlorine', 'giay mau am tay mau chlorine clo cl2'],
+    ['xcard', 'xcard', 'Tờ giấy kẻ chữ X', 'Bấm giờ đến khi dung dịch đục che khuất chữ X', 'giay chu x dong ho bam gio toc do phan ung do duc luu huynh thiosulfate'],
     ['delivery', 'delivery', 'Ống dẫn khí', 'Dẫn khí sang ống khác', 'ong dan khi thu khi suc khi nut cao su'],
     ['balance', 'balance', 'Cân điện tử', 'Cân dụng cụ, chính xác 0,01 g', 'can dien tu khoi luong bao toan khoi luong tru bi dung cu do'],
     ['syringe', 'syringe', 'Xi lanh đo khí', 'Đo thể tích khí theo thời gian', 'xi lanh gas syringe do the tich khi toc do phan ung do thi dung cu do'],
@@ -215,6 +225,9 @@ export const SOLID_COLOR_NAME: Record<string, string> = {
   CaCO3: 'trắng',
   BaSO4: 'trắng',
   PbI2: 'vàng',
+  AgBr: 'vàng nhạt',
+  AgI: 'vàng',
+  'S(coll)': 'trắng ngà',
   Cu: 'đỏ',
   Ag: 'xám bạc',
 };

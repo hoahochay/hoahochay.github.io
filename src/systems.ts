@@ -19,6 +19,7 @@ export const FAMILIES: AcidBaseFamily[] = [
   { id: 'sulfate', forms: ['HSO4-', 'SO4^2-'], pKa: [1.99] },
   // Hydrofluoric acid là acid yếu (các HX khác là acid mạnh, phân li hoàn toàn)
   { id: 'fluoride', forms: ['HF', 'F-'], pKa: [3.17] },
+  { id: 'phosphate', forms: ['H3PO4', 'H2PO4-', 'HPO4^2-', 'PO4^3-'], pKa: [2.15, 7.20, 12.35] },
   { id: 'citrate', forms: ['H3Cit', 'H2Cit-', 'HCit^2-', 'Cit^3-'], pKa: [3.13, 4.76, 6.40] },
   // Thủy phân ion kim loại: [M(H2O)]n+ ⇌ [M(OH)](n-1)+ + H+
   { id: 'iron3', forms: ['Fe^3+', 'FeOH^2+'], pKa: [2.2] },
@@ -43,6 +44,8 @@ export interface SolidDef {
    * Kết tủa hình thành tức thời; hòa tan thì cần thời gian. Hydroxide mới kết tủa tan rất nhanh trong acid.
    */
   dissolution: { k: number; kH?: number; Ea: number };
+  /** Chỉ tan, không kết tủa lại từ dung dịch (oxide: ion của nó kết tủa dưới dạng hydroxide/muối khác) */
+  dissolveOnly?: boolean;
 }
 
 export const SOLIDS: SolidDef[] = [
@@ -63,6 +66,13 @@ export const SOLIDS: SolidDef[] = [
   { id: 'Ca(OH)2', ions: { 'Ca^2+': 1, 'OH-': 2 }, Ksp: 5.5e-6, dissolution: { k: 3e-6, kH: 1e-4, Ea: 30000 } },
   // Vôi sống: CaO + H₂O → Ca(OH)₂, tỏa nhiều nhiệt. Luôn "tan" (Ca(OH)₂ dư kết tủa lại ngay)
   { id: 'CaO', ions: { 'Ca^2+': 1, 'OH-': 2 }, Ksp: 1e6, dissolution: { k: 2e-4, Ea: 30000 } },
+  // Oxide chu kì 3 + nước (SGK Hóa 10 Bài 7): Na₂O tan hết tạo NaOH (base mạnh);
+  // MgO chỉ tan rất ít (Mg(OH)₂ ít tan, base yếu); P₂O₅ tan hết tạo H₃PO₄ (acid trung bình)
+  // Thuốc tím: tan khá tốt (≈ 6,4 g/100 mL), dung dịch màu tím
+  { id: 'KMnO4', ions: { 'K+': 1, 'MnO4-': 1 }, Ksp: 0.16, dissolution: { k: 3e-5, Ea: 20000 } },
+  { id: 'Na2O', ions: { 'Na+': 2, 'OH-': 2 }, Ksp: 1e6, dissolution: { k: 3e-4, Ea: 20000 }, dissolveOnly: true },
+  { id: 'MgO', ions: { 'Mg^2+': 1, 'OH-': 2 }, Ksp: 5.61e-12, dissolution: { k: 2e-6, Ea: 40000 }, dissolveOnly: true },
+  { id: 'P2O5', ions: { H3PO4: 2 }, Ksp: 1e6, dissolution: { k: 3e-4, Ea: 20000 }, dissolveOnly: true },
   { id: 'CaCO3', ions: { 'Ca^2+': 1, 'CO3^2-': 1 }, Ksp: 3.36e-9, dissolution: { k: 1e-7, kH: 6e-5, Ea: 35000 } },
   { id: 'BaSO4', ions: { 'Ba^2+': 1, 'SO4^2-': 1 }, Ksp: 1.08e-10, dissolution: { k: 1e-7, Ea: 40000 } },
   // Muối dễ tan (độ tan ≈ 1,1 M): chỉ dùng khi cho bột rắn vào, hòa tan nhanh

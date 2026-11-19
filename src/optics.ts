@@ -29,17 +29,19 @@ export function solutionColor(mix: Mixture, pathCm: number): RGB {
 export function turbidity(mix: Mixture, pathCm: number): { turbidity: number; color: RGB } {
   if (mix.volumeL <= 0) return { turbidity: 0, color: [1, 1, 1] };
   let grams = 0;
+  let optical = 0;
   const color: RGB = [0, 0, 0];
   for (const [id, susp] of mix.suspended) {
     const s = species(id);
     const g = mix.get(id) * susp * s.molarMass;
     if (g <= 0) continue;
     grams += g;
+    optical += g * (s.scatter ?? 1);
     const c = s.color ?? [1, 1, 1];
     for (let i = 0; i < 3; i++) color[i] += g * c[i];
   }
   if (grams <= 0) return { turbidity: 0, color: [1, 1, 1] };
-  const gPerL = grams / mix.volumeL;
+  const gPerL = optical / mix.volumeL;
   return {
     turbidity: 1 - Math.exp(-0.5 * gPerL * pathCm),
     color: color.map((x) => x / grams) as RGB,

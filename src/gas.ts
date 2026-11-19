@@ -24,6 +24,8 @@ export const GASES: GasDef[] = [
   { id: 'O2', D: 0.2 },
   { id: 'CO2', D: 0.16, dissolved: { species: 'H2CO3', kH: 0.034 } },
   { id: 'NH3(g)', D: 0.23, dissolved: { species: 'NH3', kH: 58 } },
+  // Chlorine: nặng hơn không khí (đọng lại trong bình), tan vừa phải (≈ 0,09 M ở 1 atm)
+  { id: 'Cl2(g)', D: 0.12, dissolved: { species: 'Cl2', kH: 0.09 } },
 ];
 export const GAS_INDEX = new Map(GASES.map((g) => [g.id, g]));
 

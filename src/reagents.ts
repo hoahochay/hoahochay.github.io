@@ -25,6 +25,7 @@ export const COMPOUNDS: Record<string, Compound> = {
   NaF: { name: 'sodium fluoride', ions: { 'Na+': 1, 'F-': 1 } },
   NaBr: { name: 'sodium bromide', ions: { 'Na+': 1, 'Br-': 1 } },
   NaI: { name: 'sodium iodide', ions: { 'Na+': 1, 'I-': 1 } },
+  Na2S2O3: { name: 'sodium thiosulfate', ions: { 'Na+': 2, 'S2O3^2-': 1 } },
   NaNO3: { name: 'sodium nitrate', ions: { 'Na+': 1, 'NO3-': 1 } },
   AgNO3: { name: 'silver nitrate', ions: { 'Ag+': 1, 'NO3-': 1 } },
   CuSO4: { name: 'copper(II) sulfate', ions: { 'Cu^2+': 1, 'SO4^2-': 1 } },

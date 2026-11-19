@@ -105,7 +105,8 @@ export class Hud {
   }
 
   /** Cập nhật bảng thông tin (giới hạn ~6 lần/giây) */
-  panel(view: VesselView | null, o: Observation | null, now: number): void {
+  /** stopwatch: chữ hiển thị của đồng hồ bấm giờ (tờ giấy kẻ chữ X) đặt ở dụng cụ này, nếu có */
+  panel(view: VesselView | null, o: Observation | null, now: number, stopwatch?: string): void {
     if (now - this.lastPanel < 0.16) return;
     this.lastPanel = now;
     const el = $('#info');
@@ -146,6 +147,7 @@ export class Hud {
         <div class="meter"><div class="k">Thể tích</div><div class="val">${o.volumeML.toFixed(o.volumeML < 10 ? 2 : 1)}<small> mL</small></div></div>
       </div>
       <div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>
+      ${stopwatch ? `<div class="row"><span class="k">Đồng hồ</span><b>${stopwatch}</b></div>` : ''}
       ${dissolved ? `<div class="sec">Chất tan</div><div class="chips">${dissolved}</div>` : ''}
       ${solids ? `<div class="sec">Chất rắn</div><div class="chips">${solids}</div>` : ''}
       ${gases ? `<div class="sec">Khí thoát ra</div><div class="chips">${gases}</div>` : ''}

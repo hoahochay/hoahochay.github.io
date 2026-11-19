@@ -79,6 +79,8 @@ export function runKinetics(mix: Mixture, dt: number, reactions: KineticReaction
     }
     for (const [id, nu] of Object.entries(r.products)) {
       if (IMPLICIT.has(id)) continue;
+      // Chất rắn không chỉ định hình dạng: kết tủa mịn, lơ lửng trong dung dịch
+      if (species(id).phase === 's' && !r.productForm) { mix.addPrecipitate(id, nu * dXi); continue; }
       mix.add(id, nu * dXi);
       if (species(id).phase === 's' && !mix.formFactor.has(id)) mix.setForm(id, r.productForm ?? 'precipitate');
     }

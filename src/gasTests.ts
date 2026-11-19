@@ -15,6 +15,7 @@ export interface Atmosphere {
   H2: number;
   CO2: number;
   NH3: number;
+  Cl2: number;
   /** Phần không khí còn lại */
   air: number;
 }
@@ -29,8 +30,24 @@ export function atmosphere(v: Vessel): Atmosphere {
     H2: f.H2 ?? 0,
     CO2: (f.CO2 ?? 0) + AIR.CO2 * air,
     NH3: f['NH3(g)'] ?? 0,
+    Cl2: f['Cl2(g)'] ?? 0,
     air,
   };
+}
+
+/** Phần mol chlorine ở miệng dụng cụ từ đó giấy màu ẩm bị tẩy màu rõ trong vài giây */
+export const BLEACH_MIN_CL2 = 0.05;
+
+/**
+ * Mẩu giấy màu ẩm: chlorine tan vào lớp nước trên giấy tạo HClO, chất oxi hóa mạnh, làm mất màu.
+ * Trả về tốc độ mất màu (1/s); 0 nếu không có chlorine.
+ */
+export function bleachRate(v: Vessel): number {
+  const c = atmosphere(v).Cl2;
+  return c < 0.005 ? 0 : 0.8 * c;
+}
+export function testDyePaper(v: Vessel): 'bleached' | 'none' {
+  return atmosphere(v).Cl2 >= BLEACH_MIN_CL2 ? 'bleached' : 'none';
 }
 
 export type GlowingSplintResult = 'relight' | 'none';
@@ -75,13 +92,18 @@ export function litmusPH(v: Vessel): number {
 
 const LITMUS_RED: RGB = [0.86, 0.22, 0.26];
 const LITMUS_PURPLE: RGB = [0.56, 0.32, 0.62];
-const LITMUS_BLUE: RGB = [0.22, 0.36, 0.86];
+const LITMUS_BLUE: RGB = [0.36, 0.46, 0.86];
+const LITMUS_DEEP_BLUE: RGB = [0.1, 0.2, 0.72];
 
-/** Màu quỳ tím theo pH: đỏ (pH < 4,5) – tím (5–8) – xanh (pH > 9) */
+/**
+ * Màu quỳ tím theo pH: đỏ (pH < 4,5) – tím (5–8) – xanh (pH > 9).
+ * Base càng mạnh quỳ càng xanh đậm (vd. NaOH xanh đậm, Mg(OH)₂ xanh nhạt).
+ */
 export function litmusColor(pH: number): RGB {
   const lerp = (a: RGB, b: RGB, t: number) => a.map((x, i) => x + (b[i] - x) * Math.max(0, Math.min(1, t))) as RGB;
   if (pH < 5) return lerp(LITMUS_RED, LITMUS_PURPLE, (pH - 4.2) / 0.8);
-  return lerp(LITMUS_PURPLE, LITMUS_BLUE, (pH - 8) / 1);
+  if (pH < 10) return lerp(LITMUS_PURPLE, LITMUS_BLUE, (pH - 8) / 1);
+  return lerp(LITMUS_BLUE, LITMUS_DEEP_BLUE, (pH - 10.5) / 2);
 }
 
 /** Đánh giá màu quỳ: 'acid' (đỏ), 'base' (xanh) hoặc 'neutral' (không đổi màu) */

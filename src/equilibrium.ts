@@ -150,6 +150,7 @@ export function equilibrate(mix: Mixture): void {
   for (let round = 0; round < 20; round++) {
     let changed = false;
     for (const s of SOLIDS) {
+      if (s.dissolveOnly) continue;
       const ksp = K.Ksp.get(s.id)!;
       if (ionProduct(s, logh, t, K) <= ksp * (1 + 1e-9)) continue;
       let maxD = Infinity;

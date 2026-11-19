@@ -7,6 +7,7 @@ import { syringeModel } from './syringe';
 import { balanceModel } from './balance';
 import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
+import { XCard } from './xcard';
 
 export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, string> {
   const out = new Map<string, string>();
@@ -32,12 +33,14 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = syringeModel();
     } else if (e.tool === 'balance') {
       obj = balanceModel();
+    } else if (e.tool === 'xcard') {
+      obj = new XCard().group;
     } else if (e.tool) {
       const p = new ProbeView(e.tool);
       p.update(0.016);
       obj = p.group;
       if (e.tool === 'magnet') obj.rotation.set(0.5, 0.6, 0);
-      else obj.rotation.z = e.tool === 'litmus' || e.tool === 'litmus_sol' || e.tool === 'ph_paper' ? -0.5 : -0.9;
+      else obj.rotation.z = e.tool === 'litmus' || e.tool === 'dye_paper' || e.tool === 'litmus_sol' || e.tool === 'ph_paper' ? -0.5 : -0.9;
     } else obj = e.solid ? dishModel(e.solid) : new BottleView(e.reagent!).group;
     scene.add(obj);
     const box = new THREE.Box3().setFromObject(obj);

@@ -3,8 +3,9 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { testDyePaper, contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
 import { CHEMICALS, solidMol } from '../web/catalog';
+import { X_HIDDEN_TURBIDITY } from '../web/xcard';
 import { BEAKER, CATEGORIES, FLASK, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
 
 interface RunResult {
@@ -108,6 +109,8 @@ function runRecipe(r: PlayScript): RunResult {
         if (s.tool === 'glowing') probes.push(testGlowingSplint(v));
         else if (s.tool === 'burning') probes.push(testBurningSplint(v));
         else if (s.tool === 'magnet') probes.push('magnet-' + testMagnet(v));
+        else if (s.tool === 'xcard') probes.push('xcard');
+        else if (s.tool === 'dye_paper') probes.push('dye-' + testDyePaper(v));
         else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
         else if (s.tool === 'litmus_sol') probes.push('litmus_sol-' + litmusVerdict(v.observe().pH));
         else {
@@ -402,6 +405,41 @@ describe('Thí nghiệm mẫu', () => {
     const v = vesselsOf('nhiet-do-toc-do-hoa10');
     expect(v[1].observe().solutionColor[1]).toBeLessThan(0.7);
     expect(v[0].observe().solutionColor[1]).toBeGreaterThan(0.95);
+  });
+
+  it('Lớp 10 – oxide chu kì 3 + nước: Na₂O base mạnh, MgO base yếu, P₂O₅ acid', () => {
+    const r = runRecipe(RECIPES.find((x) => x.id === 'oxide-tac-dung-nuoc')!);
+    const [a, b, c] = r.vessels;
+    expect(a.observe().pH).toBeGreaterThan(12.5);
+    expect(b.observe().pH).toBeGreaterThan(9);
+    expect(b.observe().pH).toBeLessThan(11);
+    expect(b.mix.get('MgO') * 40.3).toBeGreaterThan(0.09);
+    expect(c.observe().pH).toBeLessThan(2.5);
+    expect(a.mix.get('Na2O') + c.mix.get('P2O5')).toBeLessThan(1e-6);
+  });
+
+  it('Lớp 10 – nồng độ thiosulfate càng lớn, chữ X biến mất càng nhanh', () => {
+    const hiddenAt = (chem: string) => {
+      const v = runRecipe({ id: 'x', title: 'x', steps: [{ kind: 'add', chem, amount: 5, vessel: 0 }, { kind: 'add', chem: 'h2so4', amount: 5, vessel: 0 }] }).vessels[0];
+      let t = 0;
+      while (v.observe().turbidity < X_HIDDEN_TURBIDITY && t < 300) { v.step(0.1); t += 0.1; }
+      return t;
+    };
+    const [a, b, c] = ['na2s2o3_005', 'na2s2o3_01', 'na2s2o3_03'].map(hiddenAt);
+    expect(c).toBeGreaterThan(8); expect(c).toBeLessThan(25);
+    expect(b).toBeGreaterThan(30); expect(b).toBeLessThan(60);
+    expect(a).toBeGreaterThan(70); expect(a).toBeLessThan(120);
+    const v = vesselsOf('nong-do-toc-do-hoa10');
+    for (const i of [0, 1, 2]) expect(v[i].observe().turbidity).toBeGreaterThan(X_HIDDEN_TURBIDITY);
+  });
+
+  it('Lớp 10 – khí chlorine từ thuốc tím + HCl đặc tẩy màu giấy ẩm; HCl loãng thì không', () => {
+    const r = runRecipe(RECIPES.find((x) => x.id === 'tay-mau-chlorine-am')!);
+    expect(r.probes).toContain('dye-bleached');
+    const weak = runRecipe({ id: 'x', title: 'x', steps: [
+      { kind: 'add', chem: 'kmno4', amount: 0.2, vessel: FLASK }, { kind: 'add', chem: 'hcl', amount: 5, vessel: FLASK },
+      { kind: 'wait', seconds: 20 }, { kind: 'probe', tool: 'dye_paper', vessel: FLASK }] });
+    expect(weak.probes).toContain('dye-none');
   });
 
   it('mỗi thí nghiệm thuộc một chủ đề và một mục có trong danh sách; id không trùng', () => {

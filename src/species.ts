@@ -36,6 +36,8 @@ export interface SpeciesDef {
   indicator?: IndicatorDef;
   /** Chất rắn không tan, lơ lửng: thời gian lắng đặc trưng (s), thay cho giá trị mặc định theo hình dạng */
   settleTime?: number;
+  /** Mức tán xạ ánh sáng so với kết tủa thường (hạt keo rất mịn làm đục mạnh hơn nhiều với cùng khối lượng) */
+  scatter?: number;
 }
 
 const list: SpeciesDef[] = [];
@@ -63,6 +65,16 @@ sp('Br-', 'ion bromide', 'aq', -1, 0, -121.55, 79.9);
 sp('F-', 'ion fluoride', 'aq', -1, 0, -332.63, 19.0);
 sp('HF', 'hydrofluoric acid', 'aq', 0, 1, -320.08, 20.01);
 sp('NO3-', 'ion nitrate', 'aq', -1, 0, -205.0, 62.0);
+sp('S2O3^2-', 'ion thiosulfate', 'aq', -2, 0, -652.3, 112.13);
+sp('MnO4-', 'ion permanganate', 'aq', -1, 0, -541.4, 118.94, { epsilon: [250, 2400, 400] });
+sp('Mn^2+', 'ion manganese(II)', 'aq', 2, 0, -220.75, 54.94);
+// Sulfur dioxide tan trong nước (rất dễ tan); không tách riêng H₂SO₃ vì dung dịch đã có acid mạnh
+sp('SO2', 'sulfur dioxide', 'aq', 0, 0, -322.98, 64.07);
+// Phosphoric acid: acid ba nấc, độ mạnh trung bình
+sp('H3PO4', 'phosphoric acid', 'aq', 0, 3, -1288.34, 97.99);
+sp('H2PO4-', 'ion dihydrogenphosphate', 'aq', -1, 2, -1296.29, 96.99);
+sp('HPO4^2-', 'ion hydrogenphosphate', 'aq', -2, 1, -1292.14, 95.98);
+sp('PO4^3-', 'ion phosphate', 'aq', -3, 0, -1277.4, 94.97);
 sp('Ag+', 'ion bạc', 'aq', 1, 0, 105.58, 107.87);
 sp('Fe^2+', 'ion sắt(II)', 'aq', 2, 0, -89.1, 55.85, { epsilon: [1.2, 0.2, 0.8] });
 sp('Mg^2+', 'ion magnesium', 'aq', 2, 0, -466.85, 24.305);
@@ -95,7 +107,7 @@ sp('NH3', 'ammonia', 'aq', 0, 3, -80.29, 17.03);
 // ── Phân tử tan trung hòa ────────────────────────────────────────────────
 sp('H2O2', 'hydrogen peroxide', 'aq', 0, 2, -191.17, 34.01);
 // Halogen tan trong nước: nước chlorine vàng lục nhạt, nước bromine vàng cam, iodine (cùng I⁻ tạo I₃⁻) nâu
-sp('Cl2', 'chlorine', 'aq', 0, 0, -23.4, 70.9, { epsilon: [0.4, 0.8, 6] });
+sp('Cl2', 'chlorine', 'aq', 0, 0, -23.4, 70.9, { epsilon: [0.3, 0.2, 2.5] });
 sp('Br2', 'bromine', 'aq', 0, 0, -2.59, 159.8, { epsilon: [1, 20, 110] });
 sp('I2', 'iodine', 'aq', 0, 0, 22.6, 253.8, { epsilon: [60, 160, 600] });
 // Hồ tinh bột (tính theo mắt xích C₆H₁₀O₅) và phức xanh tím với iodine
@@ -132,6 +144,8 @@ sp('starch', 'tinh bột', 's', 0, 10, -960, 162.14, { color: [0.97, 0.96, 0.92]
 // tan nhanh hơn trong nước nóng. Bỏ qua vitamin C, đường, hương liệu (không tạo khí).
 sp('VitC', 'viên vitamin C sủi', 's', 0, 11, -4396.2, 444.15, { color: [0.98, 0.93, 0.62], label: 'Vitamin C sủi' });
 sp('S', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.96, 0.84, 0.18] });
+// Lưu huỳnh sinh ra trong dung dịch (thiosulfate + acid): hạt rất mịn, lơ lửng lâu, làm dung dịch đục trắng ngà
+sp('S(coll)', 'lưu huỳnh', 's', 0, 0, 0, 32.06, { color: [0.97, 0.95, 0.8], label: 'S', settleTime: 3600, scatter: 40 });
 sp('FeS', 'iron(II) sulfide', 's', 0, 0, -100.0, 87.91, { color: [0.13, 0.12, 0.11] });
 sp('CuO', 'copper(II) oxide', 's', 0, 0, -157.3, 79.55, { color: [0.08, 0.08, 0.09] });
 sp('MnO2', 'manganese dioxide', 's', 0, 0, -520.03, 86.94, { color: [0.1, 0.1, 0.1] });
@@ -147,6 +161,11 @@ sp('KClO3', 'potassium chlorate', 's', 0, 0, -397.73, 122.55, { color: [0.98, 0.
 sp('KCl', 'potassium chloride', 's', 0, 0, -436.5, 74.55, { color: [0.97, 0.97, 0.97] });
 sp('CaCl2', 'calcium chloride', 's', 0, 0, -795.4, 110.98, { color: [0.97, 0.97, 0.96] });
 sp('CaO', 'calcium oxide', 's', 0, 0, -634.92, 56.08, { color: [0.95, 0.94, 0.9] });
+sp('KMnO4', 'potassium permanganate', 's', 0, 0, -837.2, 158.03, { color: [0.22, 0.05, 0.25] });
+sp('Na2O', 'sodium oxide', 's', 0, 0, -414.22, 61.98, { color: [0.97, 0.97, 0.96] });
+sp('MgO', 'magnesium oxide', 's', 0, 0, -601.6, 40.3, { color: [0.97, 0.97, 0.97], settleTime: 30 });
+// Tính theo đơn vị P₂O₅ (phân tử thật là P₄O₁₀)
+sp('P2O5', 'diphosphorus pentoxide', 's', 0, 0, -1492, 141.94, { color: [0.98, 0.98, 0.98] });
 sp('Ca(OH)2', 'calcium hydroxide', 's', 0, 2, -985.2, 74.09, { color: WHITE });
 sp('Mg(OH)2', 'magnesium hydroxide', 's', 0, 2, -924.54, 58.32, { color: WHITE });
 sp('CaCO3', 'calcium carbonate', 's', 0, 0, -1206.92, 100.09, { color: WHITE });
@@ -158,6 +177,7 @@ sp('H2', 'khí hydrogen', 'g', 0, 2, 0, 2.016);
 sp('O2', 'khí oxygen', 'g', 0, 0, 0, 32.0);
 sp('CO2', 'khí carbon dioxide', 'g', 0, 0, -393.51, 44.01);
 sp('NH3(g)', 'khí ammonia', 'g', 0, 3, -45.94, 17.03);
+sp('Cl2(g)', 'khí chlorine', 'g', 0, 0, 0, 70.9);
 
 export const SPECIES: Readonly<Record<string, SpeciesDef>> = Object.fromEntries(
   list.map((s) => [s.id, s]),

@@ -67,6 +67,9 @@ export class VesselView {
   private selected = false;
   private hovered = false;
   private readonly liquid: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  /** Khí có màu (chlorine vàng lục) trong khoảng khí phía trên chất lỏng */
+  private readonly gasFill: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  private gasFrom = -1;
   private readonly sediment: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
   /** Quầng sáng khi lớp bột khô nóng đỏ */
   private readonly hotGlow: THREE.Sprite;
@@ -114,6 +117,13 @@ export class VesselView {
     );
     this.liquid.renderOrder = 2;
     this.group.add(this.liquid);
+    this.gasFill = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial({ color: 0xc8d84a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    this.gasFill.renderOrder = 3;
+    this.gasFill.visible = false;
+    this.group.add(this.gasFill);
 
     this.sediment = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ roughness: 0.95 }));
     this.sediment.visible = false;
@@ -278,6 +288,21 @@ export class VesselView {
     const strength = 1 - Math.min(...c);
     setRGB(this.liquid.material.color, [c[0] * 0.93, c[1] * 0.97, c[2]]);
     this.liquid.material.opacity = Math.min(0.94, 0.2 + 0.6 * strength + 0.75 * o.turbidity);
+    // Dung dịch màu đậm: giảm phản chiếu môi trường, nếu không lớp dung dịch mỏng (đáy bình nón) trông bạc trắng
+    this.liquid.material.envMapIntensity = 0.8 * (1 - 0.85 * strength);
+
+    // ── Khí chlorine màu vàng lục đọng trong dụng cụ ──
+    const cl2 = o.headspace['Cl2(g)'] ?? 0;
+    this.gasFill.visible = cl2 > 0.01 && !this.vessel.inverted;
+    if (this.gasFill.visible) {
+      const from = Math.max(h, 0.05);
+      if (Math.abs(from - this.gasFrom) > 0.01) {
+        this.gasFrom = from;
+        this.gasFill.geometry.dispose();
+        this.gasFill.geometry = filledLathe(p, from, p.height * 0.97, 0.02);
+      }
+      this.gasFill.material.opacity = Math.min(0.35, 0.08 + 0.6 * cl2);
+    }
 
     this.updateSediment(o);
     this.updateSolids(o, dt);

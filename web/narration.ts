@@ -13,6 +13,8 @@ const PROBE_NAME: Record<ToolKind, string> = {
   litmus_sol: 'mẩu giấy quỳ tím',
   ph_paper: 'mẩu giấy pH',
   magnet: 'nam châm',
+  xcard: 'tờ giấy kẻ chữ X',
+  dye_paper: 'mẩu giấy màu ẩm',
 };
 
 /** Tên dụng cụ theo số thứ tự dùng trong kịch bản (khớp với tên trong cảnh 3D) */
@@ -44,7 +46,9 @@ export function describeStep(s: Step): string {
       ? 'Tháo ống dẫn khí.'
       : `Lắp ống dẫn khí từ ${vn(s.src)} sang ${vn(s.dst)}.`);
     case 'invert': return s.text ?? `Úp ngược ${vn(s.vessel)}.`;
-    case 'probe': return s.text ?? (s.tool === 'magnet'
+    case 'probe': return s.text ?? (s.tool === 'xcard'
+      ? `Đặt tờ giấy kẻ chữ X phía sau ${vn(s.vessel)}.`
+      : s.tool === 'magnet'
       ? `Đưa nam châm lại gần đáy ${vn(s.vessel)}.`
       : s.tool === 'litmus_sol' || s.tool === 'ph_paper' ? `Nhúng đầu ${PROBE_NAME[s.tool]} vào dung dịch trong ${vn(s.vessel)}.`
       : `Đưa ${PROBE_NAME[s.tool]} vào miệng ${vn(s.vessel)}.`);
