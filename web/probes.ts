@@ -7,7 +7,7 @@ import { setRGB, softCircleTexture } from './materials';
 /** xcard: tờ giấy kẻ chữ X đặt sau ống, kèm đồng hồ bấm giờ (xem xcard.ts) */
 /** dye_paper: mẩu giấy màu ẩm thử tính tẩy màu của khí chlorine */
 export type ToolKind = 'glowing' | 'burning' | 'litmus' | 'litmus_sol' | 'ph_paper' | 'ph_moist' | 'magnet' | 'xcard' | 'dye_paper'
-  | 'ice_bath' | 'hot_bath' | 'no2_tube' | 'spoon_s';
+  | 'ice_bath' | 'warm_bath' | 'hot_bath' | 'no2_tube' | 'spoon_s' | 'dish_burn' | 'burette';
 /** Màu ban đầu của mẩu giấy màu ẩm */
 export const DYE_PAPER_COLOR: RGB = [0.86, 0.16, 0.3];
 
@@ -177,6 +177,16 @@ export function blueFlame(): THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMat
   const m = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 16, 10).scale(1, 1.8, 1).translate(0, 0.8, 0),
     new THREE.MeshBasicMaterial({ color: 0x7fb4ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }),
+  );
+  m.renderOrder = 5;
+  return m;
+}
+
+/** Ngọn lửa sáng màu vàng của ethylene / acetylene cháy ở miệng ống */
+export function brightFlame(): THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 16, 10).scale(1, 2.2, 1).translate(0, 1.1, 0),
+    new THREE.MeshBasicMaterial({ color: 0xffb23a, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   m.renderOrder = 5;
   return m;

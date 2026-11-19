@@ -2,20 +2,21 @@ import { isPhone, phoneQuery } from './layout';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { bleachRate, burnSulfurIn, contentsMassG, indicatorDrops, litmusColor, litmusPH, litmusVerdict, makeSolution, RGB, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
+import { Burette, bleachRate, burnSulfurIn, contentsMassG, liquidBurn, litmusColor, litmusPH, litmusVerdict, RGB, species, testBurningSplint, testMagnet, testGlowingSplint } from '../src';
 import { Animator, call, easeIn, Step as AnimStep, tween } from './anim';
-import { CHEMICALS, ChemEntry, ReagentDef, SolidItem, solidMol } from './catalog';
+import { BURETTE_SOLUTES, CHEMICALS, ChemEntry, ReagentDef, reagentMixture, SolidItem, solidMol } from './catalog';
 import { RecipePlayer } from './recipePlayer';
-import { RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
+import { BuretteAction, RECIPE_ALIASES, RECIPES, Step as ScriptStep, SYRINGE } from './recipes';
 import { ChemPanel } from './chemPanel';
 import { LogEntry, PhenomenaTracker } from './events';
 import { Hud } from './hud';
 import { setRGB } from './materials';
 import { DeliveryTubeView } from './deliveryTube';
-import { blueFlame, DYE_PAPER_COLOR, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
+import { blueFlame, brightFlame, DYE_PAPER_COLOR, PH_PAPER_DRY, phPaperColor, popFlash, ProbeView, smokePuff, ToolKind } from './probes';
 import { X_HIDDEN_TURBIDITY, XCard } from './xcard';
-import { BATH_TEMP_C, BathKind, BathView } from './bath';
-import { burnOutcome, burnRefusal, spoonModel, TongsView } from './burn';
+import { BATH_TEMP_C, BATH_TOOL, BathKind, BathView } from './bath';
+import { BuretteView } from './buretteView';
+import { burnOutcome, burnRefusal, porcelainDishModel, spoonModel, TongsView } from './burn';
 import { BottleView, heatingStand, LampView, solidPiece, tubeRack } from './props';
 import { playPop } from './sound';
 import './style.css';
@@ -163,6 +164,7 @@ const hud = new Hud({
   onEmpty: () => locked() || empty(),
   onFocus: () => toggleFocus(),
   onInvert: () => locked() || invert(),
+  onBurette: (a) => locked() || (selected && buretteAction(selected, a)),
 });
 
 /**
@@ -217,7 +219,7 @@ const fmt = (x: number) => String(+x.toFixed(2)).replace('.', ',');
 function pour(def: ReagentDef, amount: number, view: VesselView) {
   const drops = def.indicator ? Math.max(1, Math.round(amount)) : 0;
   let mL = def.indicator ? drops * 0.05 : amount;
-  const room = view.capacityML - view.vessel.mix.volumeL * 1000 - pendingML(view);
+  const room = view.capacityML - view.vessel.mix.liquidL() * 1000 - pendingML(view);
   if (room < 0.01) {
     log(`${view.name} đã đầy.`, 'warning', view.name);
     return;
@@ -277,8 +279,7 @@ function pour(def: ReagentDef, amount: number, view: VesselView) {
       stream.visible = drop.visible = false;
       addPending(view, -mL);
       startXCard(view);
-      if (def.indicator) view.vessel.add(indicatorDrops(def.indicator, drops));
-      else view.vessel.add(makeSolution(def.solutes, mL / 1000, view.vessel.roomK));
+      view.vessel.add(reagentMixture(def, def.indicator ? drops : mL, view.vessel.roomK));
       const what = def.indicator
         ? `${drops} giọt ${def.formula.toLowerCase()}`
         : `${fmt(mL)} mL ${def.formula}${def.key === 'water' || !def.conc ? '' : ' ' + def.conc}`;
@@ -329,9 +330,12 @@ const TOOL_NAME: Record<ToolKind, string> = {
   ph_paper: 'giấy pH',
   ph_moist: 'giấy pH ẩm',
   ice_bath: 'cốc nước đá',
+  warm_bath: 'cốc nước ấm',
   hot_bath: 'cốc nước nóng',
   no2_tube: 'khí NO₂',
   spoon_s: 'muôi sắt đựng lưu huỳnh',
+  dish_burn: 'bát sứ',
+  burette: 'burette chứa dung dịch NaOH',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -440,7 +444,7 @@ function placeXCard(view: VesselView) {
 
 // ── Cốc nước đá / nước nóng để ngâm ống nghiệm ──
 const baths = new Map<VesselView, BathView>();
-const BATH_NAME: Record<BathKind, string> = { ice: 'cốc nước đá', hot: 'cốc nước nóng' };
+const BATH_NAME: Record<BathKind, string> = { ice: 'cốc nước đá', warm: 'cốc nước ấm', hot: 'cốc nước nóng' };
 
 function toggleBath(view: VesselView, kind: BathKind) {
   if (view.kind.type !== 'tube') return log('Chỉ ngâm được ống nghiệm vào cốc nước.', 'warning', view.name);
@@ -529,9 +533,11 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
   rec({ kind: 'probe', tool: kind, vessel: idx(view) });
   if (kind === 'magnet') return magnetTest(view);
   if (kind === 'xcard') return placeXCard(view);
-  if (kind === 'ice_bath' || kind === 'hot_bath') return toggleBath(view, kind === 'ice_bath' ? 'ice' : 'hot');
+  if (kind === 'ice_bath' || kind === 'warm_bath' || kind === 'hot_bath') return toggleBath(view, BATH_TOOL[kind]);
   if (kind === 'no2_tube') return fillNO2(view);
   if (kind === 'spoon_s') return sulfurSpoon(view);
+  if (kind === 'dish_burn') return dishBurn(view);
+  if (kind === 'burette') return toggleBurette(view);
   const p = new ProbeView(kind);
   const dye = kind === 'dye_paper';
   const isPaper = kind === 'litmus' || kind === 'ph_moist' || dip || dye;
@@ -562,7 +568,8 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
       } else log('Que đóm vẫn chỉ còn tàn đỏ, không bùng cháy → không giàu oxygen', 'phenomenon', view.name);
       return;
     }
-    switch (testBurningSplint(v)) {
+    const r = testBurningSplint(v);
+    switch (r) {
       case 'pop':
         playPop();
         effect(popFlash(), 0.35, (o, t) => { o.scale.setScalar(1 + t * 5); (o as THREE.Sprite).material.opacity = 1 - t; });
@@ -572,6 +579,23 @@ function probe(kind: ToolKind, view: VesselView, queued = false) {
         effect(blueFlame(), holdTime, (o, t) => { o.scale.setScalar(Math.min(1, t * 8) * (1 - t * 0.5)); });
         log('Khí cháy ở miệng ống với ngọn lửa xanh nhạt → khí hydrogen (H₂)', 'phenomenon', view.name);
         break;
+      case 'burns-ethylene':
+      case 'burns-acetylene': {
+        const c2h2 = r === 'burns-acetylene';
+        effect(brightFlame(), holdTime, (o, t) => { o.scale.setScalar(Math.min(1, t * 8) * (1 - t * 0.4)); });
+        if (c2h2) for (let i = 0; i < 4; i++) {
+          effect(smokePuff(), 1.4 + i * 0.4, (o, t) => {
+            o.position.y += 0.05;
+            o.scale.setScalar(0.5 + t * 1.8);
+            (o as THREE.Sprite).material.color.setHex(0x222222);
+            (o as THREE.Sprite).material.opacity = 0.5 * (1 - t);
+          });
+        }
+        log(c2h2
+          ? 'Khí cháy ở miệng ống với ngọn lửa rất sáng, có muội than (khói đen) → acetylene (C₂H₂)'
+          : 'Khí cháy ở miệng ống với ngọn lửa sáng màu vàng → ethylene (C₂H₄)', 'phenomenon', view.name);
+        break;
+      }
       case 'brighter':
         p.setFlame('bright');
         log('Que đóm cháy sáng mạnh hơn → khí giàu oxygen', 'phenomenon', view.name);
@@ -751,6 +775,151 @@ function sulfurSpoon(view: VesselView) {
   );
 }
 
+// ── Đốt khoảng 1 mL chất lỏng trong bát sứ bằng que đóm đang cháy (SGK Hóa 11 Bài 15) ──
+// ── Burette chuẩn độ (SGK Hóa 11 Bài 2) ──
+interface MountedBurette { b: Burette; view: BuretteView; disp: number }
+const burettes = new Map<VesselView, MountedBurette>();
+const fmtML = (x: number) => x.toFixed(2).replace('.', ',');
+
+function toggleBurette(view: VesselView) {
+  if (burettes.has(view)) {
+    removeBurette(view);
+    return log('Tháo burette', 'action', view.name);
+  }
+  if (view.kind.type === 'tube') return log('Burette lắp trên bình nón hoặc cốc, không lắp trên ống nghiệm.', 'warning', view.name);
+  if (view.vessel.inverted || view.vessel.outlet || view.vessel.stoppered) return log('Mở miệng dụng cụ trước khi lắp burette.', 'warning', view.name);
+  const tip = view.mouthWorld().add(new THREE.Vector3(0, 1.2, 0));
+  const bv = new BuretteView(tip.y - LAMP_POS.y);
+  bv.group.position.copy(tip);
+  scene.add(bv.group);
+  burettes.set(view, { b: new Burette(view.vessel, BURETTE_SOLUTES), view: bv, disp: 0 });
+  log('Lắp burette chứa dung dịch NaOH (nồng độ khoảng 0,1 M) phía trên dụng cụ, chỉnh mức dung dịch về vạch 0', 'action', view.name);
+}
+
+function removeBurette(view: VesselView) {
+  const m = burettes.get(view);
+  if (!m) return;
+  scene.remove(m.view.group);
+  m.view.dispose();
+  burettes.delete(view);
+}
+
+function buretteAction(view: VesselView, action: BuretteAction) {
+  const m = burettes.get(view);
+  if (!m) return log('Chưa lắp burette trên dụng cụ này.', 'warning', view.name);
+  rec({ kind: 'burette', vessel: idx(view), action });
+  if (action === 'drop') {
+    m.disp += m.b.drop();
+    return log(`Nhỏ 1 giọt NaOH (đã dùng ${fmtML(m.b.usedML)} mL)`, 'action', view.name);
+  }
+  if (action === 'close') {
+    if (m.b.mode === 'closed') return;
+    m.b.mode = 'closed';
+    return log(`Đóng khóa burette. Thể tích dung dịch NaOH đã dùng: ${fmtML(m.b.usedML)} mL`, 'action', view.name);
+  }
+  m.b.mode = action;
+  log(action === 'stream' ? 'Mở khóa burette, dung dịch NaOH chảy thành dòng xuống bình (lắc đều bình)'
+    : 'Vặn khóa burette cho dung dịch NaOH nhỏ từng giọt (lắc đều bình)', 'action', view.name);
+}
+
+function buretteInfo(v: VesselView) {
+  const m = burettes.get(v);
+  return m ? { usedML: m.b.usedML, mode: m.b.mode } : undefined;
+}
+
+const capitalize = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
+function dishBurn(view: VesselView) {
+  const v = view.vessel;
+  if (v.inverted || v.stoppered) return log('Mở miệng dụng cụ trước khi rót chất lỏng ra bát sứ.', 'warning', view.name);
+  if (v.mix.liquidL() < 2e-4) return log('Không có đủ chất lỏng để rót ra bát sứ.', 'warning', view.name);
+  const taken = v.take(Math.min(0.001, v.mix.liquidL()));
+  const res = liquidBurn(taken);
+  const mL = taken.liquidL() * 1000;
+  const { group: g, liquid } = porcelainDishModel();
+  const splint = new ProbeView('burning');
+  splint.setFlame('normal');
+  const flame = res.flame === 'blue' ? blueFlame() : brightFlame();
+  flame.visible = false;
+  flame.position.y = 0.2;
+  if (res.flame === 'blue') flame.material.opacity = 0.6;
+  g.add(flame);
+  const light = new THREE.PointLight(res.flame === 'blue' ? 0x6a86ff : 0xffa63a, 0, 40, 2);
+  const smoke: THREE.Sprite[] = [];
+  let time = 0, base = new THREE.Vector3(), near = new THREE.Vector3(), away = new THREE.Vector3();
+  const phase = (dur: number, fn: (k: number, dt: number) => void): AnimStep => {
+    let e = 0;
+    return (dt) => { e += dt; time += dt; fn(Math.min(1, e / dur), dt); return e >= dur; };
+  };
+  const setFlame = (size: number) => {
+    const flick = 1 + 0.12 * Math.sin(time * 37) + 0.08 * Math.sin(time * 61);
+    flame.visible = size > 0.01;
+    // Lửa cháy trên cả mặt chất lỏng trong bát: rộng gần bằng miệng bát
+    flame.scale.set(2.2 * Math.max(0.001, size * flick), 2 * Math.max(0.001, size * flick), 2.2 * Math.max(0.001, size * flick));
+    light.intensity = (res.flame === 'blue' ? 60 : 160) * size * flick;
+    light.position.copy(g.localToWorld(new THREE.Vector3(0, 1.5, 0)));
+  };
+  animator.run(
+    call(() => {
+      // Bát sứ đặt ở chỗ trống trên mặt bàn, phía trước giữa giá ống nghiệm và cốc
+      base = new THREE.Vector3(6, LAMP_POS.y, 11);
+      g.position.copy(base);
+      g.scale.setScalar(0.01);
+      addTemp(g);
+      addTemp(light);
+      near = base.clone().add(new THREE.Vector3(1.2, 1.6, 0));
+      away = base.clone().add(new THREE.Vector3(5, 7, 2));
+      splint.group.position.copy(away);
+      splint.group.rotation.z = 0.9;
+      addTemp(splint.group);
+      log(`Rót khoảng ${fmt(mL)} mL chất lỏng ra bát sứ nhỏ`, 'action', view.name);
+    }),
+    tween(0.4, (t) => g.scale.setScalar(Math.max(0.01, t))),
+    tween(0.9, (t) => splint.group.position.lerpVectors(away, near, t)),
+    call(() => {
+      if (res.flame === 'none') {
+        splint.setFlame('none');
+        log('Chất lỏng không bắt lửa, que đóm bị tắt khi chạm vào → chất lỏng không cháy được', 'phenomenon', view.name);
+        return;
+      }
+      const name = species(res.fuel!).name;
+      hud.log({
+        t: simTime, vessel: view.name, kind: 'phenomenon', equation: res.equation,
+        color: res.flame === 'blue' ? [0.55, 0.65, 1] : [1, 0.75, 0.3],
+        text: res.flame === 'blue' ? `${capitalize(name)} bốc cháy với ngọn lửa màu xanh nhạt, không có khói`
+          : res.flame === 'sooty' ? `${capitalize(name)} bốc cháy với ngọn lửa sáng màu vàng, có nhiều muội than (khói đen)`
+          : `${capitalize(name)} bốc cháy với ngọn lửa màu vàng, tỏa nhiều nhiệt`,
+      });
+    }),
+    phase(res.flame === 'none' ? 0.6 : 6, (k, dt) => {
+      if (res.flame === 'none') return;
+      // Ngọn lửa bùng lên rồi nhỏ dần khi chất lỏng cháy hết
+      setFlame(Math.min(1, k * 6) * (k < 0.7 ? 1 : (1 - k) / 0.3));
+      liquid.scale.setScalar(Math.max(0.05, 1 - k));
+      if (res.flame === 'sooty' && Math.random() < dt * 4) {
+        const s = smokePuff();
+        s.material.color.setHex(0x1d1d1d);
+        s.position.set((Math.random() - 0.5) * 0.6, 3, (Math.random() - 0.5) * 0.6);
+        g.add(s);
+        smoke.push(s);
+      }
+      for (const s of smoke) {
+        s.position.y += dt * 1.5;
+        s.scale.setScalar(s.scale.x + dt * 1.2);
+        s.material.opacity = Math.max(0, s.material.opacity - dt * 0.25);
+      }
+    }),
+    tween(0.7, (t) => splint.group.position.lerpVectors(near, away, t)),
+    tween(0.4, (t) => g.scale.setScalar(Math.max(0.01, 1 - t))),
+    call(() => {
+      removeTemp(g);
+      removeTemp(light);
+      removeTemp(splint.group);
+      if (res.flame !== 'none') log('Chất lỏng trong bát sứ đã cháy hết', 'phenomenon', view.name);
+    }),
+  );
+}
+
 // ── Đốt mẩu kim loại trên ngọn lửa đèn cồn (cầm bằng kẹp sắt) ───────────
 function burnInFlame(item: SolidItem) {
   const refusal = burnRefusal(item);
@@ -923,11 +1092,11 @@ function pourVessel(src: VesselView, dst: VesselView, queued = false, limitML?: 
   const why = heatingView === src || heatingView === dst ? 'Tắt đèn cồn trước khi đổ.'
     : src.vessel.inverted || dst.vessel.inverted ? 'Lật ngửa ống trước khi đổ.'
     : src.vessel.outlet || dst.vessel.outlet || [...tubes.values()].some((t) => t.dst === src || t.dst === dst) ? 'Tháo ống dẫn khí trước khi đổ.'
-    : src.vessel.mix.volumeL < 1e-5 ? `${src.name} không có chất lỏng để đổ.`
+    : src.vessel.mix.liquidL() < 1e-5 ? `${src.name} không có chất lỏng để đổ.`
     : null;
   if (why) { log(why, 'warning', src.name); return false; }
-  let mL = Math.min(src.vessel.mix.volumeL * 1000, limitML ?? Infinity);
-  const room = dst.capacityML - dst.vessel.mix.volumeL * 1000 - pendingML(dst);
+  let mL = Math.min(src.vessel.mix.liquidL() * 1000, limitML ?? Infinity);
+  const room = dst.capacityML - dst.vessel.mix.liquidL() * 1000 - pendingML(dst);
   if (room < 0.05) { log(`${dst.name} đã đầy.`, 'warning', dst.name); return false; }
   if (mL > room) {
     mL = room;
@@ -1070,7 +1239,7 @@ function restPose(v: VesselView): THREE.Vector3 {
 function invert(v = requireSelected(), quiet = false) {
   if (!v) return;
   if (v.kind.type !== 'tube') return log('Chỉ úp ngược được ống nghiệm.', 'warning', v.name);
-  if (!v.vessel.inverted && v.vessel.mix.volumeL > 5e-5) return log('Hãy đổ hết chất lỏng trước khi úp ngược ống.', 'warning', v.name);
+  if (!v.vessel.inverted && v.vessel.mix.liquidL() > 5e-5) return log('Hãy đổ hết chất lỏng trước khi úp ngược ống.', 'warning', v.name);
   if (heatingView === v) return log('Không úp ống đang đun.', 'warning', v.name);
   if (v.vessel.outlet) return log('Ống đang được nút để phát khí, không úp được.', 'warning', v.name);
   const toInverted = !v.vessel.inverted;
@@ -1544,7 +1713,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   if (!o) return hud.tooltip(null);
   const u = o.userData;
   const text = u.kind === 'vessel'
-    ? `<b>${u.view.name}</b><br>${(u.view.vessel.mix.volumeL * 1000).toFixed(1)} mL`
+    ? `<b>${u.view.name}</b><br>${(u.view.vessel.mix.liquidL() * 1000).toFixed(1)} mL`
     : u.kind === 'balance'
     ? `<b>Cân điện tử</b><br>${fmtG(balanceReading())} g<br><i>${selected && !isOnBalance(selected) ? `Bấm để đặt ${selected.name.toLowerCase()} lên cân` : onBalance.length ? `Đang cân ${onBalance.map((o) => o.name.toLowerCase()).join(" và ")}` : 'Chọn một dụng cụ rồi bấm vào cân'}</i>`
     : u.kind === 'syringe'
@@ -1668,6 +1837,7 @@ function resetAll() {
   stand.clamp.visible = stand.tripod.visible = false;
   for (const v of views) disconnect(v, true);
   for (const v of views) removeDipped(v);
+  for (const v of views) removeBurette(v);
   syringeView.reset();
   syringePanel.show(false);
   onBalance = [];
@@ -1688,6 +1858,7 @@ const player = new RecipePlayer({
   add: (chem, amount, vessel) => dropEntry(CHEMICALS.find((c) => c.key === chem)!, amount, views[vessel]),
   setHeat: (vessel, on) => (on ? startHeat(views[vessel]) : heatingView === views[vessel] && stopHeat()),
   stir: (vessel) => stir(views[vessel]),
+  burette: (vessel, action) => buretteAction(views[vessel], action),
   probe: (tool, vessel) => probe(tool, views[vessel]),
   burn: (chem) => burnInFlame(CHEMICALS.find((c) => c.key === chem)!.solid!),
   connect: (src, dst) => (dst === null ? disconnect(views[src]) : connect(views[src], dst === SYRINGE ? syringeView : views[dst])),
@@ -1705,6 +1876,7 @@ const player = new RecipePlayer({
     tempC: (i) => views[i].vessel.mix.tempK - 273.15,
     syringeML: () => syringeView.syringe.volumeML,
     balanceG: balanceReading,
+    buretteML: (i) => burettes.get(views[i])?.b.usedML ?? 0,
   },
 }, document.getElementById('recipes')!);
 
@@ -1960,6 +2132,11 @@ function frame() {
     simAcc += dt * speed;
     let n = 0;
     while (simAcc >= step && n < 60) {
+      for (const [v, m] of burettes) {
+        const was = m.b.leftML;
+        m.disp += m.b.step(step);
+        if (was > 0 && m.b.leftML <= 0) log('Burette đã hết dung dịch', 'warning', v.name);
+      }
       for (const v of views) v.vessel.step(step);
       simAcc -= step;
       simTime += step;
@@ -1975,6 +2152,11 @@ function frame() {
     updateDipped(v, o.pH, dt);
     updateXCard(v, o.turbidity);
     baths.get(v)?.update(dt);
+    const bm = burettes.get(v);
+    if (bm) {
+      bm.view.update(dt, bm.b, bm.disp, v.surfaceWorld().y - bm.view.group.position.y);
+      bm.disp = 0;
+    }
     for (const e of tracker.check(v, o)) hud.log({ ...e, t: simTime });
     if (v === selected) selObs = o;
   }
@@ -1984,7 +2166,7 @@ function frame() {
   const g = balanceReading();
   balanceView.display(g);
   balancePanel.record(simTime, g);
-  hud.panel(selected, selObs, realTime, selected ? xcardText(selected) ?? bathText(selected) : undefined);
+  hud.panel(selected, selObs, realTime, selected ? xcardText(selected) ?? bathText(selected) : undefined, selected ? buretteInfo(selected) : undefined);
   hud.setTime(simTime);
   lamp.update(dt);
   controls.update();
@@ -2017,6 +2199,8 @@ Object.assign(window, {
     add: (key: string, amount: number, vessel = 0) =>
       dropEntry(CHEMICALS.find((c) => c.key === key)!, amount, views[vessel]),
     heat: () => toggleHeat(),
+    stir: (i: number) => stir(views[i]),
+    focus: (vs: number[] | null) => panTo(vs ? vs.map((i) => views[i]) : null),
     pour: (src: number, dst: number) => pourVessel(views[src], views[dst]),
     weigh: (i: number) => placeOnBalance(views[i], false),
     player,

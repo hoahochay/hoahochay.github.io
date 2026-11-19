@@ -1,4 +1,5 @@
-export type Phase = 'aq' | 's' | 'l' | 'g';
+/** org: chất lỏng hữu cơ không tan trong nước (lớp riêng) và chất tan trong lớp đó */
+export type Phase = 'aq' | 's' | 'l' | 'g' | 'org';
 /** Màu hoặc hệ số theo 3 kênh R, G, B */
 export type RGB = [number, number, number];
 
@@ -49,6 +50,10 @@ export interface SpeciesDef {
   settleTime?: number;
   /** Mức tán xạ ánh sáng so với kết tủa thường (hạt keo rất mịn làm đục mạnh hơn nhiều với cùng khối lượng) */
   scatter?: number;
+  /** Dung môi hữu cơ (phase 'org'): khối lượng riêng, g/mL */
+  density?: number;
+  /** Chất rắn luôn nằm thành lớp dưới đáy (đường kết tinh, khối than xốp): thể tích lớp, mL mỗi gam */
+  bulk?: number;
 }
 
 const list: SpeciesDef[] = [];
@@ -134,6 +139,32 @@ sp('Ag(NH3)2+', 'ion diamminesilver(I)', 'aq', 1, 6, -111.3, 141.94, { label: '[
 // Bạc sinh ra từ phản ứng tráng bạc: bám thành lớp gương trên thành ống, không lơ lửng
 sp('Ag(mirror)', 'silver (lớp bạc sáng bám thành ống)', 's', 0, 0, 0, 107.87, { color: [0.85, 0.86, 0.88], label: 'Ag' });
 sp('Cu2O', 'copper(I) oxide', 's', 0, 0, -168.6, 143.09, { color: [0.72, 0.24, 0.1], scatter: 2 });
+// ── Tính háo nước của sulfuric acid đặc (SGK Hóa 11 Bài 8) ──
+sp('C12H22O11', 'saccharose (đường mía)', 's', 0, 22, -2226.1, 342.3, { color: [0.97, 0.96, 0.93], bulk: 1.3 });
+// Than sinh ra khi đường bị hút nước: khối xốp, phồng lên nhờ hơi nước và khí CO₂, SO₂
+sp('C', 'carbon (than)', 's', 0, 0, 0, 12.011, { color: [0.08, 0.05, 0.03], bulk: 18 });
+// ── Hydrocarbon không no (SGK Hóa 11 Bài 16) ──
+sp('C2H4(g)', 'ethylene', 'g', 0, 4, 52.4, 28.05);
+sp('C2H4', 'ethylene (tan)', 'aq', 0, 4, 36.4, 28.05);
+sp('C2H2(g)', 'acetylene', 'g', 0, 2, 226.7, 26.04);
+sp('C2H2', 'acetylene (tan)', 'aq', 0, 2, 212.0, 26.04);
+sp('CaC2', 'calcium carbide (đất đèn)', 's', 0, 0, -59.8, 64.1, { color: [0.36, 0.36, 0.38] });
+sp('C2H6O2', 'ethylene glycol', 'aq', 0, 6, -460.0, 62.07);
+sp('C2O4^2-', 'ion oxalate', 'aq', -2, 0, -825.1, 88.02);
+// Sản phẩm cộng bromine: chất lỏng nặng, không tan trong nước (giọt dầu chìm xuống đáy)
+sp('C2H4Br2', '1,2-dibromoethane', 'org', 0, 4, -81.0, 187.86, { density: 2.18 });
+sp('C2H2Br4', '1,1,2,2-tetrabromoethane', 'org', 0, 2, -60.0, 345.65, { density: 2.97 });
+// ── Chất lỏng hữu cơ không tan trong nước (lớp riêng) ──
+sp('C6H14', 'hexane', 'org', 0, 14, -198.7, 86.18, { density: 0.655 });
+sp('C6H6', 'benzene', 'org', 0, 6, 49.1, 78.11, { density: 0.877 });
+sp('C6H5CH3', 'toluene', 'org', 0, 8, 12.4, 92.14, { density: 0.867 });
+// Chất tan trong lớp hữu cơ
+sp('Br2(org)', 'bromine (tan trong lớp hữu cơ)', 'org', 0, 0, -2.59, 159.8, { epsilon: [0.5, 12, 75], label: 'Br₂' });
+// β-carotene (màu cam của cà rốt): trong nước ép ở dạng hạt keo, tan tốt trong hexane
+sp('carotene', 'β-carotene (trong nước ép)', 'aq', 0, 56, 0, 536.9, { epsilon: [800, 40000, 160000], label: 'β-carotene' });
+sp('carotene(org)', 'β-carotene (tan trong hexane)', 'org', 0, 56, 0, 536.9, { epsilon: [800, 40000, 160000], label: 'β-carotene' });
+sp('C6H5COOH', 'benzoic acid', 'aq', 0, 6, -385.1, 122.12);
+sp('C6H13Br', 'bromohexane', 'org', 0, 13, -230, 165.07);
 // Alcohol (tan vô hạn trong nước)
 sp('C2H5OH', 'ethanol', 'aq', 0, 6, -288.3, 46.07);
 sp('glycerol', 'glycerol', 'aq', 0, 8, -676.5, 92.09, { label: 'C₃H₅(OH)₃' });

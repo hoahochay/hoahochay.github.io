@@ -17,6 +17,8 @@ export interface Atmosphere {
   NH3: number;
   Cl2: number;
   SO2: number;
+  C2H4: number;
+  C2H2: number;
   /** Phần không khí còn lại */
   air: number;
 }
@@ -33,6 +35,8 @@ export function atmosphere(v: Vessel): Atmosphere {
     NH3: f['NH3(g)'] ?? 0,
     Cl2: f['Cl2(g)'] ?? 0,
     SO2: f['SO2(g)'] ?? 0,
+    C2H4: f['C2H4(g)'] ?? 0,
+    C2H2: f['C2H2(g)'] ?? 0,
     air,
   };
 }
@@ -53,7 +57,7 @@ export function testDyePaper(v: Vessel): 'bleached' | 'none' {
 }
 
 export type GlowingSplintResult = 'relight' | 'none';
-export type BurningSplintResult = 'pop' | 'burns-at-mouth' | 'brighter' | 'extinguished' | 'normal';
+export type BurningSplintResult = 'pop' | 'burns-at-mouth' | 'burns-ethylene' | 'burns-acetylene' | 'brighter' | 'extinguished' | 'normal';
 
 /** Que đóm còn tàn đỏ bùng cháy khi khí giàu oxygen (≳ 50% O2) */
 export function testGlowingSplint(v: Vessel): GlowingSplintResult {
@@ -72,9 +76,15 @@ export function testBurningSplint(v: Vessel): BurningSplintResult {
   let result: BurningSplintResult = 'normal';
   if (a.H2 >= 0.04 && a.H2 <= 0.75) result = 'pop';
   else if (a.H2 > 0.75) result = 'burns-at-mouth';
+  // Ethylene, acetylene: khí cháy ở miệng ống với ngọn lửa sáng (acetylene nhiều muội than)
+  else if (a.C2H4 + a.C2H2 >= 0.05) result = a.C2H2 > a.C2H4 ? 'burns-acetylene' : 'burns-ethylene';
   else if (a.O2 >= 0.5) result = 'brighter';
   else if (a.O2 < 0.15) result = 'extinguished';
   if (result === 'pop' || result === 'burns-at-mouth') v.mix.headspace.delete('H2');
+  if (result === 'burns-ethylene' || result === 'burns-acetylene') {
+    v.mix.headspace.delete('C2H4(g)');
+    v.mix.headspace.delete('C2H2(g)');
+  }
   return result;
 }
 

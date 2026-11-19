@@ -17,6 +17,8 @@ export interface LabState {
   syringeML(): number;
   /** Số đọc trên cân điện tử (khối lượng các chất, không tính dụng cụ), g */
   balanceG(): number;
+  /** Thể tích đã chảy ra khỏi burette lắp trên dụng cụ, mL (0 nếu không có burette) */
+  buretteML(vessel: number): number;
 }
 
 export type Step =
@@ -39,7 +41,11 @@ export type Step =
   /** Đổ hết chất lỏng từ dụng cụ src sang dụng cụ dst */
   /** mL: chỉ rót một phần (mặc định: đổ hết) */
   | { kind: 'pour'; src: number; dst: number; mL?: number; text?: string }
-  | { kind: 'focus'; vessels: number[] | null };
+  | { kind: 'focus'; vessels: number[] | null }
+  /** Khóa burette lắp trên dụng cụ: mở cho chảy thành dòng, nhỏ từng giọt, nhỏ một giọt, đóng */
+  | { kind: 'burette'; vessel: number; action: BuretteAction; text?: string };
+
+export type BuretteAction = 'stream' | 'drip' | 'drop' | 'close';
 
 /** Các nhóm thí nghiệm (tab trong danh sách): theo lớp, và nhóm Khám phá ngoài chương trình */
 export const CATEGORIES = { 10: 'Lớp 10', 11: 'Lớp 11', 12: 'Lớp 12', explore: 'Khám phá' } as const;
@@ -60,6 +66,10 @@ export const TOPICS = {
   'hoa11-b5': { cat: 11, title: 'Hóa 11 · Bài 5. Ammonia. Muối ammonium' },
   'hoa11-b7': { cat: 11, title: 'Hóa 11 · Bài 7. Sulfur và sulfur dioxide' },
   'hoa11-b8': { cat: 11, title: 'Hóa 11 · Bài 8. Sulfuric acid và muối sulfate' },
+  'hoa11-b11': { cat: 11, title: 'Hóa 11 · Bài 11. Phương pháp tách biệt và tinh chế hợp chất hữu cơ' },
+  'hoa11-b15': { cat: 11, title: 'Hóa 11 · Bài 15. Alkane' },
+  'hoa11-b16': { cat: 11, title: 'Hóa 11 · Bài 16. Hydrocarbon không no' },
+  'hoa11-b17': { cat: 11, title: 'Hóa 11 · Bài 17. Arene (hydrocarbon thơm)' },
   'hoa11-b20': { cat: 11, title: 'Hóa 11 · Bài 20. Alcohol' },
   'hoa11-b21': { cat: 11, title: 'Hóa 11 · Bài 21. Phenol' },
   'hoa11-b23': { cat: 11, title: 'Hóa 11 · Bài 23. Hợp chất carbonyl' },
@@ -131,6 +141,7 @@ const probe = (tool: ToolKind, vessel: number, text?: string): Step => ({ kind: 
 const burn = (chem: string, text?: string): Step => ({ kind: 'burn', chem, text });
 const weigh = (vessel: number | null, text?: string): Step => ({ kind: 'weigh', vessel, text });
 const pourInto = (src: number, dst: number, text?: string, mL?: number): Step => ({ kind: 'pour', src, dst, text, ...(mL ? { mL } : {}) });
+const burette = (vessel: number, action: BuretteAction, text?: string): Step => ({ kind: 'burette', vessel, action, text });
 const focus = (...vessels: number[]): Step => ({ kind: 'focus', vessels: vessels.length ? vessels : null });
 
 export const RECIPES: Recipe[] = [
@@ -599,6 +610,36 @@ export const RECIPES: Recipe[] = [
     },
   },
   {
+    id: 'chuan-do-acid-base',
+    title: 'Chuẩn độ acid – base',
+    topic: 'hoa11-b2', page: 25,
+    concepts: ['chuẩn độ', 'phản ứng trung hòa', 'chất chỉ thị', 'phenolphthalein', 'burette'],
+    summary: 'Dùng burette nhỏ dung dịch NaOH (nồng độ khoảng 0,1 M) vào 10 mL HCl 0,1 M có phenolphthalein, dừng khi dung dịch có màu hồng nhạt bền. Từ thể tích NaOH đã dùng, tính nồng độ NaOH.',
+    steps: [
+      focus(FLASK),
+      add('hcl01', 10, FLASK, 'Dùng pipette lấy 10 mL dung dịch HCl 0,1 M cho vào bình tam giác…'),
+      add('phenol', 2, FLASK, '…thêm 1 – 2 giọt phenolphthalein.'),
+      probe('burette', FLASK, 'Cho dung dịch NaOH vào burette, điều chỉnh dung dịch trong burette về vạch 0, lắp burette trên bình tam giác.'),
+      { kind: 'predict', text: 'Khi nào thì dừng chuẩn độ?' },
+      burette(FLASK, 'stream', 'Mở khóa burette cho dung dịch NaOH chảy xuống bình tam giác, lắc đều bình.'),
+      wait(60, { speed: 2, text: 'NaOH chảy xuống, dung dịch trong bình vẫn không màu.', until: (l) => l.buretteML(FLASK) >= 8.5 }),
+      burette(FLASK, 'drip', 'Gần đến điểm kết thúc: vặn khóa cho dung dịch NaOH nhỏ từng giọt, lắc đều sau mỗi giọt.'),
+      wait(120, { text: 'Nhỏ từng giọt cho đến khi dung dịch xuất hiện màu hồng nhạt.', until: (l) => l.mix(FLASK).h < 4e-9 }),
+      burette(FLASK, 'close', 'Dung dịch có màu hồng nhạt: đóng khóa burette ngay.'),
+      wait(10, { text: 'Màu hồng nhạt bền trong khoảng 10 giây: kết thúc chuẩn độ. Đọc thể tích NaOH đã dùng trên burette.' }),
+      say('Thể tích NaOH đã dùng khoảng 9,5 mL. Nồng độ NaOH = 0,1 × 10 : 9,5 ≈ 0,105 M. Trong thực hành, chuẩn độ ít nhất ba lần rồi lấy thể tích trung bình.'),
+    ],
+    result: {
+      phenomena: [
+        'Khi nhỏ NaOH vào, dung dịch trong bình vẫn không màu (còn dư acid)',
+        'Ngay sau điểm tương đương, chỉ một giọt NaOH dư làm dung dịch chuyển sang màu hồng nhạt',
+        'Thể tích NaOH đã dùng khoảng 9,5 mL',
+      ],
+      equations: ['NaOH + HCl → NaCl + H₂O', 'V(HCl) · C(HCl) = V(NaOH) · C(NaOH)'],
+      explain: 'Khi HCl và NaOH phản ứng vừa đủ, số mol NaOH bằng số mol HCl. Gần điểm tương đương, pH của dung dịch thay đổi rất nhanh: chỉ một giọt NaOH dư cũng làm pH vượt quá 8 và phenolphthalein chuyển màu hồng. Vì vậy cần nhỏ từng giọt và lắc đều khi gần kết thúc. Từ V(HCl) = 10 mL, C(HCl) = 0,1 M và V(NaOH) ≈ 9,5 mL tính được C(NaOH) ≈ 0,105 M.',
+    },
+  },
+  {
     id: 'moi-truong-dung-dich-muoi',
     title: 'Môi trường của dung dịch muối: Na₂CO₃, AlCl₃, FeCl₃',
     topic: 'hoa11-b2', page: 24,
@@ -728,6 +769,30 @@ export const RECIPES: Recipe[] = [
     },
   },
   {
+    id: 'duong-h2so4-dac',
+    title: 'Dung dịch sulfuric acid đặc tác dụng với đường mía',
+    topic: 'hoa11-b8', page: 51,
+    concepts: ['sulfuric acid đặc', 'tính háo nước', 'than hóa', 'tính oxi hóa'],
+    summary: 'Nhỏ khoảng 2 mL sulfuric acid đặc lên 10 g đường mía trong cốc thủy tinh.',
+    steps: [
+      focus(BEAKER),
+      add('sugar', 10, BEAKER, 'Lấy khoảng 10 g đường mía cho vào cốc thủy tinh.'),
+      { kind: 'predict', text: 'Nhỏ sulfuric acid đặc lên đường mía thì có hiện tượng gì?' },
+      add('h2so4_98', 2, BEAKER, 'Nhỏ đều trên bề mặt đường mía khoảng 2 mL dung dịch sulfuric acid đặc.'),
+      wait(150, { speed: 2, text: 'Quan sát màu của đường và nhiệt độ trong cốc.', until: (l) => l.mix(BEAKER).get('C12H22O11') < 3e-4 }),
+      wait(15, { text: 'Khối than đen xốp phồng lên, có khí mùi hắc thoát ra.' }),
+    ],
+    result: {
+      phenomena: [
+        'Đường mía chuyển dần từ trắng sang vàng, nâu rồi đen',
+        'Cốc nóng lên mạnh, có hơi nước bốc lên',
+        'Khối than đen xốp phồng lên trong cốc, có khí mùi hắc (SO₂) thoát ra',
+      ],
+      equations: ['C₁₂H₂₂O₁₁ →(H₂SO₄ đặc) 12C + 11H₂O', 'C + 2H₂SO₄ (đặc) →(t°) CO₂↑ + 2SO₂↑ + 2H₂O'],
+      explain: 'Sulfuric acid đặc có tính háo nước: nó lấy các nguyên tố H và O (theo tỉ lệ của nước) ra khỏi phân tử đường, để lại carbon màu đen (hiện tượng than hóa). Quá trình này tỏa nhiều nhiệt làm nước bay hơi. Ở nhiệt độ cao, sulfuric acid đặc còn oxi hóa một phần carbon tạo khí CO₂ và SO₂; các khí và hơi nước đẩy khối than phồng lên, xốp. Các carbohydrate khác như cellulose (giấy, bông), tinh bột cũng bị than hóa tương tự.',
+    },
+  },
+  {
     id: 'dong-h2so4-dac',
     title: 'Đồng tác dụng với dung dịch sulfuric acid đặc, nóng',
     topic: 'hoa11-b8', page: 51,
@@ -776,6 +841,226 @@ export const RECIPES: Recipe[] = [
       phenomena: ['Ống (1), Na₂SO₄ + BaCl₂: kết tủa trắng', 'Ống (2), H₂SO₄ loãng + BaCl₂: kết tủa trắng'],
       equations: ['Na₂SO₄ + BaCl₂ → BaSO₄↓ + 2NaCl', 'H₂SO₄ + BaCl₂ → BaSO₄↓ + 2HCl', 'Ba²⁺ + SO₄²⁻ → BaSO₄↓'],
       explain: 'Ion Ba²⁺ kết hợp với ion SO₄²⁻ tạo barium sulfate, chất rắn màu trắng rất ít tan và không tan cả trong acid. Vì vậy dung dịch chứa ion Ba²⁺ (như BaCl₂) dùng để nhận biết ion sulfate trong cả dung dịch muối sulfate lẫn dung dịch sulfuric acid.',
+    },
+  },
+  {
+    id: 'chung-cat-ethanol',
+    title: 'Chưng cất ethanol từ dung dịch ethanol – nước',
+    topic: 'hoa11-b11', page: 64,
+    concepts: ['chưng cất', 'nhiệt độ sôi', 'tách biệt hợp chất hữu cơ', 'độ cồn'],
+    summary: 'Đun sôi rượu nấu thủ công, cho hơi ngưng tụ ở bình hứng. Theo dõi nhiệt độ sôi và so sánh độ cồn của sản phẩm với rượu ban đầu.',
+    steps: [
+      say('Trong phòng thí nghiệm ảo, bình nón thay cho bình cầu có nhánh; hơi đi qua ống dẫn sang ống nghiệm (1) ngâm trong cốc nước đá, thay cho ống sinh hàn và bình hứng.'),
+      focus(FLASK, TUBE1, TUBE2),
+      add('ruou', 40, FLASK, 'Cho khoảng 40 mL rượu nấu thủ công vào bình (chất lỏng không quá 2/3 thể tích bình), thêm vài viên đá bọt.'),
+      add('ruou', 2, TUBE2, 'Lấy riêng khoảng 2 mL rượu ban đầu để so sánh.'),
+      probe('dish_burn', TUBE2, 'Thử đốt khoảng 1 mL rượu ban đầu trong bát sứ.'),
+      probe('ice_bath', TUBE1, 'Ngâm ống nghiệm (1) dùng làm bình hứng vào cốc nước đá.'),
+      connect(FLASK, TUBE1, 'Đậy bình bằng nút có ống dẫn, dẫn hơi sang ống nghiệm (1).'),
+      { kind: 'predict', text: 'Hỗn hợp ethanol – nước sôi ở nhiệt độ nào: bằng 78 °C như ethanol, 100 °C như nước, hay ở giữa?' },
+      heat(FLASK, true, 'Đun nóng từ từ đến khi hỗn hợp sôi. Theo dõi nhiệt độ.'),
+      wait(900, { speed: 10, text: 'Hỗn hợp sôi ở khoảng 86 °C, rồi nhiệt độ tăng dần; chất lỏng ngưng tụ chảy vào ống hứng.', until: (l) => l.mix(TUBE1).volumeL > 0.008 }),
+      heat(FLASK, false, 'Khi nhiệt độ tăng lên gần 90 °C thì tắt nguồn nhiệt, ngừng chưng cất.'),
+      connect(FLASK, null, 'Tháo ống dẫn.'),
+      probe('dish_burn', TUBE1, 'Thử đốt khoảng 1 mL sản phẩm ở ống hứng trong bát sứ.'),
+    ],
+    result: {
+      phenomena: [
+        'Rượu ban đầu (khoảng 30°) không bắt lửa',
+        'Hỗn hợp bắt đầu sôi ở khoảng 86 °C, thấp hơn 100 °C nhưng cao hơn 78 °C; trong khi chưng cất nhiệt độ tăng dần',
+        'Chất lỏng thu được ở ống hứng cháy với ngọn lửa xanh nhạt: độ cồn cao hơn hẳn (khoảng 70°)',
+      ],
+      equations: ['C₂H₅OH + 3O₂ →(t°) 2CO₂ + 3H₂O'],
+      explain: 'Ethanol sôi ở 78 °C, nước sôi ở 100 °C; hỗn hợp của chúng sôi ở nhiệt độ trung gian tùy thành phần. Khi sôi, hơi bay lên chứa nhiều ethanol hơn chất lỏng trong bình, nên chất lỏng ngưng tụ ở bình hứng có độ cồn cao hơn rượu ban đầu. Ethanol trong bình giảm dần nên nhiệt độ sôi tăng dần về phía 100 °C. Đây là nguyên tắc của phương pháp chưng cất: tách các chất lỏng dựa vào sự khác nhau về nhiệt độ sôi.',
+    },
+  },
+  {
+    id: 'tach-beta-carotene',
+    title: 'Tách β-carotene từ nước ép cà rốt',
+    topic: 'hoa11-b11', page: 66,
+    concepts: ['chiết lỏng – lỏng', 'dung môi hữu cơ', 'tách lớp', 'khối lượng riêng'],
+    summary: 'Lắc nước ép cà rốt với hexane, để yên cho chất lỏng tách thành hai lớp rồi lấy riêng lớp hexane chứa β-carotene.',
+    steps: [
+      say('Trong phòng thí nghiệm ảo, ta dùng ống nghiệm thay cho phễu chiết.'),
+      focus(TUBE1, TUBE2),
+      add('carrot', 6, TUBE1, 'Cho khoảng 6 mL nước ép cà rốt vào ống nghiệm (1).'),
+      add('hexane', 6, TUBE1, 'Thêm tiếp khoảng 6 mL hexane.'),
+      wait(4, { text: 'Hexane không tan trong nước, nhẹ hơn nước nên nổi thành lớp không màu phía trên.' }),
+      { kind: 'predict', text: 'Lắc đều rồi để yên: màu cam của β-carotene sẽ nằm ở lớp nào?' },
+      stir(TUBE1, 'Đậy ống, lắc đều khoảng 2 phút.'),
+      wait(25, { speed: 2, text: 'Để yên cho chất lỏng tách thành hai lớp.' }),
+      say('Lớp hexane phía trên chuyển màu cam, lớp nước phía dưới gần như mất màu: β-carotene đã chuyển sang hexane.'),
+      pourInto(TUBE1, TUBE2, 'Nghiêng ống, rót nhẹ lớp hexane phía trên sang ống (2). Với phễu chiết, ta mở khóa cho lớp nước phía dưới chảy ra, giữ lại lớp hexane.', 5.5),
+    ],
+    result: {
+      phenomena: [
+        'Ban đầu: lớp hexane không màu ở trên, nước ép cà rốt màu cam ở dưới',
+        'Sau khi lắc và để yên: lớp hexane phía trên có màu cam, lớp nước phía dưới gần như mất màu',
+      ],
+      equations: [],
+      explain: 'Đây là phương pháp chiết lỏng – lỏng. β-carotene là chất hữu cơ không phân cực, gần như không tan trong nước nhưng tan tốt trong hexane. Khi lắc, hai chất lỏng tiếp xúc nhau trên diện tích lớn nên β-carotene chuyển gần hết sang hexane. Hexane không tan trong nước và nhẹ hơn nước (khối lượng riêng khoảng 0,66 g/mL) nên tách thành lớp phía trên, có thể lấy riêng ra. Chưng cất bỏ hexane sẽ thu được β-carotene.',
+    },
+  },
+  {
+    id: 'brom-hoa-hexane',
+    title: 'Phản ứng bromine hóa hexane',
+    topic: 'hoa11-b15', page: 86,
+    concepts: ['alkane', 'phản ứng thế', 'halogen hóa', 'chiết'],
+    summary: 'Lắc hexane với nước bromine rồi ngâm ống vào cốc nước ấm khoảng 50 °C.',
+    steps: [
+      focus(TUBE1),
+      add('hexane', 1, TUBE1, 'Cho vào ống nghiệm khoảng 1 mL hexane.'),
+      add('br2_water', 1, TUBE1, 'Cho tiếp khoảng 1 mL nước bromine.'),
+      wait(4, { text: 'Ống nghiệm có hai lớp: lớp dưới là nước bromine màu vàng, lớp trên là hexane không màu.' }),
+      { kind: 'predict', text: 'Lắc đều ống nghiệm: màu vàng của bromine sẽ ở lớp nào?' },
+      stir(TUBE1, 'Lắc đều.'),
+      wait(15, { speed: 2, text: 'Để yên cho chất lỏng tách lớp.' }),
+      say('Bromine tan trong hexane tốt hơn trong nước nên chuyển lên lớp hexane: lớp trên có màu vàng cam, lớp nước phía dưới nhạt màu.'),
+      probe('warm_bath', TUBE1, 'Đặt ống nghiệm vào cốc nước ấm khoảng 50 °C.'),
+      wait(600, { speed: 20, text: 'Màu của lớp hexane nhạt dần.', until: (l) => l.mix(TUBE1).get('Br2(org)') < 1.6e-6 }),
+    ],
+    result: {
+      phenomena: [
+        'Ban đầu có hai lớp: nước bromine màu vàng ở dưới, hexane không màu ở trên',
+        'Lắc đều: bromine chuyển lên lớp hexane, lớp trên có màu vàng cam',
+        'Ngâm nước ấm khoảng 50 °C: màu của lớp hexane nhạt dần rồi gần như mất màu',
+      ],
+      equations: ['C₆H₁₄ + Br₂ →(t°) C₆H₁₃Br + HBr'],
+      explain: 'Bromine là phân tử không phân cực nên tan trong hexane tốt hơn trong nước; khi lắc, bromine chuyển phần lớn lên lớp hexane. Ở nhiệt độ phòng, trong bóng râm, hexane hầu như không phản ứng với bromine. Khi đun nóng (hoặc chiếu sáng), xảy ra phản ứng thế: một nguyên tử hydrogen trong hexane được thay bằng nguyên tử bromine, tạo dẫn xuất bromohexane không màu và hydrogen bromide, nên màu bromine nhạt dần.',
+    },
+  },
+  {
+    id: 'hexane-kmno4',
+    title: 'Phản ứng oxi hóa hexane',
+    topic: 'hoa11-b15', page: 88,
+    concepts: ['alkane', 'phản ứng oxi hóa', 'phản ứng cháy', 'tách lớp'],
+    summary: 'Lắc hexane với vài giọt dung dịch KMnO₄ 1% rồi để yên; đốt khoảng 1 mL hexane trong bát sứ.',
+    steps: [
+      say('Phần 1: phản ứng của hexane với dung dịch KMnO₄.'),
+      focus(TUBE1, TUBE2),
+      add('hexane', 1, TUBE1, 'Cho khoảng 1 mL hexane vào ống nghiệm.'),
+      add('kmno4_1', 0.4, TUBE1, 'Thêm vài giọt dung dịch KMnO₄ 1%.'),
+      { kind: 'predict', text: 'Hexane có làm mất màu dung dịch thuốc tím không?' },
+      stir(TUBE1, 'Lắc đều ống nghiệm trong khoảng 5 phút.'),
+      wait(600, { speed: 30, text: 'Đặt ống nghiệm vào giá, để yên khoảng 10 phút.' }),
+      say('Phần 2: phản ứng đốt cháy hexane.'),
+      add('hexane', 1, TUBE2, 'Lấy khoảng 1 mL hexane (lưu ý không lấy nhiều hơn).'),
+      { kind: 'predict', text: 'Hexane có cháy được không? Ngọn lửa màu gì?' },
+      probe('dish_burn', TUBE2, 'Rót hexane vào bát sứ nhỏ, cẩn thận đưa que đóm đang cháy vào bề mặt chất lỏng.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống nghiệm có hai lớp: lớp dưới là dung dịch KMnO₄ màu tím, lớp trên là hexane không màu',
+        'Để yên 10 phút, màu tím của dung dịch không thay đổi',
+        'Hexane trong bát sứ bốc cháy với ngọn lửa màu vàng',
+      ],
+      equations: ['2C₆H₁₄ + 19O₂ →(t°) 12CO₂ + 14H₂O', '2C₆H₁₄ + 13O₂ →(t°) 12CO + 14H₂O (thiếu oxygen)'],
+      explain: 'Ở điều kiện thường, hexane không phản ứng với dung dịch KMnO₄ vì phân tử alkane chỉ có liên kết đơn C–C và C–H bền, khó bị oxi hóa. Hexane không tan trong nước và nhẹ hơn nước nên nổi thành lớp riêng phía trên. Tuy vậy hexane dễ cháy, tỏa nhiều nhiệt. Đốt trong bát sứ vì bát sứ chịu nhiệt tốt; cốc thủy tinh có thể bị nứt vỡ khi bị đốt nóng không đều.',
+    },
+  },
+  {
+    id: 'dieu-che-ethylene',
+    title: 'Điều chế và thử tính chất hóa học của ethylene',
+    topic: 'hoa11-b16', page: 99,
+    concepts: ['alkene', 'ethylene', 'phản ứng cộng', 'phản ứng oxi hóa', 'điều chế khí'],
+    summary: 'Đun ethanol với H₂SO₄ đặc, dẫn khí ethylene vào dung dịch KMnO₄ loãng, nước bromine rồi đốt khí.',
+    steps: [
+      say('Trong phòng thí nghiệm ảo, bình nón thay cho bình cầu có nhánh. Bỏ qua bình rửa khí chứa NaOH.'),
+      focus(FLASK, TUBE1, TUBE2),
+      add('kmno4_0002', 2, TUBE1, 'Ống nghiệm (1): khoảng 2 mL dung dịch KMnO₄ loãng.'),
+      add('br2_water', 2, TUBE2, 'Ống nghiệm (2): khoảng 2 mL nước bromine loãng.'),
+      add('ethanol', 2, FLASK, 'Cho vào bình khoảng 2 mL cồn 96° (và vài viên đá bọt để sôi êm).'),
+      add('h2so4_70', 4, FLASK, 'Rót từ từ khoảng 4 mL dung dịch H₂SO₄ đặc vào bình.'),
+      connect(FLASK, TUBE1, 'Đậy bình bằng nút có ống dẫn khí, nhúng đầu ống dẫn vào ống nghiệm (1).'),
+      heat(FLASK, true, 'Đun nóng hỗn hợp.'),
+      { kind: 'predict', text: 'Khí ethylene sục vào dung dịch thuốc tím, nước bromine thì có hiện tượng gì?' },
+      wait(400, { speed: 8, text: 'Khí ethylene sinh ra sục vào dung dịch KMnO₄.', until: (l) => l.mix(TUBE1).get('MnO4-') < 4e-8 }),
+      connect(FLASK, TUBE2, 'Chuyển đầu ống dẫn khí sang ống nghiệm (2).'),
+      wait(300, { speed: 6, text: 'Khí ethylene sục vào nước bromine.', until: (l) => l.mix(TUBE2).get('Br2') < 2e-6 }),
+      connect(FLASK, null, 'Thay ống dẫn khí hình chữ L bằng ống dẫn có đầu vuốt nhọn.'),
+      probe('burning', FLASK, 'Đưa que đóm đang cháy lại gần đầu ống dẫn khí.'),
+      heat(FLASK, false, 'Ngừng đun.'),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1): màu tím của dung dịch KMnO₄ nhạt dần rồi mất màu, có kết tủa nâu đen MnO₂',
+        'Ống (2): nước bromine màu vàng nhạt dần rồi mất màu',
+        'Khí ethylene cháy với ngọn lửa sáng màu vàng',
+      ],
+      equations: [
+        'C₂H₅OH →(H₂SO₄ đặc, 170 °C) CH₂=CH₂ + H₂O',
+        '3CH₂=CH₂ + 2KMnO₄ + 4H₂O → 3HO–CH₂–CH₂–OH + 2MnO₂↓ + 2KOH',
+        'CH₂=CH₂ + Br₂ → BrCH₂–CH₂Br',
+        'CH₂=CH₂ + 3O₂ →(t°) 2CO₂ + 2H₂O',
+      ],
+      explain: 'H₂SO₄ đặc tách một phân tử nước khỏi ethanol tạo ethylene (thực tế cần đun tới khoảng 170 °C). Liên kết π trong liên kết đôi C=C kém bền nên ethylene dễ tham gia phản ứng cộng (làm mất màu nước bromine) và dễ bị oxi hóa (làm mất màu dung dịch thuốc tím, tạo ethylene glycol và MnO₂ nâu đen). Ethylene cháy tỏa nhiều nhiệt.',
+    },
+  },
+  {
+    id: 'dieu-che-acetylene',
+    title: 'Điều chế và thử tính chất hóa học của acetylene',
+    topic: 'hoa11-b16', page: 99,
+    concepts: ['alkyne', 'acetylene', 'đất đèn', 'phản ứng cộng', 'phản ứng oxi hóa', 'điều chế khí'],
+    summary: 'Nhỏ nước vào đất đèn, dẫn khí acetylene vào dung dịch KMnO₄ loãng, nước bromine rồi đốt khí.',
+    steps: [
+      say('Trong phòng thí nghiệm ảo, bình nón thay cho bình cầu có nhánh và phễu nhỏ giọt. Bỏ qua bình rửa khí chứa NaOH.'),
+      focus(FLASK, TUBE1, TUBE2),
+      add('kmno4_0002', 2, TUBE1, 'Ống nghiệm (1): khoảng 2 mL dung dịch KMnO₄ loãng.'),
+      add('br2_water', 2, TUBE2, 'Ống nghiệm (2): khoảng 2 mL nước bromine loãng.'),
+      add('cac2', 0.3, FLASK, 'Cho vài mẩu đất đèn (CaC₂) vào bình.'),
+      connect(FLASK, TUBE1, 'Đậy bình bằng nút có ống dẫn khí, nhúng đầu ống dẫn vào ống nghiệm (1).'),
+      { kind: 'predict', text: 'Acetylene có làm mất màu dung dịch thuốc tím và nước bromine như ethylene không?' },
+      add('water', 5, FLASK, 'Cho nước từ từ chảy xuống đất đèn.'),
+      wait(200, { speed: 4, text: 'Đất đèn sủi bọt mạnh, khí acetylene sục vào dung dịch KMnO₄.', until: (l) => l.mix(TUBE1).get('MnO4-') < 4e-8 }),
+      connect(FLASK, TUBE2, 'Chuyển đầu ống dẫn khí sang ống nghiệm (2).'),
+      wait(200, { speed: 4, text: 'Khí acetylene sục vào nước bromine.', until: (l) => l.mix(TUBE2).get('Br2') < 2e-6 }),
+      connect(FLASK, null, 'Thay ống dẫn khí hình chữ L bằng ống dẫn có đầu vuốt nhọn.'),
+      probe('burning', FLASK, 'Đưa que đóm đang cháy lại gần đầu ống dẫn khí.'),
+    ],
+    result: {
+      phenomena: [
+        'Đất đèn tác dụng mạnh với nước, sủi bọt khí; trong bình có vẩn đục trắng Ca(OH)₂',
+        'Ống (1): dung dịch KMnO₄ mất màu tím, có kết tủa nâu đen MnO₂',
+        'Ống (2): nước bromine mất màu',
+        'Acetylene cháy với ngọn lửa rất sáng, có muội than',
+      ],
+      equations: [
+        'CaC₂ + 2H₂O → C₂H₂↑ + Ca(OH)₂',
+        'CH≡CH + 2Br₂ → Br₂CH–CHBr₂',
+        '3CH≡CH + 8KMnO₄ → 3K₂C₂O₄ + 8MnO₂↓ + 2KOH + 2H₂O',
+        '2CH≡CH + 5O₂ →(t°) 4CO₂ + 2H₂O',
+      ],
+      explain: 'Calcium carbide tác dụng với nước sinh ra acetylene. Liên kết ba C≡C gồm hai liên kết π kém bền nên acetylene cộng được bromine (làm mất màu nước bromine) và bị KMnO₄ oxi hóa. Acetylene có hàm lượng carbon cao nên khi cháy trong không khí cho ngọn lửa rất sáng và có muội than; cháy trong oxygen tạo ngọn lửa trên 3 000 °C (đèn xì hàn cắt kim loại).',
+    },
+  },
+  {
+    id: 'oxi-hoa-toluene-benzene',
+    title: 'Oxi hóa toluene và benzene bằng dung dịch KMnO₄',
+    topic: 'hoa11-b17', page: 107,
+    concepts: ['arene', 'phản ứng oxi hóa nhóm alkyl', 'toluene', 'benzene'],
+    summary: 'Hai ống nghiệm chứa KMnO₄ trong H₂SO₄: thêm benzene vào ống (1), toluene vào ống (2) rồi đun cách thủy.',
+    steps: [
+      focus(TUBE1, TUBE2),
+      add('kmno4_005', 1, TUBE1, 'Cho vào hai ống nghiệm, mỗi ống 1 mL dung dịch KMnO₄ 0,05 M…'),
+      add('kmno4_005', 1, TUBE2),
+      add('h2so4_2', 1, TUBE1, '…và 1 mL dung dịch H₂SO₄ 2 M.'),
+      add('h2so4_2', 1, TUBE2),
+      add('benzene', 1, TUBE1, 'Cho tiếp vào ống (1) 1 mL benzene…'),
+      add('toluene', 1, TUBE2, '…và vào ống (2) 1 mL toluene.'),
+      stir(TUBE1, 'Lắc đều hai ống nghiệm.'),
+      stir(TUBE2),
+      { kind: 'predict', text: 'Đun cách thủy: ống nào mất màu tím?' },
+      probe('hot_bath', TUBE1, 'Đun cách thủy hai ống nghiệm trong nồi nước nóng.'),
+      probe('hot_bath', TUBE2),
+      wait(900, { speed: 20, text: 'Ống (2) nhạt màu tím dần.', until: (l) => l.mix(TUBE2).get('MnO4-') < 3e-8 }),
+    ],
+    result: {
+      phenomena: [
+        'Ống (1) chứa benzene: dung dịch vẫn giữ nguyên màu tím',
+        'Ống (2) chứa toluene: màu tím nhạt dần rồi mất màu',
+      ],
+      equations: ['5C₆H₅CH₃ + 6KMnO₄ + 9H₂SO₄ →(t°) 5C₆H₅COOH + 3K₂SO₄ + 6MnSO₄ + 14H₂O'],
+      explain: 'Vòng benzene rất bền, không bị KMnO₄ oxi hóa nên benzene không làm mất màu thuốc tím. Ở toluene, nhóm methyl gắn với vòng benzene bị KMnO₄ oxi hóa khi đun nóng thành nhóm –COOH, tạo benzoic acid; ion MnO₄⁻ màu tím bị khử thành Mn²⁺ gần như không màu.',
     },
   },
   {

@@ -1,5 +1,5 @@
 /** Danh mục hóa chất trên kệ và chất rắn trên khay */
-import { gramsToMol, makeSolution, RGB, solutionColor, SolidForm } from '../src';
+import { gramsToMol, indicatorDrops, makeOrganic, makeSolution, Mixture, RGB, solutionColor, SolidForm } from '../src';
 import type { ToolKind } from './probes';
 
 export type LabTool = ToolKind | 'delivery' | 'syringe' | 'balance';
@@ -19,14 +19,26 @@ export interface ReagentDef {
   amber?: boolean;
   /** Màu dung dịch trong lọ */
   color: RGB;
+  /** Chất lỏng hữu cơ không tan trong nước: id dung môi (solutes là chất tan trong nó) */
+  organic?: string;
 }
 
 function reagent(
   key: string, formula: string, conc: string, name: string,
   solutes: Record<string, number>, extra: Partial<ReagentDef> = {},
 ): ReagentDef {
-  const color = extra.color ?? solutionColor(makeSolution(solutes, 0.01), 2.5);
+  const color = extra.color ?? (extra.organic ? [0.98, 0.98, 0.97] as RGB : solutionColor(makeSolution(solutes, 0.01), 2.5));
   return { key, formula, conc, name, solutes, ...extra, color };
+}
+
+/** Hỗn hợp rót vào khi lấy amount (mL, hoặc số giọt với chất chỉ thị) của một lọ hóa chất */
+/** Dung dịch trong burette: NaOH có nồng độ "khoảng 0,1 M", cần xác định bằng chuẩn độ */
+export const BURETTE_SOLUTES = { NaOH: 0.105 };
+
+export function reagentMixture(def: ReagentDef, amount: number, tempK: number): Mixture {
+  if (def.indicator) return indicatorDrops(def.indicator, amount);
+  if (def.organic) return makeOrganic(def.organic, amount / 1000, def.solutes, tempK);
+  return makeSolution(def.solutes, amount / 1000, tempK);
 }
 
 export const REAGENTS: ReagentDef[] = [
@@ -43,6 +55,7 @@ export const REAGENTS: ReagentDef[] = [
   reagent('vinegar', 'CH₃COOH', '5%', 'giấm ăn', { CH3COOH: 0.83 }, { aka: 'vinegar acetic acid giam' }),
   reagent('h2so4_01', 'H₂SO₄', '0,1M', 'sulfuric acid loãng', { H2SO4: 0.1 }),
   reagent('h2so4_2', 'H₂SO₄', '2M', 'sulfuric acid', { H2SO4: 2 }),
+  reagent('h2so4_98', 'H₂SO₄', '98%', 'sulfuric acid đặc', { H2SO4: 18.4 }, { aka: 'axit sunfuric dac h2so4 dac 98 sulfuric acid dac' }),
   reagent('h2so4_70', 'H₂SO₄', '70%', 'sulfuric acid đặc', { H2SO4: 11.5 }, { aka: 'axit sunfuric dac h2so4 dac sulfuric acid dac' }),
   reagent('naoh', 'NaOH', '1M', 'sodium hydroxide', { NaOH: 1 }),
   reagent('naoh05', 'NaOH', '0,5M', 'sodium hydroxide', { NaOH: 0.5 }),
@@ -76,11 +89,20 @@ export const REAGENTS: ReagentDef[] = [
   reagent('lemon', 'Nước chanh', '', 'đồ uống, chứa citric acid', { H3Cit: 0.25 }, { aka: 'chanh lemon citric acid nuoc qua', color: [0.97, 0.95, 0.72] }),
   reagent('soda', 'Nước ngọt có gas', '', 'đồ uống, chứa khí carbon dioxide', { H2CO3: 0.1, H3Cit: 0.01 }, { aka: 'nuoc ngot co ga soda carbonic' }),
   reagent('dishsoap', 'Nước rửa bát', '', 'chất tẩy rửa dùng trong gia đình', { NaHCO3: 0.01, Na2CO3: 0.0005 }, { aka: 'nuoc rua bat xa phong chat tay rua', color: [0.75, 0.92, 0.7] }),
+  reagent('ruou', 'Rượu', '≈ 30°', 'rượu nấu thủ công (ethanol – nước)', { C2H5OH: 5.1 }, { aka: 'ruou gao nau thu cong ethanol nuoc do con' }),
   reagent('ethanol', 'C₂H₅OH', '96°', 'ethanol (cồn)', { C2H5OH: 16.4 }, { aka: 'ethanol con ruou ancol etylic' }),
   reagent('phenol_sat', 'C₆H₅OH', 'bão hòa', 'dung dịch phenol bão hòa (trắng đục)', { C6H5OH: 1.2 }, { aka: 'phenol bao hoa c6h5oh axit phenic' }),
   reagent('phenol_5', 'C₆H₅OH', '5%', 'dung dịch phenol', { C6H5OH: 0.53 }, { aka: 'phenol c6h5oh axit phenic' }),
   reagent('ch3cho_5', 'CH₃CHO', '5%', 'acetaldehyde (ethanal)', { CH3CHO: 1.13 }, { aka: 'acetaldehyde ethanal andehit axetic anđehit aldehyde' }),
   reagent('glycerol', 'C₃H₅(OH)₃', '', 'glycerol', { glycerol: 13.7 }, { aka: 'glycerol glixerol glyxerin' }),
+  // Chất lỏng hữu cơ không tan trong nước: tách thành lớp riêng
+  reagent('hexane', 'C₆H₁₄', '', 'hexane', {}, { organic: 'C6H14', aka: 'hexane hexan dung moi huu co ankan alkane' }),
+  reagent('benzene', 'C₆H₆', '', 'benzene', {}, { organic: 'C6H6', aka: 'benzene benzen arene hydrocarbon thom' }),
+  reagent('toluene', 'C₆H₅CH₃', '', 'toluene (methylbenzene)', {}, { organic: 'C6H5CH3', aka: 'toluene toluen methylbenzene metylbenzen arene' }),
+  reagent('carrot', 'Nước ép cà rốt', '', 'chứa β-carotene màu cam', { carotene: 1.5e-5 }, { aka: 'nuoc ep ca rot carrot beta carotene' }),
+  reagent('kmno4_1', 'KMnO₄', '1%', 'dung dịch thuốc tím', { KMnO4: 0.063 }, { aka: 'potassium permanganate kmno4 thuoc tim kali pemanganat' }),
+  reagent('kmno4_0002', 'KMnO₄', '0,002M', 'dung dịch thuốc tím loãng', { KMnO4: 0.002 }, { aka: 'potassium permanganate kmno4 thuoc tim loang kali pemanganat' }),
+  reagent('kmno4_005', 'KMnO₄', '0,05M', 'dung dịch thuốc tím', { KMnO4: 0.05 }, { aka: 'potassium permanganate kmno4 thuoc tim kali pemanganat' }),
   reagent('h2o2', 'H₂O₂', '3%', 'nước oxy già', { H2O2: 0.88 }, { amber: true, aka: 'hydrogen peroxide' }),
   reagent('h2o2_10', 'H₂O₂', '10%', 'hydrogen peroxide', { H2O2: 2.94 }, { amber: true, aka: 'nuoc oxy gia hydrogen peroxide 10' }),
   reagent('agno3', 'AgNO₃', '0,1M', 'silver nitrate', { AgNO3: 0.1 }, { amber: true }),
@@ -154,6 +176,8 @@ export const SOLID_ITEMS: SolidItem[] = [
   { key: 'mgo', id: 'MgO', label: 'Magnesium oxide', aka: 'magie oxit mgo', grams: 0.1, form: 'powder', shape: 'powder' },
   { key: 'p2o5', id: 'P2O5', label: 'Diphosphorus pentoxide', aka: 'diphotpho pentaoxit p2o5 p4o10', grams: 0.1, form: 'powder', shape: 'powder' },
   { key: 'cuo', id: 'CuO', label: 'Copper(II) oxide (bột)', aka: 'dong oxit cuo bot den oxide base', grams: 0.08, form: 'powder', shape: 'powder' },
+  { key: 'sugar', id: 'C12H22O11', label: 'Đường mía (saccharose)', aka: 'duong mia saccharose sucrose c12h22o11 duong kinh', grams: 10, form: 'powder', shape: 'powder' },
+  { key: 'cac2', id: 'CaC2', label: 'Đất đèn (calcium carbide)', aka: 'dat den calcium carbide cac2 canxi cacbua', grams: 0.3, form: 'granule', shape: 'chunk' },
   { key: 'mno2', id: 'MnO2', label: 'Manganese dioxide (bột)', grams: 0.1, form: 'powder', shape: 'powder' },
 ];
 
@@ -206,7 +230,7 @@ function searchText(s: string): string {
   return n + ' ' + Object.entries(LEGACY).filter(([k]) => n.includes(k)).map(([, v]) => v).join(' ');
 }
 
-const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', NH4Cl: 'NH₄Cl', KNO3: 'KNO₃', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
+const SOLID_FORMULA: Record<string, string> = { Li: 'Li', K: 'K', Mg: 'Mg', Zn: 'Zn', Fe: 'Fe', Cu: 'Cu', Na: 'Na', CaCO3: 'CaCO₃', MnO2: 'MnO₂', S: 'S', NaHCO3: 'NaHCO₃', NaCl: 'NaCl', CuSO4: 'CuSO₄', starch: 'Bột gạo', CuO: 'CuO', CaO: 'CaO', KMnO4: 'KMnO₄', CaC2: 'CaC₂', C12H22O11: 'C₁₂H₂₂O₁₁', NH4Cl: 'NH₄Cl', KNO3: 'KNO₃', Na2O: 'Na₂O', MgO: 'MgO', P2O5: 'P₂O₅', CaCl2: 'CaCl₂', KClO3: 'KClO₃', VitC: 'Vitamin C sủi' };
 
 export const CHEMICALS: ChemEntry[] = [
   ...REAGENTS.map((r): ChemEntry => {
@@ -231,8 +255,11 @@ export const CHEMICALS: ChemEntry[] = [
     ['ph_paper', 'ph_paper', 'Giấy pH', 'Đo pH dung dịch theo bảng màu', 'giay ph thang ph chi thi van nang do ph'],
     ['ph_moist', 'ph_moist', 'Giấy pH ẩm', 'Thử khí: đưa vào miệng ống, đọc pH', 'giay ph am thu khi nh3 ammonia miệng ong mieng ong'],
     ['ice_bath', 'ice_bath', 'Cốc nước đá', 'Ngâm ống nghiệm ở khoảng 0 °C (thả lần nữa để lấy ra)', 'coc nuoc da lanh ngam ong lam lanh nhiet do can bang'],
+    ['warm_bath', 'warm_bath', 'Cốc nước ấm', 'Ngâm ống nghiệm ở khoảng 50 °C (thả lần nữa để lấy ra)', 'coc nuoc am ngam ong cach thuy 50 do'],
     ['hot_bath', 'hot_bath', 'Cốc nước nóng', 'Ngâm ống nghiệm ở khoảng 80 °C (thả lần nữa để lấy ra)', 'coc nuoc nong ngam ong cach thuy dun nhiet do can bang'],
     ['no2_tube', 'no2_tube', 'Khí NO₂ (nút kín)', 'Nạp khí nitrogen dioxide vào ống khô rồi đậy nút', 'khi no2 nitrogen dioxide nito dioxit n2o4 nau do can bang ong nut kin'],
+    ['burette', 'burette', 'Burette NaOH (≈ 0,1 M)', 'Lắp burette 25 mL chứa NaOH nồng độ khoảng 0,1 M lên bình nón để chuẩn độ', 'burette buret chuan do naoh acid base'],
+    ['dish_burn', 'dish_burn', 'Bát sứ + que đóm', 'Rót khoảng 1 mL chất lỏng ra bát sứ rồi châm lửa (hexane, cồn…)', 'bat su dot chay chat long que dom hexane con ethanol'],
     ['spoon_s', 'spoon_s', 'Muôi sắt + lưu huỳnh', 'Đốt lưu huỳnh trên đèn cồn rồi đưa vào bình (vd. bình oxygen)', 'muoi sat dot luu huynh sulfur chay binh oxygen so2'],
     ['magnet', 'magnet', 'Nam châm', 'Thử sắt trong hỗn hợp', 'nam cham hut sat tu tinh'],
     ['dye_paper', 'dye_paper', 'Mẩu giấy màu ẩm', 'Thử tính tẩy màu của khí chlorine', 'giay mau am tay mau chlorine clo cl2'],

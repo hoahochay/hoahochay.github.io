@@ -12,6 +12,7 @@ export interface HudHandlers {
   onEmpty(): void;
   onFocus(): void;
   onInvert(): void;
+  onBurette(action: 'stream' | 'drip' | 'drop' | 'close'): void;
 }
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -52,6 +53,11 @@ export class Hud {
     $('#btn-empty').onclick = () => h.onEmpty();
     $('#btn-focus').onclick = () => h.onFocus();
     $('#btn-invert').onclick = () => h.onInvert();
+    // Nút của burette nằm trong bảng thông tin (vẽ lại liên tục): bắt sự kiện ở bảng
+    $('#info').addEventListener('pointerdown', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-burette]');
+      if (b) h.onBurette(b.dataset.burette as 'stream' | 'drip' | 'drop' | 'close');
+    });
   }
 
   setSpeed(s: number): void {
@@ -106,7 +112,7 @@ export class Hud {
 
   /** Cập nhật bảng thông tin (giới hạn ~6 lần/giây) */
   /** stopwatch: chữ hiển thị của đồng hồ bấm giờ (tờ giấy kẻ chữ X) đặt ở dụng cụ này, nếu có */
-  panel(view: VesselView | null, o: Observation | null, now: number, stopwatch?: string): void {
+  panel(view: VesselView | null, o: Observation | null, now: number, stopwatch?: string, burette?: { usedML: number; mode: string }): void {
     if (now - this.lastPanel < 0.16) return;
     this.lastPanel = now;
     const el = $('#info');
@@ -114,7 +120,13 @@ export class Hud {
       el.innerHTML = '<div class="muted">Bấm vào một ống nghiệm hoặc cốc để chọn.</div>';
       return;
     }
-    const empty = o.volumeML < 0.005 && o.solids.length === 0 && !Object.values(o.headspace).some((x) => x > 0.005);
+    const org = o.organic;
+    const totalML = o.volumeML + (org?.volumeML ?? 0);
+    const orgChips = org ? Object.entries(org.dissolved)
+      .filter(([id, x]) => species(id).density ? x > 0.005 : x > 1e-5)
+      .map(([id, x]) => `<span class="chip">${pretty(id)} <b>${species(id).density ? x.toFixed(2) + ' mL' : fmtConc(x)}</b></span>`)
+      .join('') : '';
+    const empty = totalML < 0.005 && o.solids.length === 0 && !Object.values(o.headspace).some((x) => x > 0.005);
     const dissolved = Object.entries(o.dissolved)
       .filter(([id]) => id !== 'H+' && id !== 'OH-' && !species(id).indicator && o.dissolved[id] > 1e-5)
       .sort((a, b) => b[1] - a[1])
@@ -144,11 +156,17 @@ export class Hud {
       <div class="meters">
         <div class="meter"><div class="k">Nhiệt độ</div><div class="val">${o.tempC.toFixed(1)}<small> °C</small></div></div>
         <div class="meter"><div class="k">pH</div><div class="val">${o.volumeML > 0.005 ? o.pH.toFixed(2) : '–'}</div></div>
-        <div class="meter"><div class="k">Thể tích</div><div class="val">${o.volumeML.toFixed(o.volumeML < 10 ? 2 : 1)}<small> mL</small></div></div>
+        <div class="meter"><div class="k">Thể tích</div><div class="val">${totalML.toFixed(totalML < 10 ? 2 : 1)}<small> mL</small></div></div>
       </div>
       ${o.volumeML < 0.005 ? '' : `<div class="row"><span class="k">Màu</span>${swatch(o.appearance)} ${toHex(o.appearance)}${o.turbidity > 0.05 ? ` · đục ${(o.turbidity * 100).toFixed(0)}%` : ''}${o.boiling ? ' · <b>đang sôi</b>' : ''}</div>`}
+      ${burette ? `<div class="sec">Burette NaOH (≈ 0,1 M)</div>
+        <div class="row"><span class="k">Đã dùng</span><b>${burette.usedML.toFixed(2).replace('.', ',')} mL</b>&nbsp;· ${burette.mode === 'stream' ? 'đang chảy thành dòng' : burette.mode === 'drip' ? 'đang nhỏ từng giọt' : 'khóa đóng'}</div>
+        <div class="bur-btns">${([['stream', '▶ Mở khóa'], ['drip', '💧 Nhỏ từng giọt'], ['drop', '+1 giọt'], ['close', '⏹ Đóng khóa']] as const)
+          .map(([a, t]) => `<button data-burette="${a}"${burette.mode === a ? ' class="on"' : ''}>${t}</button>`).join('')}</div>` : ''}
       ${stopwatch ? `<div class="row"><span class="k">${/^[⏱⏹]/.test(stopwatch) ? 'Đồng hồ' : 'Ngâm'}</span><b>${stopwatch}</b></div>` : ''}
-      ${dissolved ? `<div class="sec">Chất tan</div><div class="chips">${dissolved}</div>` : ''}
+      ${dissolved ? `<div class="sec">Chất tan${org ? ' (lớp nước)' : ''}</div><div class="chips">${dissolved}</div>` : ''}
+      ${org ? `<div class="sec">Lớp chất lỏng hữu cơ (${o.agitation > 0.3 ? 'đang trộn lẫn, để yên cho tách lớp' : org.onTop ? 'nổi ở trên' : 'chìm ở dưới'})</div>
+        <div class="row"><span class="k">Màu</span>${swatch(org.color)} ${toHex(org.color)}</div><div class="chips">${orgChips}</div>` : ''}
       ${solids ? `<div class="sec">Chất rắn</div><div class="chips">${solids}</div>` : ''}
       ${gases ? `<div class="sec">Khí thoát ra</div><div class="chips">${gases}</div>` : ''}
       ${head ? (view.vessel.stoppered

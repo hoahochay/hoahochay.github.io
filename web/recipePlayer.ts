@@ -2,7 +2,7 @@
 import type { ToolKind } from './probes';
 import { describeStep } from './narration';
 import { copyText, shareUrl } from './router';
-import { CATEGORIES, categoryOf, CategoryId, LabState, PlayScript, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
+import { BuretteAction, CATEGORIES, categoryOf, CategoryId, LabState, PlayScript, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
 import { Narrator } from './voice';
 
 type Tab = CategoryId | 'all';
@@ -35,6 +35,8 @@ export interface LabApi {
   /** Đổ hết chất lỏng từ dụng cụ này sang dụng cụ khác */
   pour(src: number, dst: number, mL?: number): void;
   focus(vessels: number[] | null): void;
+  /** Vặn khóa burette lắp trên dụng cụ */
+  burette(vessel: number, action: BuretteAction): void;
   resetAll(): void;
   setSpeed(s: number): void;
   simTime(): number;
@@ -271,6 +273,10 @@ export class RecipePlayer {
       case 'stir':
         this.ui.progress(null);
         this.lab.stir(s.vessel);
+        return this.untilIdle(id);
+      case 'burette':
+        this.ui.progress(null);
+        this.lab.burette(s.vessel, s.action);
         return this.untilIdle(id);
       case 'connect':
         this.ui.progress(null);

@@ -69,6 +69,9 @@ export class VesselView {
   private selected = false;
   private hovered = false;
   private readonly liquid: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  /** Lớp chất lỏng hữu cơ không tan trong nước (hexane, toluene…) */
+  private readonly orgLiquid: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  private liquidKey = '';
   /** Khí có màu (chlorine vàng lục) trong khoảng khí phía trên chất lỏng */
   private readonly gasFill: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   private readonly stopper: THREE.Mesh;
@@ -123,6 +126,9 @@ export class VesselView {
     );
     this.liquid.renderOrder = 2;
     this.group.add(this.liquid);
+    this.orgLiquid = new THREE.Mesh(new THREE.BufferGeometry(), this.liquid.material.clone());
+    this.orgLiquid.renderOrder = 2;
+    this.group.add(this.orgLiquid);
     this.gasFill = new THREE.Mesh(
       new THREE.BufferGeometry(),
       new THREE.MeshBasicMaterial({ color: 0xc8d84a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
@@ -299,18 +305,46 @@ export class VesselView {
     const p = this.kind.profile;
     if (this.selected) this.ring.scale.setScalar(1 + 0.04 * Math.sin(this.time * 5));
 
-    // ── Chất lỏng ──
-    const h = this.vmap.heightFor(o.volumeML);
-    if (Math.abs(h - this.liquidH) > 0.004) {
-      this.liquidH = h;
-      this.liquid.geometry.dispose();
-      this.liquid.geometry = h > 0.02 ? filledLathe(p, 0, h, 0.01) : new THREE.BufferGeometry();
+    // ── Chất lỏng: lớp nước và lớp hữu cơ không tan (nhẹ hơn nước thì nổi trên, nặng hơn thì chìm dưới).
+    // Vừa lắc: hai lớp trộn thành nhũ tương đục, để yên vài giây thì tách lớp trở lại.
+    const org = o.organic;
+    const h = this.vmap.heightFor(o.volumeML + (org?.volumeML ?? 0));
+    const emulsion = !!org && o.agitation > 0.3;
+    let aq0 = 0, aq1 = h, or0 = 0, or1 = 0;
+    if (org && !emulsion) {
+      if (org.onTop) { aq1 = or0 = this.vmap.heightFor(o.volumeML); or1 = h; }
+      else { or1 = aq0 = this.vmap.heightFor(org.volumeML); }
     }
-    this.liquid.visible = h > 0.02;
-    const c = o.appearance;
+    const q = (x: number) => Math.round(x * 200);
+    const key = [aq0, aq1, or0, or1].map(q).join('|');
+    this.liquidH = h;
+    if (key !== this.liquidKey) {
+      this.liquidKey = key;
+      this.liquid.geometry.dispose();
+      this.liquid.geometry = aq1 - aq0 > 0.02 ? filledLathe(p, aq0, aq1, 0.01) : new THREE.BufferGeometry();
+      this.orgLiquid.geometry.dispose();
+      this.orgLiquid.geometry = or1 - or0 > 0.02 ? filledLathe(p, or0, or1, 0.01) : new THREE.BufferGeometry();
+    }
+    this.liquid.visible = aq1 - aq0 > 0.02;
+    this.orgLiquid.visible = or1 - or0 > 0.02;
+    let c = o.appearance;
+    let turbidity = o.turbidity;
+    if (org && emulsion) {
+      // Nhũ tương: màu trung bình theo thể tích, đục như sữa
+      const w = org.volumeML / (org.volumeML + Math.max(1e-6, o.volumeML));
+      c = c.map((x, i) => x * (1 - w) + org.color[i] * w) as RGB;
+      turbidity = Math.max(turbidity, 0.6 * Math.min(1, (o.agitation - 0.3) / 0.4));
+    }
+    if (org && this.orgLiquid.visible) {
+      const oc = org.color;
+      const os = 1 - Math.min(...oc);
+      setRGB(this.orgLiquid.material.color, [oc[0] * 0.95, oc[1] * 0.96, oc[2] * 0.93]);
+      this.orgLiquid.material.opacity = Math.min(0.9, 0.24 + 0.6 * os);
+      this.orgLiquid.material.envMapIntensity = 0.8 * (1 - 0.85 * os);
+    }
     const strength = 1 - Math.min(...c);
     setRGB(this.liquid.material.color, [c[0] * 0.93, c[1] * 0.97, c[2]]);
-    this.liquid.material.opacity = Math.min(0.94, 0.2 + 0.6 * strength + 0.75 * o.turbidity);
+    this.liquid.material.opacity = Math.min(0.94, 0.2 + 0.6 * strength + 0.75 * turbidity);
     // Dung dịch màu đậm: giảm phản chiếu môi trường, nếu không lớp dung dịch mỏng (đáy bình nón) trông bạc trắng
     this.liquid.material.envMapIntensity = 0.8 * (1 - 0.85 * strength);
 
@@ -369,27 +403,35 @@ export class VesselView {
   }
 
   private updateSediment(o: Observation): void {
-    let grams = 0;
+    let grams = 0, bedML = 0, hasBulk = false;
     const col: RGB = [0, 0, 0];
+    const logCol: RGB = [0, 0, 0];
     // Ống khô có bột: các loại bột nằm trộn lẫn thành một lớp, màu theo tỉ lệ khối lượng
     this.dryBed = o.volumeML < 0.05 && o.solids.some((s) => (this.vessel.mix.formFactor.get(s.id) ?? 0) >= POWDER);
     for (const s of o.solids) {
       if (s.id === MIRROR_ID) continue;
       const ff = this.vessel.mix.formFactor.get(s.id) ?? 0;
-      if (ff < (this.dryBed ? POWDER : FINE)) continue;
-      const g = this.dryBed ? s.grams : s.grams * (1 - s.suspended);
+      const bulk = species(s.id).bulk;
+      if (!bulk && ff < (this.dryBed ? POWDER : FINE)) continue;
+      const g = this.dryBed || bulk ? s.grams : s.grams * (1 - s.suspended);
       grams += g;
-      for (let i = 0; i < 3; i++) col[i] += g * s.color[i];
+      // kết tủa xốp: khoảng 1,5 mL cho mỗi gam; bột khô nén chặt hơn, khoảng 0,5 mL/g
+      bedML += g * (bulk ?? (this.dryBed ? 0.5 : 1.5));
+      if (bulk) hasBulk = true;
+      for (let i = 0; i < 3; i++) {
+        col[i] += g * s.color[i];
+        logCol[i] += g * Math.log(Math.max(0.01, s.color[i]));
+      }
     }
-    // kết tủa xốp: khoảng 1,5 mL cho mỗi gam; bột khô nén chặt hơn, khoảng 0,5 mL/g
-    const hs = this.vmap.heightFor(grams * (this.dryBed ? 0.5 : 1.5));
+    const hs = this.vmap.heightFor(bedML);
     if (Math.abs(hs - this.sedimentH) > 0.004) {
       this.sedimentH = hs;
       this.sediment.geometry.dispose();
       this.sediment.geometry = hs > 0.01 ? filledLathe(this.kind.profile, 0, hs, 0.015) : new THREE.BufferGeometry();
     }
     this.sediment.visible = hs > 0.01;
-    if (grams > 0) setRGB(this.sediment.material.color, col.map((x) => x / grams) as RGB);
+    // Khối đường đang than hóa: chất màu đậm lấn át (trộn theo trung bình nhân) để chuyển dần vàng nâu → đen
+    if (grams > 0) setRGB(this.sediment.material.color, (hasBulk ? logCol.map((x) => Math.exp(x / grams)) : col.map((x) => x / grams)) as RGB);
     // Nóng đỏ: từ khoảng 450 °C bắt đầu đỏ sẫm, 750 °C đỏ cam
     const hot = THREE.MathUtils.clamp((o.tempC - 450) / 300, 0, 1);
     const mat = this.sediment.material;
@@ -411,7 +453,7 @@ export class VesselView {
     const depositCol: RGB = [0, 0, 0];
     for (const s of o.solids) {
       if (s.id === MIRROR_ID) continue;
-      if (this.solids.has(s.id) || (mix.formFactor.get(s.id) ?? 0) >= (this.dryBed ? POWDER : FINE)) continue;
+      if (this.solids.has(s.id) || species(s.id).bulk || (mix.formFactor.get(s.id) ?? 0) >= (this.dryBed ? POWDER : FINE)) continue;
       depositG += s.grams;
       for (let i = 0; i < 3; i++) depositCol[i] += s.grams * s.color[i];
     }
@@ -420,7 +462,7 @@ export class VesselView {
     let substrate = false;
     for (const v of this.solids.values()) {
       const n = mix.get(v.item.id);
-      v.obj.visible = n > v.mol0 * 1e-3 && !(this.dryBed && v.item.shape === 'powder');
+      v.obj.visible = n > v.mol0 * 1e-3 && !(this.dryBed && v.item.shape === 'powder') && !species(v.item.id).bulk;
       if (!v.obj.visible) continue;
       const k = v.size * Math.max(0.12, Math.cbrt(n / v.mol0));
       v.obj.scale.setScalar(k);

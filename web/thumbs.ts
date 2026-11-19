@@ -8,8 +8,9 @@ import { balanceModel } from './balance';
 import { ProbeView } from './probes';
 import { BottleView, dishModel } from './props';
 import { XCard } from './xcard';
-import { BathView } from './bath';
-import { spoonModel } from './burn';
+import { BATH_TOOL, BathView } from './bath';
+import { porcelainDishModel, spoonModel } from './burn';
+import { BuretteView } from './buretteView';
 import { glassMaterial } from './materials';
 
 export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, string> {
@@ -38,8 +39,12 @@ export function renderThumbnails(entries: ChemEntry[], size = 128): Map<string, 
       obj = balanceModel();
     } else if (e.tool === 'xcard') {
       obj = new XCard().group;
-    } else if (e.tool === 'ice_bath' || e.tool === 'hot_bath') {
-      obj = new BathView(e.tool === 'ice_bath' ? 'ice' : 'hot').group;
+    } else if (e.tool === 'ice_bath' || e.tool === 'warm_bath' || e.tool === 'hot_bath') {
+      obj = new BathView(BATH_TOOL[e.tool]).group;
+    } else if (e.tool === 'burette') {
+      obj = new BuretteView(2).group;
+    } else if (e.tool === 'dish_burn') {
+      obj = porcelainDishModel().group;
     } else if (e.tool === 'spoon_s') {
       obj = spoonModel().group;
       obj.rotation.z = -0.5;

@@ -38,7 +38,10 @@ export const COMPOUNDS: Record<string, Compound> = {
   BaCl2: { name: 'barium chloride', ions: { 'Ba^2+': 1, 'Cl-': 2 } },
   Na2SO4: { name: 'sodium sulfate', ions: { 'Na+': 2, 'SO4^2-': 1 } },
   AlCl3: { name: 'aluminium chloride', ions: { 'Al^3+': 1, 'Cl-': 3 } },
-  C2H5OH: { name: 'ethanol', ions: { C2H5OH: 1 } },
+  KMnO4: { name: 'potassium permanganate', ions: { 'K+': 1, 'MnO4-': 1 } },
+  carotene: { name: 'β-carotene', ions: { carotene: 1 } },
+  // 1 mol ethanol lỏng chiếm khoảng 58 mL, thay chỗ của 3,24 mol nước (cồn 96° chỉ còn rất ít nước)
+  C2H5OH: { name: 'ethanol', ions: { C2H5OH: 1, H2O: -3.24 } },
   C6H5OH: { name: 'phenol', ions: { C6H5OH: 1 } },
   CH3CHO: { name: 'acetaldehyde', ions: { CH3CHO: 1 } },
   glycerol: { name: 'glycerol', ions: { glycerol: 1 } },
@@ -94,3 +97,16 @@ export function gramsToMol(id: string, grams: number): number {
   return grams / species(id).molarMass;
 }
 
+/**
+ * Chất lỏng hữu cơ không tan trong nước (vd. hexane), volumeL lít; solutes: chất tan trong đó (mol/L).
+ * Thể tích lớp nước của hỗn hợp bằng 0.
+ */
+export function makeOrganic(solvent: string, volumeL: number, solutes: Record<string, number> = {}, tempK = T25): Mixture {
+  const m = new Mixture();
+  m.tempK = tempK;
+  const s = species(solvent);
+  if (s.phase !== 'org' || !s.density) throw new Error(`${solvent} không phải dung môi hữu cơ`);
+  m.set(solvent, (volumeL * 1000 * s.density) / s.molarMass);
+  for (const [id, c] of Object.entries(solutes)) m.add(id, c * volumeL);
+  return m;
+}

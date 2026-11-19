@@ -146,6 +146,24 @@ export class TongsView {
 }
 
 /** Muôi sắt (môi đốt hóa chất) đựng một ít bột lưu huỳnh; gốc tọa độ ở lòng muôi */
+/** Bát sứ nhỏ trắng; `liquid` là mặt chất lỏng trong bát */
+export function porcelainDishModel(): { group: THREE.Group; liquid: THREE.Mesh<THREE.CircleGeometry, THREE.MeshStandardMaterial> } {
+  const g = new THREE.Group();
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const a = (i / 12) * Math.PI / 2;
+    pts.push(new THREE.Vector2(0.3 + 1.5 * Math.sin(a), 0.9 - 0.9 * Math.cos(a) + 0.08));
+  }
+  const bowl = new THREE.Mesh(new THREE.LatheGeometry(pts, 36), new THREE.MeshStandardMaterial({ color: 0xf6f4ee, roughness: 0.35, side: THREE.DoubleSide }));
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.12, 24).translate(0, 0.06, 0), bowl.material);
+  const liquid = new THREE.Mesh(
+    new THREE.CircleGeometry(1.15, 32).rotateX(-Math.PI / 2).translate(0, 0.42, 0),
+    new THREE.MeshStandardMaterial({ color: 0xdfe8ee, roughness: 0.05, transparent: true, opacity: 0.6 }),
+  );
+  g.add(bowl, foot, liquid);
+  return { group: g, liquid };
+}
+
 export function spoonModel(): { group: THREE.Group; sulfur: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> } {
   const g = new THREE.Group();
   const iron = new THREE.MeshStandardMaterial({ color: 0x4d5258, metalness: 0.7, roughness: 0.45 });

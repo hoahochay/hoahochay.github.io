@@ -20,7 +20,13 @@ export function hydrogenAtoms(mix: Mixture): number {
 
 /** Nhiệt dung của chất lỏng trong hỗn hợp, J/K */
 export function liquidHeatCapacity(mix: Mixture): number {
-  return CP_WATER * mix.get('H2O');
+  let c = CP_WATER * mix.get('H2O');
+  // Lớp chất lỏng hữu cơ (hexane, toluene…): nhiệt dung riêng ≈ 2 J/(g·K)
+  for (const [id, n] of mix.moles) {
+    const s = species(id);
+    if (s.density) c += 2 * n * s.molarMass;
+  }
+  return c;
 }
 
 /** Nhiệt dung riêng gần đúng của chất rắn, J/(g·K) */

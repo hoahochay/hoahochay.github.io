@@ -547,3 +547,8 @@ body.recording .toast { top: 118px; }
   #rec-bar button { padding: 3px 7px; font-size: 12px; }
   body.recording .toast { top: 100px; }
 }
+
+/* Nút điều khiển khóa burette trong bảng thông tin */
+.bur-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.bur-btns button { font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 7px; border: 1px solid #d5dbe3; background: #fff; cursor: pointer; }
+.bur-btns button.on { background: #2f6fe4; border-color: #2f6fe4; color: #fff; }

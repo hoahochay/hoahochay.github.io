@@ -50,9 +50,28 @@ export class Mixture {
     this.set(id, this.get(id) + n);
   }
 
-  /** Nồng độ mol (M) của chất tan */
+  /** Nồng độ mol (M) của chất tan; chất ở lớp hữu cơ tính theo thể tích lớp hữu cơ */
   conc(id: string): number {
+    if (species(id).phase === 'org') {
+      const v = this.orgL();
+      return v > 0 ? this.get(id) / v : 0;
+    }
     return this.volumeL > 0 ? this.get(id) / this.volumeL : 0;
+  }
+
+  /** Thể tích lớp chất lỏng hữu cơ không tan trong nước, L */
+  orgL(): number {
+    let v = 0;
+    for (const [id, n] of this.moles) {
+      const s = species(id);
+      if (s.density) v += (n * s.molarMass) / s.density / 1000;
+    }
+    return v;
+  }
+
+  /** Tổng thể tích chất lỏng (lớp nước + lớp hữu cơ), L */
+  liquidL(): number {
+    return this.volumeL + this.orgL();
   }
 
   /** Diện tích bề mặt của chất rắn, cm² */

@@ -6,6 +6,7 @@
  * động học chính xác. Ea lấy gần với giá trị trong tài liệu.
  */
 import { KineticReaction, massAction } from './kinetics';
+import { arrhenius } from './thermo';
 
 export const REACTIONS: KineticReaction[] = [
   // ── Kim loại + acid ──────────────────────────────────────────────────
@@ -160,6 +161,81 @@ export const REACTIONS: KineticReaction[] = [
     equation: 'C₆H₅OH + 3Br₂ → C₆H₂Br₃OH↓ + 3HBr',
     reactants: { C6H5OH: 1, Br2: 3 }, products: { C6H2Br3OH: 1, 'H+': 3, 'Br-': 3 },
     rate: massAction({ k25: 50, Ea: 20000, orders: { C6H5OH: 1, Br2: 1 } }),
+  },
+
+  // ── Sulfuric acid đặc hút nước của đường mía, để lại carbon (than hóa) – SGK Hóa 11 Bài 8.
+  // Chỉ acid rất đặc (nhiều HSO₄⁻) mới hút nước được: tốc độ ∝ [HSO₄⁻]²; phản ứng tỏa nhiều nhiệt nên tự tăng tốc.
+  {
+    id: 'sugar_charring', name: 'Sulfuric acid đặc làm than hóa đường mía',
+    equation: 'C₁₂H₂₂O₁₁ →(H₂SO₄ đặc) 12C + 11H₂O',
+    reactants: { C12H22O11: 1 }, products: { C: 12 }, productForm: 'powder',
+    rate: massAction({ k25: 1.5e-10, Ea: 60000, orders: { 'HSO4-': 2 }, surface: 'C12H22O11' }),
+  },
+  // Carbon nóng bị sulfuric acid đặc oxi hóa: sinh khí CO₂ và SO₂ (mùi hắc) làm khối than phồng lên
+  {
+    id: 'carbon_h2so4', name: 'Carbon tác dụng với sulfuric acid đặc, nóng',
+    equation: 'C + 2H₂SO₄ (đặc) →(t°) CO₂↑ + 2SO₂↑ + 2H₂O',
+    reactants: { C: 1, 'HSO4-': 2, 'H+': 2 }, products: { H2CO3: 1, SO2: 2 },
+    rate: massAction({ k25: 1e-13, Ea: 90000, orders: { 'HSO4-': 2 }, surface: 'C' }),
+  },
+
+  // ── Hydrocarbon không no (SGK Hóa 11 Bài 16) ──
+  // Điều chế ethylene: tách nước ethanol bằng H₂SO₄ đặc khi đun nóng (thực tế ở khoảng 170 °C)
+  {
+    id: 'ethanol_dehydration', name: 'Điều chế ethylene từ ethanol',
+    equation: 'C₂H₅OH →(H₂SO₄ đặc, t°) CH₂=CH₂ + H₂O',
+    reactants: { C2H5OH: 1 }, products: { C2H4: 1 },
+    rate: massAction({ k25: 8e-10, Ea: 150000, orders: { C2H5OH: 1, 'HSO4-': 1 } }),
+  },
+  // Điều chế acetylene: đất đèn tác dụng với nước
+  {
+    id: 'cac2_water', name: 'Calcium carbide tác dụng với nước',
+    equation: 'CaC₂ + 2H₂O → C₂H₂↑ + Ca(OH)₂',
+    reactants: { CaC2: 1 }, products: { C2H2: 1, 'Ca^2+': 1, 'OH-': 2 },
+    rate: massAction({ k25: 8e-5, Ea: 30000, surface: 'CaC2' }),
+  },
+  {
+    id: 'ethylene_br2', name: 'Ethylene làm mất màu nước bromine',
+    equation: 'CH₂=CH₂ + Br₂ → BrCH₂–CH₂Br',
+    reactants: { C2H4: 1, Br2: 1 }, products: { C2H4Br2: 1 },
+    rate: massAction({ k25: 3e4, Ea: 20000, orders: { C2H4: 1, Br2: 1 } }),
+  },
+  {
+    id: 'acetylene_br2', name: 'Acetylene làm mất màu nước bromine',
+    equation: 'CH≡CH + 2Br₂ → Br₂CH–CHBr₂',
+    reactants: { C2H2: 1, Br2: 2 }, products: { C2H2Br4: 1 },
+    rate: massAction({ k25: 1e4, Ea: 20000, orders: { C2H2: 1, Br2: 1 } }),
+  },
+  {
+    id: 'ethylene_kmno4', name: 'Ethylene làm mất màu dung dịch KMnO₄',
+    equation: '3CH₂=CH₂ + 2KMnO₄ + 4H₂O → 3HO–CH₂–CH₂–OH + 2MnO₂↓ + 2KOH',
+    reactants: { C2H4: 3, 'MnO4-': 2 }, products: { C2H6O2: 3, MnO2: 2, 'OH-': 2 },
+    rate: massAction({ k25: 3e3, Ea: 30000, orders: { C2H4: 1, 'MnO4-': 1 } }),
+  },
+  {
+    id: 'acetylene_kmno4', name: 'Acetylene làm mất màu dung dịch KMnO₄',
+    equation: '3CH≡CH + 8KMnO₄ → 3K₂C₂O₄ + 8MnO₂↓ + 2KOH + 2H₂O',
+    reactants: { C2H2: 3, 'MnO4-': 8 }, products: { 'C2O4^2-': 3, MnO2: 8, 'OH-': 2 },
+    rate: massAction({ k25: 1e3, Ea: 30000, orders: { C2H2: 1, 'MnO4-': 1 } }),
+  },
+
+  // ── Bromine hóa hexane (SGK Hóa 11 Bài 15): thế H bằng Br, xảy ra trong lớp hexane.
+  // Ở nhiệt độ phòng, trong bóng râm gần như không phản ứng; ngâm nước ấm khoảng 50 °C thì màu bromine nhạt dần.
+  {
+    id: 'hexane_br2', name: 'Bromine hóa hexane',
+    equation: 'C₆H₁₄ + Br₂ →(t°) C₆H₁₃Br + HBr',
+    reactants: { C6H14: 1, 'Br2(org)': 1 }, products: { C6H13Br: 1, 'H+': 1, 'Br-': 1 },
+    rate: (ctx) => ctx.mix.get('C6H14') > 0 ? arrhenius(4e-4, 110000, ctx.T) * ctx.mix.get('Br2(org)') : 0,
+  },
+
+  // ── Toluene bị KMnO₄ (môi trường acid) oxi hóa nhóm methyl thành benzoic acid khi đun nóng (SGK Hóa 11 Bài 17).
+  // Benzene không phản ứng. Phản ứng xảy ra ở mặt phân cách hai lớp: tốc độ ∝ [MnO₄⁻] khi có lớp toluene.
+  {
+    id: 'toluene_kmno4', name: 'Toluene tác dụng với dung dịch KMnO₄',
+    equation: '5C₆H₅CH₃ + 6KMnO₄ + 9H₂SO₄ →(t°) 5C₆H₅COOH + 3K₂SO₄ + 6MnSO₄ + 14H₂O',
+    reactants: { C6H5CH3: 5, 'MnO4-': 6, 'H+': 18 }, products: { C6H5COOH: 5, 'Mn^2+': 6 },
+    rate: (ctx) => ctx.mix.get('C6H5CH3') > 0 && ctx.mix.conc('H+') > 0.05
+      ? arrhenius(2e-5, 90000, ctx.T) * ctx.mix.get('MnO4-') : 0,
   },
 
   // ── Sulfuric acid đặc, nóng oxi hóa copper, giải phóng SO₂ (SGK Hóa 11 Bài 8) ──

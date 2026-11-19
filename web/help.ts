@@ -56,7 +56,9 @@ function helpHtml(phone: boolean): string {
           <li><b>Mẩu giấy màu ẩm</b>: đưa vào trong dụng cụ chứa khí; giấy mất màu nếu có khí chlorine (chlorine ẩm có tính tẩy màu).</li>
           <li><b>Giấy quỳ tím</b> (thử dung dịch): thả vào dụng cụ để nhúng đầu mẩu quỳ vào dung dịch; quỳ hóa đỏ với acid, hóa xanh với base. Mẩu quỳ để luôn trong dụng cụ và tiếp tục đổi màu khi dung dịch thay đổi; đổ bỏ dung dịch thì quỳ cũng được bỏ đi.</li>
           <li><b>Giấy pH</b>: dùng như giấy quỳ, giấy đổi màu theo bảng màu chuẩn pH 1 – 14; nhật ký ghi số pH đọc được.</li>
-          <li><b>Cốc nước đá, cốc nước nóng</b>: thả vào ống nghiệm để ngâm ống (khoảng 0 °C hoặc 80 °C); thả lần nữa để lấy ống ra.</li>
+          <li><b>Burette NaOH</b>: thả lên bình nón hoặc cốc để lắp burette 25 mL. Trong bảng thông tin của dụng cụ có các nút mở khóa (chảy thành dòng), nhỏ từng giọt, nhỏ 1 giọt và đóng khóa; số đọc thể tích đã dùng hiện ngay bên cạnh. Thả lần nữa để tháo burette.</li>
+          <li><b>Bát sứ + que đóm</b>: thả vào dụng cụ có chất lỏng để rót khoảng 1 mL ra bát sứ rồi châm lửa: hexane, benzene, cồn cháy được với ngọn lửa khác nhau, dung dịch nước thì không.</li>
+          <li><b>Cốc nước đá, cốc nước ấm, cốc nước nóng</b>: thả vào ống nghiệm để ngâm ống (khoảng 0 °C, 50 °C hoặc 80 °C); thả lần nữa để lấy ống ra.</li>
           <li><b>Khí NO₂ (nút kín)</b>: thả vào ống nghiệm khô để nạp khí nâu đỏ NO₂ và đậy nút; bấm Đổ bỏ để mở nút.</li>
           <li><b>Muôi sắt + lưu huỳnh</b>: thả vào dụng cụ: lưu huỳnh được đốt trên đèn cồn rồi đưa vào trong dụng cụ; ngọn lửa sáng hơn nếu dụng cụ chứa nhiều oxygen.</li>
           <li><b>Tờ giấy kẻ chữ X</b>: thả vào ống để đặt tờ giấy phía sau ống; đồng hồ trên tờ giấy bắt đầu chạy khi rót chất tiếp theo vào và dừng lại khi dung dịch đục che khuất chữ X.</li>

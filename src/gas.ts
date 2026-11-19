@@ -28,6 +28,9 @@ export const GASES: GasDef[] = [
   { id: 'Cl2(g)', D: 0.12, dissolved: { species: 'Cl2', kH: 0.09 } },
   // Sulfur dioxide: mùi hắc, nặng hơn không khí, tan nhiều (≈ 1,2 M ở 1 atm)
   { id: 'SO2(g)', D: 0.12, dissolved: { species: 'SO2', kH: 1.2 } },
+  // Ethylene, acetylene: ít tan trong nước, nhẹ hơn không khí một chút
+  { id: 'C2H4(g)', D: 0.15, dissolved: { species: 'C2H4', kH: 0.0048 } },
+  { id: 'C2H2(g)', D: 0.16, dissolved: { species: 'C2H2', kH: 0.041 } },
   { id: 'NO2(g)', D: 0.14 },
   { id: 'N2O4(g)', D: 0.09 },
 ];
@@ -56,7 +59,7 @@ const K_DRAFT = 0.01;
 const BUOYANCY = 100;
 
 export function headspaceL(mix: Mixture, spec: GasVesselSpec): number {
-  return Math.max(0.0005, spec.volumeL - mix.volumeL);
+  return Math.max(0.0005, spec.volumeL - mix.liquidL());
 }
 
 /** Hằng số Henry theo nhiệt độ (M/atm), ΔH hòa tan tính từ ΔfH° */

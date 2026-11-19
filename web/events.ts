@@ -23,6 +23,18 @@ interface State {
   hadLiquid: boolean;
   /** Chất rắn khô đang nóng đỏ */
   glowing: boolean;
+  /** Lớp chất lỏng hữu cơ: 'none' | 'layers' (đã tách lớp) | 'mixed' (vừa lắc, nhũ tương) */
+  org?: 'none' | 'layers' | 'mixed';
+  orgColor?: RGB;
+}
+
+/** Tên dung môi chính của lớp hữu cơ (nhiều mL nhất) */
+function solventName(o: Observation): string {
+  let best = '', v = 0;
+  for (const [id, x] of Object.entries(o.organic?.dissolved ?? {})) {
+    if (species(id).density && x > v) { v = x; best = species(id).name; }
+  }
+  return best;
 }
 
 /** Tên màu tiếng Việt gần đúng */
@@ -100,7 +112,8 @@ export class PhenomenaTracker {
     st.hadLiquid = hasLiquid;
 
     // Chất rắn xuất hiện / biến mất
-    const now = new Set(o.solids.filter((s) => s.grams > 3e-4).map((s) => s.id));
+    // Than từ đường: chỉ báo khi đã đen rõ (vài trăm mg)
+    const now = new Set(o.solids.filter((s) => s.grams > (s.id === 'C' ? 0.3 : 3e-4)).map((s) => s.id));
     for (const id of now) {
       if (st.solids.has(id)) continue;
       const fine = (mix.formFactor.get(id) ?? 0) >= FORM_FACTOR.precipitate;
@@ -108,6 +121,10 @@ export class PhenomenaTracker {
       if (fine) {
         log(`Xuất hiện kết tủa ${name ?? ''} ${pretty(id)}`.replace('  ', ' '), {
           color: species(id).color, equation: precipitationEquation(id),
+        });
+      } else if (id === 'C') {
+        log('Đường chuyển dần sang màu vàng, nâu rồi đen; khối than xốp màu đen phồng lên', {
+          color: species(id).color, equation: view.vessel.reactions.find((x) => 'C' in x.products)?.equation,
         });
       } else if ((id === 'Cu' || id === 'Ag') && !view.hasSolidVisual(id)) {
         log(`Có ${species(id).name} (${name}) bám trên bề mặt kim loại`, { color: species(id).color });
@@ -153,11 +170,33 @@ export class PhenomenaTracker {
       }
     }
 
+    // Lớp chất lỏng hữu cơ không tan trong nước
+    const org = o.organic;
+    const orgState = !org ? 'none' : o.agitation > 0.3 ? 'mixed' : 'layers';
+    if (org && hasLiquid && org.volumeML > 0.05 && orgState === 'layers' && st.org !== 'layers') {
+      const where = org.onTop ? 'nổi ở trên, lớp nước ở dưới' : 'chìm ở dưới, lớp nước ở trên';
+      log(st.org === 'mixed'
+        ? `Để yên: chất lỏng tách lại thành hai lớp, lớp ${solventName(o)} ${org.onTop ? 'ở trên' : 'ở dưới'}`
+        : `Chất lỏng không tan vào nhau, tách thành hai lớp: lớp ${solventName(o)} ${where}`);
+    }
+    if (org && hasLiquid && orgState === 'mixed' && st.org === 'layers') log('Hai lớp chất lỏng trộn lẫn, vẩn đục (nhũ tương)');
+    st.org = orgState;
+    if (org) {
+      st.orgColor ??= org.color;
+      if (orgState === 'layers' && Math.hypot(...org.color.map((c, i) => c - st!.orgColor![i])) > 0.2) {
+        const name = colorName(org.color);
+        log(`Lớp ${solventName(o)} ${name === 'không màu' ? 'trở nên không màu' : `có màu ${name}`}`, { color: org.color });
+        st.orgColor = org.color;
+      }
+    } else st.orgColor = undefined;
+
     // Màu dung dịch
     if (hasLiquid) {
       const d = Math.hypot(...o.solutionColor.map((c, i) => c - st!.refColor[i]));
       if (d > 0.2) {
-        log(`Dung dịch chuyển sang màu ${colorName(o.solutionColor)}`, { color: o.solutionColor });
+        const what = org ? 'Lớp nước' : 'Dung dịch';
+        const name = colorName(o.solutionColor);
+        log(org && name === 'không màu' ? 'Lớp nước trở nên không màu' : `${what} chuyển sang màu ${name}`, { color: o.solutionColor });
         st.refColor = o.solutionColor;
       }
       // Nhiệt độ

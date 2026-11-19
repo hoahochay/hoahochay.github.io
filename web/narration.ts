@@ -14,9 +14,12 @@ const PROBE_NAME: Record<ToolKind, string> = {
   ph_paper: 'mẩu giấy pH',
   ph_moist: 'mẩu giấy pH ẩm',
   ice_bath: 'cốc nước đá',
+  warm_bath: 'cốc nước ấm',
   hot_bath: 'cốc nước nóng',
   no2_tube: 'khí NO₂',
   spoon_s: 'muôi sắt đựng lưu huỳnh',
+  dish_burn: 'bát sứ',
+  burette: 'burette chứa dung dịch NaOH',
   magnet: 'nam châm',
   xcard: 'tờ giấy kẻ chữ X',
   dye_paper: 'mẩu giấy màu ẩm',
@@ -47,12 +50,17 @@ export function describeStep(s: Step): string {
     case 'wait': return s.text ?? 'Quan sát…';
     case 'heat': return s.text ?? (s.on ? 'Đun nóng bằng đèn cồn.' : 'Tắt đèn cồn.');
     case 'stir': return s.text ?? 'Lắc nhẹ cho dung dịch trộn đều.';
+    case 'burette': return s.text ?? (s.action === 'stream' ? 'Mở khóa burette cho dung dịch chảy xuống.'
+      : s.action === 'drip' ? 'Vặn khóa burette cho dung dịch nhỏ từng giọt.'
+      : s.action === 'drop' ? 'Nhỏ thêm một giọt từ burette.' : 'Đóng khóa burette.');
     case 'connect': return s.text ?? (s.dst === null
       ? 'Tháo ống dẫn khí.'
       : `Lắp ống dẫn khí từ ${vn(s.src)} sang ${vn(s.dst)}.`);
     case 'invert': return s.text ?? `Úp ngược ${vn(s.vessel)}.`;
-    case 'probe': return s.text ?? (s.tool === 'ice_bath' || s.tool === 'hot_bath'
+    case 'probe': return s.text ?? (s.tool === 'ice_bath' || s.tool === 'warm_bath' || s.tool === 'hot_bath'
       ? `Ngâm ${vn(s.vessel)} vào ${PROBE_NAME[s.tool]}.`
+      : s.tool === 'dish_burn'
+      ? `Rót khoảng 1 mL chất lỏng từ ${vn(s.vessel)} vào bát sứ nhỏ, đưa que đóm đang cháy vào bề mặt chất lỏng.`
       : s.tool === 'spoon_s'
       ? `Đốt lưu huỳnh trên muôi sắt rồi đưa vào ${vn(s.vessel)}.`
       : s.tool === 'no2_tube'

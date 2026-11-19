@@ -3,8 +3,8 @@
  * kịch bản hợp lệ và hiện tượng xảy ra đúng như phần kết luận mô tả.
  */
 import { describe, expect, it } from 'vitest';
-import { burnSulfurIn, testDyePaper, contentsMassG, GasSyringe, indicatorDrops, litmusPH, litmusVerdict, makeSolution, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
-import { CHEMICALS, solidMol } from '../web/catalog';
+import { Burette, burnSulfurIn, liquidBurn, testDyePaper, contentsMassG, GasSyringe, litmusPH, litmusVerdict, testBurningSplint, testGlowingSplint, testMagnet, Vessel, VESSELS } from '../src';
+import { BURETTE_SOLUTES, CHEMICALS, reagentMixture, solidMol } from '../web/catalog';
 import { X_HIDDEN_TURBIDITY } from '../web/xcard';
 import { BEAKER, CATEGORIES, FLASK, LabState, PlayScript, RECIPE_ALIASES, RECIPES, SYRINGE, TOPICS } from '../web/recipes';
 
@@ -16,6 +16,8 @@ interface RunResult {
   probes: string[];
   syringe: GasSyringe;
   weighings: number[];
+  /** Thể tích đã dùng của burette trên từng dụng cụ, mL */
+  burettes: Map<number, Burette>;
 }
 
 function runRecipe(r: PlayScript): RunResult {
@@ -25,7 +27,9 @@ function runRecipe(r: PlayScript): RunResult {
   let onBalance: number[] = [];
   /** Số đọc của cân sau mỗi bước, để kiểm tra kết quả */
   const weighings: number[] = [];
+  const burettes = new Map<number, Burette>();
   const state: LabState = {
+    buretteML: (i) => burettes.get(i)?.usedML ?? 0,
     mix: (i) => vessels[i].mix,
     tempC: (i) => vessels[i].mix.tempK - 273.15,
     syringeML: () => syringe.volumeML,
@@ -35,7 +39,10 @@ function runRecipe(r: PlayScript): RunResult {
   const probes: string[] = [];
   /** Chạy mô phỏng thêm một khoảng (như lúc dụng cụ thử đang được đưa vào) */
   const run = (seconds: number) => {
-    for (let t = 0; t < seconds; t += 0.05) for (const v of vessels) v.step(0.05);
+    for (let t = 0; t < seconds; t += 0.05) {
+      for (const b of burettes.values()) b.step(0.05);
+      for (const v of vessels) v.step(0.05);
+    }
   };
   r.steps.forEach((s, idx) => {
     switch (s.kind) {
@@ -44,9 +51,8 @@ function runRecipe(r: PlayScript): RunResult {
         if (!c) throw new Error(`${r.id}: không có hóa chất "${s.chem}"`);
         const v = vessels[s.vessel];
         if (c.solid) v.addSolid(c.solid.id, solidMol(c.solid, s.amount), c.solid.form);
-        else if (c.reagent!.indicator) v.add(indicatorDrops(c.reagent!.indicator, s.amount));
-        else v.add(makeSolution(c.reagent!.solutes, s.amount / 1000, v.roomK));
-        expect(v.mix.volumeL * 1000, `${r.id}: tràn ${s.vessel}`).toBeLessThanOrEqual(v.spec.capacityL * 1000);
+        else v.add(reagentMixture(c.reagent!, s.amount, v.roomK));
+        expect(v.mix.liquidL() * 1000, `${r.id}: tràn ${s.vessel}`).toBeLessThanOrEqual(v.spec.capacityL * 1000);
         break;
       }
       case 'wait': {
@@ -56,6 +62,7 @@ function runRecipe(r: PlayScript): RunResult {
         let met = false;
         while (t < s.seconds) {
           if (s.until?.(state)) { met = true; break; }
+          for (const b of burettes.values()) b.step(dt);
           for (const v of vessels) v.step(dt);
           t += dt;
         }
@@ -66,6 +73,13 @@ function runRecipe(r: PlayScript): RunResult {
         vessels[s.vessel].heaterW = s.on ? (s.vessel >= BEAKER ? 60 : 35) : 0;
         if (s.on) vessels[s.vessel].bathK = null;
         break;
+      case 'burette': {
+        const b = burettes.get(s.vessel);
+        if (!b) throw new Error(`${r.id}: chưa lắp burette trên dụng cụ ${s.vessel}`);
+        if (s.action === 'drop') b.drop();
+        else b.mode = s.action === 'close' ? 'closed' : s.action;
+        break;
+      }
       case 'stir':
         vessels[s.vessel].stir();
         break;
@@ -94,8 +108,8 @@ function runRecipe(r: PlayScript): RunResult {
         break;
       case 'pour': {
         const src = vessels[s.src], dst = vessels[s.dst];
-        dst.add(src.take(Math.min(src.mix.volumeL, (s.mL ?? Infinity) / 1000)));
-        expect(dst.mix.volumeL * 1000, `${r.id}: tràn ${s.dst}`).toBeLessThanOrEqual(dst.spec.capacityL * 1000);
+        dst.add(src.take(Math.min(src.mix.liquidL(), (s.mL ?? Infinity) / 1000)));
+        expect(dst.mix.liquidL() * 1000, `${r.id}: tràn ${s.dst}`).toBeLessThanOrEqual(dst.spec.capacityL * 1000);
         break;
       }
       case 'burn': {
@@ -114,7 +128,12 @@ function runRecipe(r: PlayScript): RunResult {
         else if (s.tool === 'dye_paper') probes.push('dye-' + testDyePaper(v));
         else if (s.tool === 'ph_paper') probes.push('ph-' + Math.min(14, Math.max(1, Math.round(v.observe().pH))));
         else if (s.tool === 'ice_bath') v.bathK = 273.15;
+        else if (s.tool === 'warm_bath') v.bathK = 323.15;
         else if (s.tool === 'hot_bath') v.bathK = 353.15;
+        else if (s.tool === 'burette') {
+          if (burettes.has(s.vessel)) burettes.delete(s.vessel);
+          else burettes.set(s.vessel, new Burette(v, BURETTE_SOLUTES));
+        } else if (s.tool === 'dish_burn') probes.push('dish-' + liquidBurn(v.take(Math.min(0.001, v.mix.liquidL()))).flame);
         else if (s.tool === 'spoon_s') {
           let o2 = 0;
           for (let i = 0; i < 6; i++) { o2 = burnSulfurIn(v, 1); run(1); }
@@ -133,7 +152,7 @@ function runRecipe(r: PlayScript): RunResult {
     }
     weighings.push(state.balanceG());
   });
-  return { vessels, timedOut, probes, syringe, weighings };
+  return { vessels, timedOut, probes, syringe, weighings, burettes };
 }
 
 describe('Thí nghiệm mẫu', () => {
@@ -227,6 +246,84 @@ describe('Thí nghiệm mẫu', () => {
     const res = runRecipe(RECIPES.find((x) => x.id === 'luu-huynh-chay-oxygen')!);
     expect(res.timedOut).toEqual([]);
     expect(res.probes).toEqual(['spoon-bright', 'litmus-acid']);
+  });
+
+  it('Hóa 11 Bài 11 – chưng cất rượu: sôi khoảng 86 °C, sản phẩm có độ cồn cao, cháy được', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'chung-cat-ethanol')!);
+    expect(res.timedOut).toEqual([]);
+    expect(res.probes).toEqual(['dish-none', 'dish-blue']);
+    const t = res.vessels[0];
+    expect(t.mix.conc('C2H5OH')).toBeGreaterThan(10);
+    const T = res.vessels[FLASK].mix.tempK - 273.15;
+    expect(T).toBeGreaterThan(84);
+  });
+
+  it('Hóa 11 Bài 11 – chiết β-carotene: lớp hexane màu cam được rót riêng ra', () => {
+    const { vessels: [a, b] } = runRecipe(RECIPES.find((x) => x.id === 'tach-beta-carotene')!);
+    const total = 6e-3 * 1.5e-5;
+    expect(b.mix.get('carotene(org)')).toBeGreaterThan(0.85 * total);
+    expect(b.mix.volumeL).toBeLessThan(1e-5);
+    expect(b.observe().organic!.color[2]).toBeLessThan(0.2);
+    expect(a.observe().solutionColor[1]).toBeGreaterThan(0.9);
+  });
+
+  it('Hóa 11 Bài 15 – bromine chuyển lên lớp hexane, nhạt màu khi ngâm nước ấm', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'brom-hoa-hexane')!);
+    expect(res.timedOut).toEqual([]);
+    const v = res.vessels[0];
+    expect(v.mix.get('C6H13Br')).toBeGreaterThan(1.5e-5);
+    expect(v.observe().organic!.onTop).toBe(true);
+    expect(v.observe().pH).toBeLessThan(2.2);
+  });
+
+  it('Hóa 11 Bài 15 – hexane không làm mất màu KMnO₄', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'hexane-kmno4')!);
+    expect(res.probes).toEqual(['dish-luminous']);
+    expect(res.vessels[1].mix.liquidL()).toBeLessThan(1e-6);
+    const v = res.vessels[0];
+    expect(v.mix.get('MnO4-')).toBeGreaterThan(0.99 * 0.4e-3 * 0.063);
+    expect(v.observe().organic!.volumeML).toBeCloseTo(1, 1);
+  });
+
+  it('Hóa 11 Bài 16 – ethylene và acetylene làm mất màu KMnO₄, nước bromine, cháy ở đầu ống dẫn', () => {
+    for (const [id, burn] of [['dieu-che-ethylene', 'burns-ethylene'], ['dieu-che-acetylene', 'burns-acetylene']]) {
+      const res = runRecipe(RECIPES.find((x) => x.id === id)!);
+      expect(res.timedOut, id).toEqual([]);
+      expect(res.probes, id).toEqual([burn]);
+      const [t1, t2] = res.vessels;
+      expect(t1.mix.get('MnO2'), id).toBeGreaterThan(3.5e-6);
+      expect(t2.observe().solutionColor[2], id).toBeGreaterThan(0.85);
+    }
+  });
+
+  it('Hóa 11 Bài 17 – toluene làm mất màu KMnO₄ khi đun, benzene thì không', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'oxi-hoa-toluene-benzene')!);
+    expect(res.timedOut).toEqual([]);
+    const [a, b] = res.vessels;
+    expect(a.mix.get('MnO4-')).toBeGreaterThan(4.5e-5);
+    expect(b.observe().solutionColor[1]).toBeGreaterThan(0.85);
+    expect(b.mix.get('C6H5COOH')).toBeGreaterThan(4e-5);
+  });
+
+  it('Hóa 11 Bài 2 – chuẩn độ HCl 0,1 M bằng NaOH: dừng ở màu hồng nhạt, V ≈ 9,5 mL', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'chuan-do-acid-base')!);
+    expect(res.timedOut).toEqual([]);
+    const v = res.burettes.get(FLASK)!.usedML;
+    expect(v).toBeGreaterThan(9.45);
+    expect(v).toBeLessThan(9.65);
+    const o = res.vessels[FLASK].observe();
+    expect(o.pH).toBeGreaterThan(8.3);
+    // Hồng: đỏ và lam còn lại nhiều hơn hẳn lục
+    expect(o.solutionColor[0] - o.solutionColor[1]).toBeGreaterThan(0.3);
+    expect(o.pH).toBeLessThan(10.8);
+  });
+
+  it('Hóa 11 Bài 8 – H₂SO₄ đặc than hóa đường mía, tỏa nhiệt, sinh SO₂', () => {
+    const res = runRecipe(RECIPES.find((x) => x.id === 'duong-h2so4-dac')!);
+    expect(res.timedOut).toEqual([]);
+    const b = res.vessels[BEAKER];
+    expect(b.mix.get('C') * 12.011).toBeGreaterThan(3.5);
+    expect(b.observe().gasTotalMol['SO2(g)'] ?? 0).toBeGreaterThan(1e-3);
   });
 
   it('Hóa 11 Bài 2 – môi trường dung dịch muối: nước 7, Na2CO3 base, AlCl3 và FeCl3 acid', () => {

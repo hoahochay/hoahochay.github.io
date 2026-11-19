@@ -8,7 +8,7 @@
  */
 import { CHEMICALS } from './catalog';
 import type { ToolKind } from './probes';
-import { FLASK, PlayScript, Step, SYRINGE } from './recipes';
+import { BuretteAction, FLASK, PlayScript, Step, SYRINGE } from './recipes';
 
 /** Phiên bản định dạng / engine; đổi khi cách mô phỏng thay đổi đáng kể */
 export const SHARE_VERSION = 1;
@@ -90,11 +90,12 @@ function pack(s: Step): Packed | null {
     case 'pour': return s.mL ? ['o', s.src, s.dst, s.mL] : ['o', s.src, s.dst];
     case 'empty': return ['e', s.vessel];
     case 'predict': return ['q'];
+    case 'burette': return ['u', s.vessel, s.action];
     default: return null; // lời thuyết minh, focus: không cần cho thí nghiệm tự làm
   }
 }
 
-const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist', 'ice_bath', 'hot_bath', 'no2_tube', 'spoon_s'];
+const TOOLS: ToolKind[] = ['glowing', 'burning', 'litmus', 'litmus_sol', 'ph_paper', 'magnet', 'xcard', 'dye_paper', 'ph_moist', 'ice_bath', 'hot_bath', 'no2_tube', 'spoon_s', 'warm_bath', 'dish_burn', 'burette'];
 
 class Bad extends Error {}
 
@@ -142,6 +143,10 @@ function unpack(p: unknown): Step {
     case 'o': return { kind: 'pour', src: vessel(p[1]), dst: vessel(p[2]), ...(typeof p[3] === 'number' && p[3] > 0 ? { mL: p[3] } : {}) };
     case 'e': return { kind: 'empty', vessel: vessel(p[1]) };
     case 'q': return { kind: 'predict' };
+    case 'u': {
+      if (!['stream', 'drip', 'drop', 'close'].includes(p[2] as string)) throw new Bad('thao tác burette không hợp lệ');
+      return { kind: 'burette', vessel: vessel(p[1]), action: p[2] as BuretteAction };
+    }
     default: throw new Bad('loại bước không biết');
   }
 }

@@ -5,10 +5,13 @@
 import * as THREE from 'three';
 import { glassMaterial, softCircleTexture } from './materials';
 
-export type BathKind = 'ice' | 'hot';
+export type BathKind = 'ice' | 'warm' | 'hot';
 
 /** Nhiệt độ nước trong cốc, °C */
-export const BATH_TEMP_C: Record<BathKind, number> = { ice: 0, hot: 80 };
+export const BATH_TEMP_C: Record<BathKind, number> = { ice: 0, warm: 50, hot: 80 };
+
+/** Công cụ trong kho tương ứng với từng loại cốc */
+export const BATH_TOOL = { ice_bath: 'ice', warm_bath: 'warm', hot_bath: 'hot' } as const;
 
 const R = 1.5;
 const H = 4.6;
@@ -50,8 +53,8 @@ export class BathView {
 
   /** Hơi nước bốc lên từ cốc nước nóng */
   update(dt: number): void {
-    if (this.kind !== 'hot') return;
-    this.acc += dt * 3;
+    if (this.kind === 'ice') return;
+    this.acc += dt * (this.kind === 'hot' ? 3 : 1);
     while (this.acc >= 1) {
       this.acc -= 1;
       let w = this.wisps.find((x) => !x.sprite.visible);

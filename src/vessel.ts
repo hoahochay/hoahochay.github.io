@@ -1,5 +1,7 @@
 import { H_VAP_WATER, M_WATER, R, T25, T_BOIL } from './constants';
 import { equilibrate } from './equilibrium';
+import { exchangeOrganic, orgDensity } from './organic';
+import { bubblePointK, H_VAP_ETHANOL, V_ETHANOL_L, vaporEthanol } from './distill';
 import { bubbleAbsorption, equilibrateNO2, exchangeGases, GAS_INDEX, headspaceFractions, no2FillMoles, ventHeadspace } from './gas';
 import { KineticReaction, runDissolution, runKinetics } from './kinetics';
 import { contentsMassG, FORM_FACTOR, Mixture, SETTLE_TIME, SETTLE_TIME_COARSE, SolidForm } from './mixture';
@@ -13,6 +15,8 @@ import { enthalpy, hydrogenAtoms, liquidHeatCapacity, solidHeatCapacity } from '
 export interface GasReceiver {
   /** `gases`: mol từng khí; `total`: tổng mol kể cả không khí bị đẩy sang */
   receiveGas(gases: Map<string, number>, total: number): void;
+  /** Hơi ngưng tụ thành chất lỏng chảy vào (chưng cất) */
+  receiveLiquid?(m: Mixture): void;
 }
 
 export interface VesselSpec {
@@ -54,7 +58,12 @@ export interface Observation {
   timeS: number;
   tempC: number;
   pH: number;
+  /** Thể tích lớp nước (dung dịch), mL */
   volumeML: number;
+  /** Lớp chất lỏng hữu cơ không tan trong nước (nếu có) */
+  organic: { volumeML: number; color: RGB; onTop: boolean; dissolved: Record<string, number> } | null;
+  /** Mức khuấy trộn 0..1: hai lớp đang bị trộn thành nhũ tương */
+  agitation: number;
   /** Màu dung dịch (không kể kết tủa) */
   solutionColor: RGB;
   /** Màu nhìn thấy, đã trộn với kết tủa lơ lửng */
@@ -103,6 +112,8 @@ export class Vessel implements GasReceiver {
   readonly gasEscaped = new Map<string, number>();
   /** Ống dẫn khí: nút kín miệng dụng cụ này, dẫn khí sang dụng cụ khác */
   outlet: GasReceiver | null = null;
+  /** Mức khuấy trộn (0..1): bằng 1 ngay sau khi lắc, giảm dần; hai lớp chất lỏng bị trộn thành nhũ tương */
+  agitation = 0;
   /** Đậy nút cao su kín (không có ống dẫn): khí bên trong không thoát ra */
   stoppered = false;
   /** Úp ngược miệng xuống (để thu khí nhẹ) */
@@ -177,16 +188,33 @@ export class Vessel implements GasReceiver {
   }
 
   /** Lấy ra một thể tích: dung dịch + phần kết tủa đang lơ lửng (chất rắn lớn ở lại) */
+  /**
+   * Lấy ra (rót) volumeL lít chất lỏng. Hai lớp đã tách: rót lớp trên ra trước (như khi nghiêng ống);
+   * đang là nhũ tương (vừa lắc) thì lấy theo tỉ lệ.
+   */
   take(volumeL: number): Mixture {
     const out = new Mixture();
     const m = this.mix;
-    const f = m.volumeL > 0 ? Math.min(1, volumeL / m.volumeL) : 0;
+    const Vorg = m.orgL();
+    let f = m.volumeL > 0 ? Math.min(1, volumeL / m.volumeL) : 0;
+    let fOrg = f;
+    if (Vorg > 0) {
+      const total = m.volumeL + Vorg;
+      if (this.agitation > 0.3) f = fOrg = Math.min(1, volumeL / total);
+      else if (orgDensity(m) < 1) {
+        fOrg = Math.min(1, volumeL / Vorg);
+        f = m.volumeL > 0 ? Math.min(1, Math.max(0, volumeL - Vorg) / m.volumeL) : 0;
+      } else {
+        f = m.volumeL > 0 ? Math.min(1, volumeL / m.volumeL) : 0;
+        fOrg = Math.min(1, Math.max(0, volumeL - m.volumeL) / Vorg);
+      }
+    }
     out.tempK = m.tempK;
     out.h = m.h;
     out.volumeL = m.volumeL * f;
     for (const [id, n] of [...m.moles]) {
       const s = species(id);
-      let frac = f;
+      let frac = s.phase === 'org' ? fOrg : f;
       if (s.phase === 's') {
         const isFine = (m.formFactor.get(id) ?? 0) >= 20000;
         frac = isFine ? f * (m.suspended.get(id) ?? 0) : 0;
@@ -215,12 +243,17 @@ export class Vessel implements GasReceiver {
   /** Khuấy: kết tủa lơ lửng trở lại */
   stir(): this {
     for (const id of this.mix.suspended.keys()) this.mix.suspended.set(id, 1);
+    this.agitation = 1;
     return this;
   }
 
   /** Một bước mô phỏng hóa học. dt = 0: chỉ cân bằng tức thời (vd. ngay sau khi trộn). */
   private process(dt: number): void {
     const m = this.mix;
+    if (dt > 0) {
+      this.agitation *= Math.exp(-dt / 3);
+      exchangeOrganic(m, dt, this.agitation);
+    }
     if (m.volumeL <= 1e-7) {
       for (const [id, n] of this.inAbsorb) this.inGas.set(id, (this.inGas.get(id) ?? 0) + n);
       this.inAbsorb.clear();
@@ -308,6 +341,10 @@ export class Vessel implements GasReceiver {
    * Nhận khí từ ống dẫn của dụng cụ khác. `total` gồm cả không khí đi kèm.
    * Đầu ống ngập trong chất lỏng: khí sục qua, khí tan được (CO2, NH3) bị hấp thụ một phần.
    */
+  receiveLiquid(m: Mixture): void {
+    if (!this.inverted) this.add(m);
+  }
+
   receiveGas(gases: Map<string, number>, total: number): void {
     if (total <= 0) return;
     this.inletAcc += total;
@@ -335,14 +372,39 @@ export class Vessel implements GasReceiver {
       // Bước thời gian lớn khi tua nhanh: không để nguội quá nhiệt độ phòng
       if (this.heaterW === 0 && m.tempK < this.roomK && this.dry) m.tempK = this.roomK;
     }
-    // Sôi: nhiệt dư làm bay hơi nước, dung dịch đặc lại
+    // Sôi: nhiệt dư làm bay hơi nước (và ethanol), dung dịch đặc lại.
+    // Hỗn hợp ethanol – nước sôi dưới 100 °C, hơi giàu ethanol hơn chất lỏng (chưng cất).
+    // Trong sulfuric acid đặc, ethanol bị giữ lại (tạo ethyl hydrogen sulfate) nên coi như không bay hơi.
     this.boiling = false;
-    if (m.tempK > T_BOIL && m.get('H2O') > 0) {
-      const nEvap = Math.min(m.get('H2O'), ((m.tempK - T_BOIL) * C) / H_VAP_WATER);
-      m.add('H2O', -nEvap);
-      m.volumeL = Math.max(0, m.volumeL - (nEvap * M_WATER) / 1000);
-      m.tempK = T_BOIL;
+    const nW = m.get('H2O');
+    const nE = m.conc('HSO4-') > 3 ? 0 : m.get('C2H5OH');
+    const x = nE > 0 ? nE / (nE + nW) : 0;
+    const Tb = nE > 0 ? bubblePointK(x) : T_BOIL;
+    if (m.tempK > Tb && nW + nE > 0) {
+      const y = vaporEthanol(x);
+      const hv = y * H_VAP_ETHANOL + (1 - y) * H_VAP_WATER;
+      let n = ((m.tempK - Tb) * C) / hv;
+      if (y > 0) n = Math.min(n, nE / y);
+      if (y < 1) n = Math.min(n, nW / (1 - y));
+      const dE = n * y, dW = n * (1 - y);
+      m.add('H2O', -dW);
+      if (dE > 0) m.add('C2H5OH', -dE);
+      // Sulfuric acid khó bay hơi: cô đặc nhiều nhất tới khoảng 98% (18,4 M), phần acid còn lại vẫn là chất lỏng
+      const acidFloorL = (m.get('HSO4-') + m.get('SO4^2-')) / 18.4;
+      const dV = (dW * M_WATER) / 1000 + dE * V_ETHANOL_L;
+      m.volumeL = Math.max(Math.min(m.volumeL, acidFloorL), m.volumeL - dV);
+      m.tempK = Tb;
       this.boiling = true;
+      // Hơi đi qua ống dẫn sang dụng cụ hứng thì ngưng tụ lại thành chất lỏng
+      const r = this.outlet;
+      if (r?.receiveLiquid && dV > 0) {
+        const c = new Mixture();
+        c.tempK = this.roomK;
+        c.set('H2O', dW);
+        if (dE > 0) c.set('C2H5OH', dE);
+        c.volumeL = dV;
+        r.receiveLiquid(c);
+      }
     }
     for (const [id, s] of m.suspended) {
       const tau = species(id).settleTime
@@ -377,6 +439,21 @@ export class Vessel implements GasReceiver {
     return this.spec.glassMassG + contentsMassG(this.mix);
   }
 
+  private observeOrganic(pathCm: number): Observation['organic'] {
+    const m = this.mix;
+    const V = m.orgL();
+    if (V <= 1e-9) return null;
+    const A: RGB = [0, 0, 0];
+    const dissolved: Record<string, number> = {};
+    for (const [id, n] of m.moles) {
+      const s = species(id);
+      if (s.phase !== 'org') continue;
+      dissolved[id] = s.density ? (n * s.molarMass) / s.density : n / V;
+      if (s.epsilon) for (let i = 0; i < 3; i++) A[i] += (s.epsilon[i] * n * pathCm) / V;
+    }
+    return { volumeML: V * 1000, color: A.map((a) => 10 ** -a) as RGB, onTop: orgDensity(m) < 1, dissolved };
+  }
+
   observe(): Observation {
     const m = this.mix;
     const L = this.spec.pathLengthCm;
@@ -404,6 +481,8 @@ export class Vessel implements GasReceiver {
       tempC: m.tempK - 273.15,
       pH: m.volumeL > 0 ? -Math.log10(m.h) : NaN,
       volumeML: m.volumeL * 1000,
+      organic: this.observeOrganic(L),
+      agitation: this.agitation,
       solutionColor: sol,
       appearance,
       turbidity: tb.turbidity,
