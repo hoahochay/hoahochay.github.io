@@ -205,7 +205,7 @@ export const RECIPES: Recipe[] = [
     title: 'Phản ứng của muối carbonate với dung dịch acid',
     topic: 'hoa10-b7', page: 41,
     concepts: ['tính acid', 'nitric acid', 'carbonic acid', 'chu kì 2'],
-    summary: 'Nhỏ từng giọt dung dịch ⟦sodium carbonate|Na₂CO₃⟧ vào ⟦nitric acid|HNO₃⟧ loãng. Có hiện tượng gì? Acid nào mạnh hơn: ⟦nitric acid⟧ hay ⟦carbonic acid|H₂CO₃⟧?',
+    summary: 'Nhỏ từng giọt dung dịch ⟦sodium carbonate|Na₂CO₃⟧ vào ⟦nitric acid|HNO₃⟧ loãng. Có hiện tượng gì? Acid nào mạnh hơn: ⟦nitric acid|HNO₃⟧ hay ⟦carbonic acid|H₂CO₃⟧?',
     steps: [
       focus(TUBE1),
       add('hno3', 2, TUBE1, 'Cho khoảng 2 mL dung dịch ⟦nitric acid|HNO₃⟧ loãng vào ống nghiệm.'),
@@ -213,12 +213,12 @@ export const RECIPES: Recipe[] = [
       wait(4, { text: 'Có bọt khí không màu thoát ra ngay khi giọt ⟦sodium carbonate|Na₂CO₃⟧ rơi xuống.' }),
       add('na2co3', 0.3, TUBE1, 'Nhỏ tiếp vài giọt.'),
       wait(4, { text: 'Lại sủi bọt khí ⟦carbon dioxide|CO₂⟧.' }),
-      say('⟦Nitric acid|HNO₃⟧ đẩy được ⟦carbonic acid|H₂CO₃⟧ ra khỏi muối carbonate: ⟦nitric acid⟧ mạnh hơn ⟦carbonic acid⟧.'),
+      say('⟦Nitric acid|HNO₃⟧ đẩy được ⟦carbonic acid|H₂CO₃⟧ ra khỏi muối carbonate: ⟦nitric acid|HNO₃⟧ mạnh hơn ⟦carbonic acid|H₂CO₃⟧.'),
     ],
     result: {
       phenomena: ['Mỗi khi nhỏ dung dịch ⟦sodium carbonate|Na₂CO₃⟧ vào, có bọt khí ⟦carbon dioxide|CO₂⟧ không màu thoát ra'],
       equations: ['Na₂CO₃ + 2HNO₃ → 2NaNO₃ + CO₂↑ + H₂O'],
-      explain: 'Acid mạnh hơn đẩy acid yếu hơn ra khỏi muối. ⟦Carbonic acid|H₂CO₃⟧ sinh ra không bền, phân hủy ngay thành khí ⟦carbon dioxide|CO₂⟧ và nước, nên ta thấy sủi bọt. Vậy ⟦nitric acid|HNO₃⟧ là acid mạnh hơn ⟦carbonic acid⟧. ⟦Carbon|C⟧ ở nhóm IVA và ⟦nitrogen|N⟧ ở nhóm VA cùng thuộc chu kì 2: trong một chu kì, đi từ trái sang phải, tính acid của oxide và hydroxide ứng với hóa trị cao nhất tăng dần.',
+      explain: 'Acid mạnh hơn đẩy acid yếu hơn ra khỏi muối. ⟦Carbonic acid|H₂CO₃⟧ sinh ra không bền, phân hủy ngay thành khí ⟦carbon dioxide|CO₂⟧ và nước, nên ta thấy sủi bọt. Vậy ⟦nitric acid|HNO₃⟧ là acid mạnh hơn ⟦carbonic acid|H₂CO₃⟧. ⟦Carbon|C⟧ ở nhóm IVA và ⟦nitrogen|N⟧ ở nhóm VA cùng thuộc chu kì 2: trong một chu kì, đi từ trái sang phải, tính acid của oxide và hydroxide ứng với hóa trị cao nhất tăng dần.',
     },
   },
   {
