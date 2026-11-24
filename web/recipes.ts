@@ -218,7 +218,7 @@ export const RECIPES: Recipe[] = [
     result: {
       phenomena: ['Mỗi khi nhỏ dung dịch ⟦sodium carbonate|Na₂CO₃⟧ vào, có bọt khí ⟦carbon dioxide|CO₂⟧ không màu thoát ra'],
       equations: ['Na₂CO₃ + 2HNO₃ → 2NaNO₃ + CO₂↑ + H₂O'],
-      explain: 'Acid mạnh hơn đẩy acid yếu hơn ra khỏi muối. ⟦Carbonic acid|H₂CO₃⟧ sinh ra không bền, phân hủy ngay thành khí ⟦carbon dioxide|CO₂⟧ và nước, nên ta thấy sủi bọt. Vậy ⟦nitric acid|HNO₃⟧ là acid mạnh hơn ⟦carbonic acid|H₂CO₃⟧. ⟦Carbon|C⟧ ở nhóm IVA và ⟦nitrogen|N⟧ ở nhóm VA cùng thuộc chu kì 2: trong một chu kì, đi từ trái sang phải, tính acid của oxide và hydroxide ứng với hóa trị cao nhất tăng dần.',
+      explain: 'Acid mạnh hơn đẩy acid yếu hơn ra khỏi muối. ⟦Carbonic acid|H₂CO₃⟧ sinh ra không bền, phân hủy ngay thành khí ⟦carbon dioxide|CO₂⟧ và nước, nên ta thấy sủi bọt. Vậy ⟦nitric acid|HNO₃⟧ là acid mạnh hơn ⟦carbonic acid|H₂CO₃⟧. ⟦Carbon|C⟧ ở nhóm 4A và ⟦nitrogen|N⟧ ở nhóm 5A cùng thuộc chu kì 2: trong một chu kì, đi từ trái sang phải, tính acid của oxide và hydroxide ứng với hóa trị cao nhất tăng dần.',
     },
   },
   {
