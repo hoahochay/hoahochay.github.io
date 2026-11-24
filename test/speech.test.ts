@@ -15,6 +15,16 @@ describe('speechText', () => {
   it('bỏ ngoặc quanh số thứ tự ống', () => {
     expect(speechText('ở ống (1) và ống (3).')).toBe('ở ống 1 và ống 3.');
   });
+  it('tên kèm công thức trong ngoặc: đọc tên, bỏ công thức', () => {
+    expect(speechText('Ống (1): thêm một ít sodium oxide (Na₂O).')).toBe('Ống 1: thêm một ít sodium oxide.');
+    expect(speechText('tạo magnesium hydroxide (Mg(OH)₂) ít tan')).toBe('tạo magnesium hydroxide ít tan');
+    expect(speechText('dung dịch copper(II) sulfate (CuSO₄)')).toBe('dung dịch copper(II) sulfate');
+    expect(speechText('từ sodium (Na) đến phosphorus (P)')).toBe('từ sodium đến phosphorus');
+  });
+  it('chỉ bỏ ngoặc ngay sau tên chất', () => {
+    expect(speechText('màu trắng (AgCl), V(HCl) = 10 mL, khử Cu(OH)₂')).toBe('màu trắng (AgCl), V(HCl) = 10 mL, khử Cu(OH)₂');
+    expect(speechText('phosphoric acid (acid trung bình)')).toBe('H₃PO₄ (acid trung bình)');
+  });
   it('không đụng tới công thức và chữ tiếng Việt', () => {
     expect(speechText('Zn + 2HCl → ZnCl₂ + H₂↑')).toBe('Zn + 2HCl → ZnCl₂ + H₂↑');
     expect(speechText('Bột sắt và bột lưu huỳnh')).toBe('Bột sắt và bột lưu huỳnh');

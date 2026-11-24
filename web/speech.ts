@@ -1,7 +1,8 @@
 /**
  * Chuyển lời thuyết minh (hiển thị) thành văn bản để mô hình TTS đọc.
- * Chỉ một việc: tên chất tiếng Anh (IUPAC) được thay bằng công thức, vì mô hình đọc tên tiếng Anh
- * không thống nhất. Công thức, số, đơn vị… để mô hình tự đọc. Chữ hiển thị vẫn giữ tên như SGK.
+ * Tên chất tiếng Anh có công thức trong ngoặc đi kèm ("sodium oxide (Na₂O)"): đọc tên, bỏ phần ngoặc.
+ * Tên đứng riêng (lời thuyết minh cũ, chưa rà soát): thay bằng công thức như trước.
+ * Công thức, số, đơn vị… để mô hình tự đọc. Chữ hiển thị giữ nguyên.
  */
 import { SPECIES } from '../src';
 import { CHEMICALS } from './catalog';
@@ -35,15 +36,35 @@ const NAME_FORMULA: Record<string, string> = (() => {
     'magnesium oxide': 'MgO', 'copper(ii) oxide': 'CuO', 'calcium hydroxide': 'Ca(OH)₂', 'zinc chloride': 'ZnCl₂',
     'sodium sulfate': 'Na₂SO₄', 'sodium acetate': 'CH₃COONa', 'iron(ii) chloride': 'FeCl₂', 'hydrogen': 'H₂', 'oxygen': 'O₂', 'citric acid': 'C₆H₈O₇', 'calcium hydrogencarbonate': 'Ca(HCO₃)₂',
   });
+  // Tên chỉ để nhận ra khi có công thức trong ngoặc đi kèm ("phosphorus (P)"); đứng riêng thì đọc nguyên tên
+  for (const n of ['phosphorus']) map[n] ??= n;
   return map;
 })();
 
 const NAME_RE = new RegExp(`(?<![A-Za-z])(${Object.keys(NAME_FORMULA).sort((a, b) => b.length - a.length)
   .map((k) => k.replace(/[()]/g, '\\$&')).join('|')})(?![A-Za-z])`, 'gi');
 
-/** Văn bản để đọc: thay tên tiếng Anh bằng công thức ("copper(II) sulfate" → "CuSO₄") */
+/**
+ * Công thức trong ngoặc viết ngay sau tên chất: "sodium oxide (Na₂O)", "calcium hydroxide (Ca(OH)₂)".
+ * Phải bắt đầu bằng chữ in hoa; không nhận số La Mã hóa trị như "(II)".
+ */
+const FORMULA_PAREN = /\s+\((?!(?:I|II|III|IV|V|VI|VII)\))[A-Z][a-z]?(?:[A-Z][a-z]?|[0-9₀-₉⁰-⁹⁺⁻·]|\((?:[A-Z][a-z]?|[0-9₀-₉])+\)[0-9₀-₉]*)*\)/y;
+
+/**
+ * Văn bản để đọc.
+ * - "sodium oxide (Na₂O)": đọc tên tiếng Anh, bỏ phần công thức trong ngoặc (chỉ để hiển thị).
+ * - Tên đứng riêng, không kèm công thức: thay bằng công thức ("copper(II) sulfate" → "CuSO₄").
+ */
 export function speechText(text: string): string {
-  return text.replace(NAME_RE, (m) => NAME_FORMULA[m.toLowerCase()] ?? m)
+  let out = '', last = 0;
+  for (const m of text.matchAll(NAME_RE)) {
+    const end = m.index + m[0].length;
+    FORMULA_PAREN.lastIndex = end;
+    const withFormula = FORMULA_PAREN.test(text);
+    out += text.slice(last, m.index) + (withFormula ? m[0] : NAME_FORMULA[m[0].toLowerCase()] ?? m[0]);
+    last = withFormula ? FORMULA_PAREN.lastIndex : end;
+  }
+  return (out + text.slice(last))
     // Ngoại lệ duy nhất: mô hình đọc "Mg" đứng riêng (Mg, 2Mg, Mg(OH)₂) thành "mi li gam"; MgO thì đọc đúng
     .replace(/(\d?)(?<![A-Za-z])Mg(?![A-Za-z])/g, (_m, d: string) => `${d ? d + ' ' : ''}mờ gờ`)
     // Số thứ tự trong ngoặc: "ống (1)" bị đọc ngắt thành "ống, một"; bỏ ngoặc để đọc liền "ống một"
