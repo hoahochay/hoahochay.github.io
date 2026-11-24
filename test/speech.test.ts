@@ -22,6 +22,13 @@ describe('speechText', () => {
     expect(speechText('tạo ⟦magnesium hydroxide|Mg(OH)₂⟧ ít tan, khác magnesium oxide')).toBe('tạo ⟦magnesium hydroxide⟧ ít tan, khác MgO');
     expect(speechText('⟦copper(II) sulfate⟧ và Mg')).toBe('⟦copper(II) sulfate⟧ và mờ gờ');
   });
+  it('tên tiếng Việt ⟦sắt|Fe|vi⟧: hiện công thức, đọc bằng mô hình tiếng Việt', () => {
+    expect(displayText('Cho một đinh ⟦sắt|Fe|vi⟧ vào ống (1).')).toBe('Cho một đinh sắt (Fe) vào ống (1).');
+    // Câu chỉ có tên tiếng Việt đọc y như khi chưa đánh dấu (giữ file đã tạo)
+    expect(speechText('Cho một đinh ⟦sắt|Fe|vi⟧ vào ống (1).')).toBe(speechText('Cho một đinh sắt vào ống (1).'));
+    expect(speechText('⟦sắt|Fe|vi⟧ khử ion Cu²⁺ trong ⟦copper(II) sulfate|CuSO₄⟧ thành ⟦đồng|Cu|vi⟧.'))
+      .toBe('sắt khử ion Cu²⁺ trong ⟦copper(II) sulfate⟧ thành đồng.');
+  });
   it('chữ hiển thị: tên kèm công thức trong ngoặc', () => {
     expect(displayText('Đi từ ⟦sodium|Na⟧ đến ⟦magnesium hydroxide|Mg(OH)₂⟧.')).toBe('Đi từ sodium (Na) đến magnesium hydroxide (Mg(OH)₂).');
     expect(displayText('⟦copper(II) sulfate⟧ 5%')).toBe('copper(II) sulfate 5%');

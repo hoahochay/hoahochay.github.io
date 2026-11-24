@@ -61,6 +61,14 @@ def loudness(w):
     return float(np.sqrt((v ** 2).mean())) if len(v) else 1.0
 
 
+ROMAN = {"I": "one", "II": "two", "III": "three", "IV": "four", "V": "five", "VI": "six", "VII": "seven"}
+
+
+def en_words(name):
+    """Hóa trị La Mã đọc thành số: "copper(II) sulfate" → "copper two sulfate" """
+    return re.sub(r"\s*\((I|II|III|IV|V|VI|VII)\)", lambda m: " " + ROMAN[m[1]], name)
+
+
 class Mixer:
     """Đọc câu có đánh dấu ⟦tên⟧: tiếng Việt bằng VieNeu, tên chất bằng Kokoro, nối lại"""
 
@@ -76,7 +84,7 @@ class Mixer:
         if name not in self.cache:
             import numpy as np, soxr
             self.kokoro = self.kokoro or load_kokoro()
-            w, sr = self.kokoro.create(name, voice=EN["voice"], lang=EN["lang"], speed=1.0)
+            w, sr = self.kokoro.create(en_words(name), voice=EN["voice"], lang=EN["lang"], speed=1.0)
             w = soxr.resample(np.asarray(w, dtype=np.float32), sr, self.tts.sample_rate)
             self.cache[name] = trim(w, self.tts.sample_rate)
         return self.cache[name]

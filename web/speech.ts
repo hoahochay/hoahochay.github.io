@@ -2,6 +2,7 @@
  * Chuyển lời thuyết minh thành văn bản để đọc, và thành chữ hiển thị.
  * - Tên chất đánh dấu tay ⟦tên tiếng Anh|công thức⟧: hiển thị "tên (công thức)"; khi đọc, phần tên
  *   do mô hình tiếng Anh đọc (scripts/tts.py ghép vào câu), bỏ công thức.
+ * - Tên tiếng Việt theo SGK ⟦sắt|Fe|vi⟧: hiển thị "sắt (Fe)"; mô hình tiếng Việt đọc "sắt" liền trong câu.
  * - Phần còn lại do mô hình tiếng Việt đọc. Tên tiếng Anh đứng riêng (không đánh dấu) được thay bằng
  *   công thức, vì mô hình tiếng Việt đọc tên tiếng Anh không thống nhất.
  */
@@ -43,12 +44,15 @@ const NAME_FORMULA: Record<string, string> = (() => {
 const NAME_RE = new RegExp(`(?<![A-Za-z])(${Object.keys(NAME_FORMULA).sort((a, b) => b.length - a.length)
   .map((k) => k.replace(/[()]/g, '\\$&')).join('|')})(?![A-Za-z])`, 'gi');
 
-/** Tên chất đọc bằng mô hình tiếng Anh: ⟦sodium oxide|Na₂O⟧, hoặc ⟦sodium oxide⟧ nếu không cần công thức */
-const EN_TAG = /⟦([^⟦⟧|]+)(?:\|([^⟦⟧]+))?⟧/g;
+/**
+ * Tên chất đánh dấu: ⟦sodium oxide|Na₂O⟧ (đọc bằng mô hình tiếng Anh), ⟦sắt|Fe|vi⟧ (tên tiếng Việt, đọc
+ * bằng mô hình tiếng Việt). Công thức không bắt buộc: ⟦sodium oxide⟧.
+ */
+const TAG = /⟦([^⟦⟧|]+)(?:\|([^⟦⟧|]+))?(\|vi)?⟧/g;
 
-/** Chữ hiển thị: ⟦sodium oxide|Na₂O⟧ → "sodium oxide (Na₂O)" */
+/** Chữ hiển thị: ⟦sodium oxide|Na₂O⟧ → "sodium oxide (Na₂O)", ⟦sắt|Fe|vi⟧ → "sắt (Fe)" */
 export function displayText(text: string): string {
-  return text.replace(EN_TAG, (_m, name: string, formula?: string) => (formula ? `${name} (${formula})` : name));
+  return text.replace(TAG, (_m, name: string, formula?: string) => (formula ? `${name} (${formula})` : name));
 }
 
 /**
@@ -56,12 +60,17 @@ export function displayText(text: string): string {
  * câu không có đánh dấu cho kết quả như trước khi có đánh dấu (giữ khóa các file đã tạo).
  */
 export function speechText(text: string): string {
-  let out = '', last = 0;
-  for (const m of text.matchAll(EN_TAG)) {
-    out += viSpeech(text.slice(last, m.index)) + `⟦${m[1].trim()}⟧`;
+  let out = '', vi = '', last = 0;
+  for (const m of text.matchAll(TAG)) {
+    vi += text.slice(last, m.index);
     last = m.index + m[0].length;
+    if (m[3]) vi += m[1]; // tên tiếng Việt: đọc liền trong phần tiếng Việt
+    else {
+      out += viSpeech(vi) + `⟦${m[1].trim()}⟧`;
+      vi = '';
+    }
   }
-  return out + viSpeech(text.slice(last));
+  return out + viSpeech(vi + text.slice(last));
 }
 
 /** Phần đọc bằng mô hình tiếng Việt: thay tên tiếng Anh bằng công thức ("copper(II) sulfate" → "CuSO₄") */
