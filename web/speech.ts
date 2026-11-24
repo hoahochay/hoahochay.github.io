@@ -13,7 +13,8 @@ const SUB = '₀₁₂₃₄₅₆₇₈₉', SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹
 
 /** "SO4^2-" (mã chất trong engine) → "SO₄²⁻" */
 function idToDisplay(id: string): string {
-  const m = /^(.*?)(?:\^?(\d*)([+-]))?$/.exec(id.replace(/\(g\)$/, ''))!;
+  // Điện tích nhiều đơn vị luôn có dấu ^ ("SO4^2-"); "NH4+" là NH₄⁺, không phải NH⁴⁺
+  const m = /^(.*?)(?:\^(\d+))?([+-])?$/.exec(id.replace(/\(g\)$/, ''))!;
   const body = m[1].replace(/\d/g, (d) => SUB[Number(d)]);
   return m[3] ? body + [...(m[2] ?? '')].map((d) => SUP[Number(d)]).join('') + (m[3] === '+' ? '⁺' : '⁻') : body;
 }
@@ -79,7 +80,37 @@ function viSpeech(text: string): string {
     // Ngoại lệ duy nhất: mô hình đọc "Mg" đứng riêng (Mg, 2Mg, Mg(OH)₂) thành "mi li gam"; MgO thì đọc đúng
     .replace(/(\d?)(?<![A-Za-z])Mg(?![A-Za-z])/g, (_m, d: string) => `${d ? d + ' ' : ''}mờ gờ`)
     // Số thứ tự trong ngoặc: "ống (1)" bị đọc ngắt thành "ống, một"; bỏ ngoặc để đọc liền "ống một"
-    .replace(/\s*\((\d+)\)/g, ' $1');
+    .replace(/\s*\((\d+)\)/g, ' $1')
+    .replace(SUPERSCRIPT_RUN, readSuperscript);
+}
+
+const VI_DIGIT = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+
+/** Số nguyên 0–99 bằng chữ: 2 → "hai", 20 → "hai mươi", 15 → "mười lăm" */
+function viNumber(n: number): string {
+  if (n < 10) return VI_DIGIT[n];
+  const t = Math.floor(n / 10), u = n % 10;
+  const tens = t === 1 ? 'mười' : `${VI_DIGIT[t]} mươi`;
+  return u === 0 ? tens : `${tens} ${u === 1 && t > 1 ? 'mốt' : u === 5 ? 'lăm' : VI_DIGIT[u]}`;
+}
+
+/** Một cụm chữ số mũ, kèm chữ/số đứng ngay trước để biết là lũy thừa hay điện tích */
+const SUPERSCRIPT_RUN = /(\d?)([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)/g;
+
+/**
+ * Mô hình đọc chữ số mũ "²" thành "bình phương": đổi sang chữ theo cách đọc trong lớp.
+ * Điện tích ion: Fe²⁺ → "Fe hai cộng", OH⁻ → "OH trừ". Số oxi hóa: Fe⁺² → "Fe cộng hai", Cu⁰ → "Cu không".
+ * Lũy thừa sau chữ số: 10⁻²⁰ → "10 mũ trừ hai mươi".
+ */
+function readSuperscript(m: string, digitBefore: string, sup: string): string {
+  const n = (d: string) => viNumber(Number([...d].map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)).join('')));
+  const sign = (c: string) => (c === '⁺' ? 'cộng' : 'trừ');
+  let r: RegExpExecArray | null;
+  if (digitBefore && (r = /^(⁻?)([⁰¹²³⁴⁵⁶⁷⁸⁹]+)$/.exec(sup))) return `${digitBefore} mũ ${r[1] ? 'trừ ' : ''}${n(r[2])}`;
+  if ((r = /^([⁰¹²³⁴⁵⁶⁷⁸⁹]*)([⁺⁻])$/.exec(sup))) return `${digitBefore} ${r[1] ? n(r[1]) + ' ' : ''}${sign(r[2])}`;
+  if ((r = /^([⁺⁻])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)$/.exec(sup))) return `${digitBefore} ${sign(r[1])} ${n(r[2])}`;
+  if ((r = /^([⁰¹²³⁴⁵⁶⁷⁸⁹]+)$/.exec(sup))) return `${digitBefore} ${n(r[1])}`;
+  return m;
 }
 
 /** Băm FNV-1a 32 bit, dạng hex 8 kí tự (dùng làm khóa / tên file) */
