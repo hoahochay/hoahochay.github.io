@@ -242,8 +242,8 @@ export const RECIPES: Recipe[] = [
         'Ống (1): có lớp ⟦đồng|Cu|vi⟧ kim loại màu đỏ bám trên đinh ⟦sắt|Fe|vi⟧, màu xanh của dung dịch nhạt dần',
         'Ống (2): có bọt khí ⟦hydrogen|H₂⟧ không màu thoát ra trên đinh ⟦sắt|Fe|vi⟧',
       ],
-      equations: ['Fe + CuSO₄ → FeSO₄ + Cu', 'Fe + H₂SO₄ → FeSO₄ + H₂↑'],
-      explain: 'Thí nghiệm 1: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử Cu⁺² + 2e → Cu⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ⟦copper(II) ion|Cu²⁺⟧ trong ⟦copper(II) sulfate|CuSO₄⟧ là chất oxi hóa. Thí nghiệm 2: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử 2H⁺ + 2e → H₂⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ⟦hydrogen ion|H⁺⟧ trong ⟦sulfuric acid|H₂SO₄⟧ loãng là chất oxi hóa. Chất khử là chất nhường electron, số oxi hóa tăng; chất oxi hóa là chất nhận electron, số oxi hóa giảm.',
+      equations: ['Fe + CuSO₄ → FeSO₄ + Cu', 'Fe⁰ → Fe⁺² + 2e;  Cu⁺² + 2e → Cu⁰', 'Fe + H₂SO₄ → FeSO₄ + H₂↑', 'Fe⁰ → Fe⁺² + 2e;  2H⁺ + 2e → H₂⁰'],
+      explain: 'Ở cả hai thí nghiệm, ⟦sắt|Fe|vi⟧ nhường 2 electron, số oxi hóa tăng từ 0 lên +2: ⟦sắt|Fe|vi⟧ là chất khử. ⟦Copper(II) ion|Cu²⁺⟧ trong ⟦copper(II) sulfate|CuSO₄⟧ và ⟦hydrogen ion|H⁺⟧ trong ⟦sulfuric acid|H₂SO₄⟧ loãng nhận electron, số oxi hóa giảm: đó là các chất oxi hóa. Chất khử là chất nhường electron, số oxi hóa tăng; chất oxi hóa là chất nhận electron, số oxi hóa giảm.',
     },
   },
   {
