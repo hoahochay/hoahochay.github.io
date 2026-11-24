@@ -235,7 +235,7 @@ export const RECIPES: Recipe[] = [
       add('fe', 2, TUBE2, 'Cho một đinh ⟦sắt|Fe|vi⟧ vào ống (2).'),
       wait(10, { text: 'Ống (2): có bọt khí nhỏ thoát ra trên bề mặt đinh ⟦sắt|Fe|vi⟧.' }),
       wait(180, { speed: 6, text: 'Tua nhanh: ở ống (1), lớp kim loại màu đỏ bám dần lên đinh ⟦sắt|Fe|vi⟧, màu xanh của dung dịch nhạt đi.' }),
-      say('Trong cả hai thí nghiệm, ⟦sắt|Fe|vi⟧ nhường electron và bị oxi hóa thành ion Fe²⁺: ⟦sắt|Fe|vi⟧ là chất khử. Ở ống (1), ion Cu²⁺ nhận electron thành ⟦đồng|Cu|vi⟧; ở ống (2), ion H⁺ nhận electron thành khí ⟦hydrogen|H₂⟧: đó là các chất oxi hóa.'),
+      say('Trong cả hai thí nghiệm, ⟦sắt|Fe|vi⟧ nhường electron và bị oxi hóa thành ⟦iron(II) ion|Fe²⁺⟧: ⟦sắt|Fe|vi⟧ là chất khử. Ở ống (1), ⟦copper(II) ion|Cu²⁺⟧ nhận electron thành ⟦đồng|Cu|vi⟧; ở ống (2), ⟦hydrogen ion|H⁺⟧ nhận electron thành khí ⟦hydrogen|H₂⟧: đó là các chất oxi hóa.'),
     ],
     result: {
       phenomena: [
@@ -243,7 +243,7 @@ export const RECIPES: Recipe[] = [
         'Ống (2): có bọt khí ⟦hydrogen|H₂⟧ không màu thoát ra trên đinh ⟦sắt|Fe|vi⟧',
       ],
       equations: ['Fe + CuSO₄ → FeSO₄ + Cu', 'Fe + H₂SO₄ → FeSO₄ + H₂↑'],
-      explain: 'Thí nghiệm 1: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử Cu⁺² + 2e → Cu⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ion Cu²⁺ trong ⟦copper(II) sulfate|CuSO₄⟧ là chất oxi hóa. Thí nghiệm 2: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử 2H⁺ + 2e → H₂⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ion H⁺ trong ⟦sulfuric acid|H₂SO₄⟧ loãng là chất oxi hóa. Chất khử là chất nhường electron, số oxi hóa tăng; chất oxi hóa là chất nhận electron, số oxi hóa giảm.',
+      explain: 'Thí nghiệm 1: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử Cu⁺² + 2e → Cu⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ⟦copper(II) ion|Cu²⁺⟧ trong ⟦copper(II) sulfate|CuSO₄⟧ là chất oxi hóa. Thí nghiệm 2: quá trình oxi hóa Fe⁰ → Fe⁺² + 2e; quá trình khử 2H⁺ + 2e → H₂⁰. ⟦Sắt|Fe|vi⟧ là chất khử, ⟦hydrogen ion|H⁺⟧ trong ⟦sulfuric acid|H₂SO₄⟧ loãng là chất oxi hóa. Chất khử là chất nhường electron, số oxi hóa tăng; chất oxi hóa là chất nhận electron, số oxi hóa giảm.',
     },
   },
   {
