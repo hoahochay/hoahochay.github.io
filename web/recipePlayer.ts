@@ -56,7 +56,8 @@ function readTime(text: string): number {
   return Math.min(10, Math.max(3, text.length / 15));
 }
 const frame = () => new Promise<number>((r) => requestAnimationFrame(r));
-const isRecipe = (r: PlayScript): r is Recipe => 'lesson' in r;
+/** Thí nghiệm mẫu (có kết luận soạn sẵn), khác thí nghiệm tự làm được chia sẻ bằng link */
+export const isRecipe = (r: PlayScript): r is Recipe => 'result' in r && !r.shared;
 /** Bước thao tác thật (không phải lời thuyết minh, chờ, đổi góc nhìn, câu hỏi) */
 const isAction = (s: Step) => !['say', 'wait', 'focus', 'predict'].includes(s.kind);
 

@@ -61,3 +61,11 @@ describe('Thí nghiệm tự làm (link chia sẻ)', () => {
     expect(e.steps).toEqual([{ kind: 'stir', vessel: 0 }]);
   });
 });
+
+describe('Thí nghiệm mẫu và thí nghiệm tự làm', () => {
+  it('thí nghiệm mẫu hiện kết luận soạn sẵn, thí nghiệm chia sẻ thì không', async () => {
+    const { isRecipe } = await import('../web/recipePlayer');
+    for (const r of RECIPES) expect(isRecipe(r), r.id).toBe(true);
+    expect(isRecipe({ id: 'x', title: 'Tự làm', steps: [], shared: { data: 'abc' } })).toBe(false);
+  });
+});
