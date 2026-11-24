@@ -235,7 +235,7 @@ export const RECIPES: Recipe[] = [
       add('fe', 2, TUBE2, 'Cho một đinh ⟦sắt|Fe|vi⟧ vào ống (2).'),
       wait(10, { text: 'Ống (2): có bọt khí nhỏ thoát ra trên bề mặt đinh ⟦sắt|Fe|vi⟧.' }),
       wait(180, { speed: 6, text: 'Tua nhanh: ở ống (1), lớp kim loại màu đỏ bám dần lên đinh ⟦sắt|Fe|vi⟧, màu xanh của dung dịch nhạt đi.' }),
-      say('Ở cả hai ống, ⟦sắt|Fe|vi⟧ là chất khử: nhường electron, bị oxi hóa thành ⟦iron(II) ion|Fe²⁺⟧. Chất oxi hóa là ⟦copper(II) ion|Cu²⁺⟧ ở ống (1) và ⟦hydrogen ion|H⁺⟧ ở ống (2): chúng nhận electron, tạo thành ⟦đồng|Cu|vi⟧ và khí ⟦hydrogen|H₂⟧.'),
+      say('Ở cả hai ống, ⟦sắt|Fe|vi⟧ là chất khử: nhường electron, bị oxi hóa thành ⟦iron(II) ion|Fe²⁺⟧. Chất oxi hóa là ⟦copper(II) ion|Cu²⁺⟧ ở ống (1) và ⟦hydrogen ion|H⁺⟧ ở ống (2): chúng nhận electron.'),
     ],
     result: {
       phenomena: [
