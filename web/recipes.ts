@@ -197,7 +197,7 @@ export const RECIPES: Recipe[] = [
         '⟦Diphosphorus pentoxide|P₂O₅⟧: tan hoàn toàn trong nước, quỳ tím chuyển đỏ',
       ],
       equations: ['Na₂O + H₂O → 2NaOH', 'MgO + H₂O → Mg(OH)₂', 'P₂O₅ + 3H₂O → 2H₃PO₄'],
-      explain: '⟦Sodium oxide|Na₂O⟧ là basic oxide, tan trong nước tạo ⟦sodium hydroxide|NaOH⟧ là base mạnh nên quỳ xanh đậm. ⟦Magnesium oxide|MgO⟧ là basic oxide, tạo ⟦magnesium hydroxide|Mg(OH)₂⟧ ít tan, là base yếu nên quỳ chỉ xanh nhạt. ⟦Diphosphorus pentoxide|P₂O₅⟧ là acidic oxide, tan trong nước tạo ⟦phosphoric acid|H₃PO₄⟧ là acid trung bình nên quỳ đỏ. Trong một chu kì, theo chiều tăng của điện tích hạt nhân, tính base của oxide và hydroxide ứng với hóa trị cao nhất giảm dần, đồng thời tính acid tăng dần.',
+      explain: '⟦Sodium oxide|Na₂O⟧ và ⟦magnesium oxide|MgO⟧ là basic oxide: ⟦sodium hydroxide|NaOH⟧ là base mạnh nên quỳ xanh đậm, ⟦magnesium hydroxide|Mg(OH)₂⟧ ít tan, là base yếu nên quỳ xanh nhạt. ⟦Diphosphorus pentoxide|P₂O₅⟧ là acidic oxide, tạo ⟦phosphoric acid|H₃PO₄⟧ nên quỳ đỏ. Trong một chu kì, theo chiều tăng điện tích hạt nhân, tính base của oxide và hydroxide giảm dần, tính acid tăng dần.',
     },
   },
   {
