@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { speechText } from '../web/speech';
+import { describeStep } from '../web/narration';
+import { RECIPES } from '../web/recipes';
+import { displayText, speechText } from '../web/speech';
 
 describe('speechText', () => {
   it('thay tên tiếng Anh bằng công thức, giữ nguyên phần còn lại', () => {
@@ -15,15 +17,22 @@ describe('speechText', () => {
   it('bỏ ngoặc quanh số thứ tự ống', () => {
     expect(speechText('ở ống (1) và ống (3).')).toBe('ở ống 1 và ống 3.');
   });
-  it('tên kèm công thức trong ngoặc: đọc tên, bỏ công thức', () => {
-    expect(speechText('Ống (1): thêm một ít sodium oxide (Na₂O).')).toBe('Ống 1: thêm một ít sodium oxide.');
-    expect(speechText('tạo magnesium hydroxide (Mg(OH)₂) ít tan')).toBe('tạo magnesium hydroxide ít tan');
-    expect(speechText('dung dịch copper(II) sulfate (CuSO₄)')).toBe('dung dịch copper(II) sulfate');
-    expect(speechText('từ sodium (Na) đến phosphorus (P)')).toBe('từ sodium đến phosphorus');
+  it('tên đánh dấu ⟦tên|công thức⟧: đọc bằng mô hình tiếng Anh, bỏ công thức', () => {
+    expect(speechText('Ống (1): thêm một ít ⟦sodium oxide|Na₂O⟧.')).toBe('Ống 1: thêm một ít ⟦sodium oxide⟧.');
+    expect(speechText('tạo ⟦magnesium hydroxide|Mg(OH)₂⟧ ít tan, khác magnesium oxide')).toBe('tạo ⟦magnesium hydroxide⟧ ít tan, khác MgO');
+    expect(speechText('⟦copper(II) sulfate⟧ và Mg')).toBe('⟦copper(II) sulfate⟧ và mờ gờ');
   });
-  it('chỉ bỏ ngoặc ngay sau tên chất', () => {
-    expect(speechText('màu trắng (AgCl), V(HCl) = 10 mL, khử Cu(OH)₂')).toBe('màu trắng (AgCl), V(HCl) = 10 mL, khử Cu(OH)₂');
-    expect(speechText('phosphoric acid (acid trung bình)')).toBe('H₃PO₄ (acid trung bình)');
+  it('chữ hiển thị: tên kèm công thức trong ngoặc', () => {
+    expect(displayText('Đi từ ⟦sodium|Na⟧ đến ⟦magnesium hydroxide|Mg(OH)₂⟧.')).toBe('Đi từ sodium (Na) đến magnesium hydroxide (Mg(OH)₂).');
+    expect(displayText('⟦copper(II) sulfate⟧ 5%')).toBe('copper(II) sulfate 5%');
+    expect(displayText('ống (1), màu trắng (AgCl)')).toBe('ống (1), màu trắng (AgCl)');
+  });
+  it('mọi đánh dấu trong thí nghiệm mẫu đều đóng mở đúng', () => {
+    for (const r of RECIPES) {
+      const texts = [r.summary, ...r.steps.map(describeStep), ...r.result.phenomena, r.result.explain, ...r.result.equations, r.title];
+      for (const t of texts) expect(displayText(t), `${r.id}: ${t}`).not.toMatch(/[⟦⟧|]/);
+      for (const t of [r.title, ...r.result.equations]) expect(t, `${r.id}: chỉ đánh dấu lời thuyết minh`).not.toMatch(/⟦/);
+    }
   });
   it('không đụng tới công thức và chữ tiếng Việt', () => {
     expect(speechText('Zn + 2HCl → ZnCl₂ + H₂↑')).toBe('Zn + 2HCl → ZnCl₂ + H₂↑');

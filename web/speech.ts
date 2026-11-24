@@ -1,8 +1,9 @@
 /**
- * Chuyển lời thuyết minh (hiển thị) thành văn bản để mô hình TTS đọc.
- * Tên chất tiếng Anh có công thức trong ngoặc đi kèm ("sodium oxide (Na₂O)"): đọc tên, bỏ phần ngoặc.
- * Tên đứng riêng (lời thuyết minh cũ, chưa rà soát): thay bằng công thức như trước.
- * Công thức, số, đơn vị… để mô hình tự đọc. Chữ hiển thị giữ nguyên.
+ * Chuyển lời thuyết minh thành văn bản để đọc, và thành chữ hiển thị.
+ * - Tên chất đánh dấu tay ⟦tên tiếng Anh|công thức⟧: hiển thị "tên (công thức)"; khi đọc, phần tên
+ *   do mô hình tiếng Anh đọc (scripts/tts.py ghép vào câu), bỏ công thức.
+ * - Phần còn lại do mô hình tiếng Việt đọc. Tên tiếng Anh đứng riêng (không đánh dấu) được thay bằng
+ *   công thức, vì mô hình tiếng Việt đọc tên tiếng Anh không thống nhất.
  */
 import { SPECIES } from '../src';
 import { CHEMICALS } from './catalog';
@@ -36,35 +37,36 @@ const NAME_FORMULA: Record<string, string> = (() => {
     'magnesium oxide': 'MgO', 'copper(ii) oxide': 'CuO', 'calcium hydroxide': 'Ca(OH)₂', 'zinc chloride': 'ZnCl₂',
     'sodium sulfate': 'Na₂SO₄', 'sodium acetate': 'CH₃COONa', 'iron(ii) chloride': 'FeCl₂', 'hydrogen': 'H₂', 'oxygen': 'O₂', 'citric acid': 'C₆H₈O₇', 'calcium hydrogencarbonate': 'Ca(HCO₃)₂',
   });
-  // Tên chỉ để nhận ra khi có công thức trong ngoặc đi kèm ("phosphorus (P)"); đứng riêng thì đọc nguyên tên
-  for (const n of ['phosphorus']) map[n] ??= n;
   return map;
 })();
 
 const NAME_RE = new RegExp(`(?<![A-Za-z])(${Object.keys(NAME_FORMULA).sort((a, b) => b.length - a.length)
   .map((k) => k.replace(/[()]/g, '\\$&')).join('|')})(?![A-Za-z])`, 'gi');
 
-/**
- * Công thức trong ngoặc viết ngay sau tên chất: "sodium oxide (Na₂O)", "calcium hydroxide (Ca(OH)₂)".
- * Phải bắt đầu bằng chữ in hoa; không nhận số La Mã hóa trị như "(II)".
- */
-const FORMULA_PAREN = /\s+\((?!(?:I|II|III|IV|V|VI|VII)\))[A-Z][a-z]?(?:[A-Z][a-z]?|[0-9₀-₉⁰-⁹⁺⁻·]|\((?:[A-Z][a-z]?|[0-9₀-₉])+\)[0-9₀-₉]*)*\)/y;
+/** Tên chất đọc bằng mô hình tiếng Anh: ⟦sodium oxide|Na₂O⟧, hoặc ⟦sodium oxide⟧ nếu không cần công thức */
+const EN_TAG = /⟦([^⟦⟧|]+)(?:\|([^⟦⟧]+))?⟧/g;
+
+/** Chữ hiển thị: ⟦sodium oxide|Na₂O⟧ → "sodium oxide (Na₂O)" */
+export function displayText(text: string): string {
+  return text.replace(EN_TAG, (_m, name: string, formula?: string) => (formula ? `${name} (${formula})` : name));
+}
 
 /**
- * Văn bản để đọc.
- * - "sodium oxide (Na₂O)": đọc tên tiếng Anh, bỏ phần công thức trong ngoặc (chỉ để hiển thị).
- * - Tên đứng riêng, không kèm công thức: thay bằng công thức ("copper(II) sulfate" → "CuSO₄").
+ * Văn bản để đọc. Tên đánh dấu giữ dạng ⟦tên⟧ (bỏ công thức) để scripts/tts.py đọc bằng mô hình tiếng Anh;
+ * câu không có đánh dấu cho kết quả như trước khi có đánh dấu (giữ khóa các file đã tạo).
  */
 export function speechText(text: string): string {
   let out = '', last = 0;
-  for (const m of text.matchAll(NAME_RE)) {
-    const end = m.index + m[0].length;
-    FORMULA_PAREN.lastIndex = end;
-    const withFormula = FORMULA_PAREN.test(text);
-    out += text.slice(last, m.index) + (withFormula ? m[0] : NAME_FORMULA[m[0].toLowerCase()] ?? m[0]);
-    last = withFormula ? FORMULA_PAREN.lastIndex : end;
+  for (const m of text.matchAll(EN_TAG)) {
+    out += viSpeech(text.slice(last, m.index)) + `⟦${m[1].trim()}⟧`;
+    last = m.index + m[0].length;
   }
-  return (out + text.slice(last))
+  return out + viSpeech(text.slice(last));
+}
+
+/** Phần đọc bằng mô hình tiếng Việt: thay tên tiếng Anh bằng công thức ("copper(II) sulfate" → "CuSO₄") */
+function viSpeech(text: string): string {
+  return text.replace(NAME_RE, (m) => NAME_FORMULA[m.toLowerCase()] ?? m)
     // Ngoại lệ duy nhất: mô hình đọc "Mg" đứng riêng (Mg, 2Mg, Mg(OH)₂) thành "mi li gam"; MgO thì đọc đúng
     .replace(/(\d?)(?<![A-Za-z])Mg(?![A-Za-z])/g, (_m, d: string) => `${d ? d + ' ' : ''}mờ gờ`)
     // Số thứ tự trong ngoặc: "ống (1)" bị đọc ngắt thành "ống, một"; bỏ ngoặc để đọc liền "ống một"

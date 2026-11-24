@@ -1,6 +1,7 @@
 /** Phát lại thí nghiệm mẫu: chạy từng bước, hiển thị lời thuyết minh, kết luận */
 import type { ToolKind } from './probes';
 import { describeStep } from './narration';
+import { displayText } from './speech';
 import { copyText, shareUrl } from './router';
 import { BuretteAction, CATEGORIES, categoryOf, CategoryId, LabState, PlayScript, Recipe, RECIPES, Step, TOPICS, TopicId } from './recipes';
 import { Narrator } from './voice';
@@ -152,7 +153,7 @@ export class RecipePlayer {
         } else if (step.kind !== 'wait' && step.kind !== 'focus' && step.kind !== 'say') {
           // Bước thao tác (không phải bước chờ có đồng hồ): giữ lời thuyết minh đủ lâu để đọc hết
           const shown = (performance.now() - t0) / 1000;
-          await this.hold(r.shared ? Math.max(0.3, SHARED_HOLD_S - shown) : Math.max(1.2, readTime(text) - shown), id);
+          await this.hold(r.shared ? Math.max(0.3, SHARED_HOLD_S - shown) : Math.max(1.2, readTime(displayText(text)) - shown), id);
         } else await this.hold(step.kind === 'focus' ? 0.2 : 0.8, id);
       }
       this.setSpeed(1);
@@ -259,7 +260,7 @@ export class RecipePlayer {
     switch (s.kind) {
       case 'say':
         this.ui.progress(null);
-        return this.hold(this.spoken ? (s.hold ?? 0) : (s.hold ?? readTime(s.text)), id);
+        return this.hold(this.spoken ? (s.hold ?? 0) : (s.hold ?? readTime(displayText(s.text))), id);
       case 'focus':
         this.lab.focus(s.vessels);
         return this.hold(0.9, id);
@@ -389,7 +390,7 @@ class RecipeUi {
   ask(i: number, n: number, action: string, next: () => void): void {
     this.q('.rb-count').textContent = `Bước ${i + 1}/${n}`;
     this.q('.rb-text').textContent = '🤔 Dừng lại một chút!';
-    this.q('.rb-q').textContent = `Bước tiếp theo: ${action} Theo em, sẽ có hiện tượng gì?`;
+    this.q('.rb-q').textContent = `Bước tiếp theo: ${displayText(action)} Theo em, sẽ có hiện tượng gì?`;
     this.onAnswer = next;
     this.q<HTMLButtonElement>('.rb-go').onclick = () => { this.onAnswer?.(); this.onAnswer = null; };
     this.q('.rb-ask').classList.remove('hidden');
@@ -445,7 +446,7 @@ class RecipeUi {
         <div class="recipe" data-id="${r.id}">
           <div class="r-title">${r.title}</div>
           <div class="r-tags"><span class="grade">${CATEGORIES[categoryOf(r)]}</span>${r.concepts.map((c) => `<span>${c}</span>`).join('')}</div>
-          <div class="r-sum">${r.summary}</div>
+          <div class="r-sum">${displayText(r.summary)}</div>
           <div class="r-foot">
             <button class="r-play">▶ Xem thí nghiệm</button>
             <button class="r-share" title="Sao chép link tới thí nghiệm này">🔗</button>
@@ -497,7 +498,7 @@ class RecipeUi {
 
   step(i: number, n: number, text: string): void {
     this.q('.rb-count').textContent = `Bước ${i + 1}/${n}`;
-    if (text) this.q('.rb-text').textContent = text;
+    if (text) this.q('.rb-text').textContent = displayText(text);
   }
 
   progress(f: number | null, label = ''): void {
@@ -535,11 +536,11 @@ class RecipeUi {
       <div class="rr-head"><span>✔ Kết luận</span><button class="rr-close" title="Đóng">×</button></div>
       <div class="rr-title">${r.title}</div>
       <div class="sec">Hiện tượng</div>
-      <ul>${r.result.phenomena.map((p) => `<li>${p}</li>`).join('')}</ul>
+      <ul>${r.result.phenomena.map((p) => `<li>${displayText(p)}</li>`).join('')}</ul>
       ${r.result.equations.length ? `<div class="sec">Phương trình hóa học</div>
       ${r.result.equations.map((e) => `<div class="eq">${e}</div>`).join('<br>')}` : ''}
       <div class="sec">Giải thích</div>
-      <p>${r.result.explain}</p>
+      <p>${displayText(r.result.explain)}</p>
       <div class="rr-actions"><button class="rr-replay">↻ Xem lại</button><button class="rr-voice" title="Bật / tắt giọng đọc">🔊</button><button class="rr-ok on">Đóng</button></div>`;
     this.result.classList.remove('hidden');
     const close = () => { this.h.closed(); this.hide(); };
