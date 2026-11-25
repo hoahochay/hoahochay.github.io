@@ -186,7 +186,8 @@ export class VesselView {
       MAX_BUBBLES,
     );
     this.bubbleMesh.count = 0;
-    this.bubbleMesh.renderOrder = 1;
+    // Vẽ sau dung dịch (renderOrder 2): dung dịch đục hoặc màu đậm (MnO₂ đen lơ lửng) không che mất bọt khí
+    this.bubbleMesh.renderOrder = 2.5;
     this.bubbleMesh.frustumCulled = false;
     this.group.add(this.bubbleMesh);
 
