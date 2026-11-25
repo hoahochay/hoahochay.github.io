@@ -359,7 +359,7 @@ export const RECIPES: Recipe[] = [
         'Ống (2), đun nóng: có bọt khí, dung dịch chuyển màu hồng sau khoảng một phút',
       ],
       equations: ['Mg + 2H₂O → Mg(OH)₂ + H₂↑'],
-      explain: '⟦Magnesium|Mg⟧ phản ứng với nước tạo ⟦magnesium hydroxide|Mg(OH)₂⟧, có tính base nên làm ⟦phenolphthalein⟧ hóa hồng, và khí ⟦hydrogen|H₂⟧. Ở nhiệt độ phòng phản ứng xảy ra rất chậm. Khi tăng nhiệt độ, các hạt chuyển động nhanh hơn, động năng lớn hơn, nên số va chạm hiệu quả tăng và tốc độ phản ứng tăng. Thực nghiệm cho thấy cứ tăng 10 °C thì tốc độ của nhiều phản ứng tăng từ 2 đến 4 lần (hệ số nhiệt độ Van\'t Hoff).',
+      explain: '⟦Magnesium|Mg⟧ phản ứng với nước tạo ⟦magnesium hydroxide|Mg(OH)₂⟧, có tính base nên làm ⟦phenolphthalein⟧ hóa hồng, và khí ⟦hydrogen|H₂⟧. Ở nhiệt độ phòng phản ứng xảy ra rất chậm. Kể cả khi đun nóng, chỉ khoảng một phần trăm miligam ⟦magnesium|Mg⟧ phản ứng, nên mẩu ⟦magnesium|Mg⟧ gần như không nhỏ đi và lượng khí ⟦hydrogen|H₂⟧ rất ít; nhưng chừng đó ⟦hydroxide ion|OH⁻⟧ đã đủ làm ⟦phenolphthalein⟧ hóa hồng. Khi tăng nhiệt độ, các hạt chuyển động nhanh hơn, động năng lớn hơn, nên số va chạm hiệu quả tăng và tốc độ phản ứng tăng. Thực nghiệm cho thấy cứ tăng 10 °C thì tốc độ của nhiều phản ứng tăng từ 2 đến 4 lần (hệ số nhiệt độ Van\'t Hoff).',
     },
   },
   {

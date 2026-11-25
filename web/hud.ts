@@ -3,6 +3,23 @@ import { Observation, pretty, RGB, species, toHex } from '../src';
 import { activeReactions, LogEntry } from './events';
 import { VesselView } from './VesselView';
 
+/** Số có 4 chữ số có nghĩa, không dạng mũ: 49.9894 → "49.99", 0.006613 → "0.006613" */
+function sig4(x: number): string {
+  if (x <= 0) return '0';
+  const decimals = Math.max(0, 3 - Math.floor(Math.log10(x)));
+  return x.toFixed(Math.min(decimals, 20)).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+}
+
+/** Khối lượng chất rắn: lượng rất nhỏ (phản ứng mới bắt đầu) vẫn hiện đủ 4 chữ số có nghĩa, không làm tròn thành 0 */
+function fmtMass(g: number): string {
+  return g >= 0.1 ? g.toFixed(2) + ' g' : sig4(g * 1000) + ' mg';
+}
+
+/** Tổng thể tích khí đã thoát ra: lượng rất nhỏ hiện đủ 4 chữ số có nghĩa thay vì "0.0 mL" */
+function fmtGasML(ml: number): string {
+  return ml >= 0.1 ? ml.toFixed(1) + ' mL' : sig4(ml) + ' mL';
+}
+
 export const SPEEDS = [0, 1, 5, 20, 60];
 
 export interface HudHandlers {
@@ -135,14 +152,14 @@ export class Hud {
       .map(([id, c]) => `<span class="chip">${pretty(id)} <b>${fmtConc(c)}</b></span>`)
       .join('');
     const solids = o.solids
-      .filter((s) => s.grams > 1e-5)
-      .map((s) => `<span class="chip">${swatch(s.color)}${s.formula} <b>${s.grams >= 0.1 ? s.grams.toFixed(2) + ' g' : (s.grams * 1000).toFixed(1) + ' mg'}</b></span>`)
+      .filter((s) => s.grams > 1e-7)
+      .map((s) => `<span class="chip">${swatch(s.color)}${s.formula} <b>${fmtMass(s.grams)}</b></span>`)
       .join('');
     const gases = Object.entries(o.gasTotalMol)
       .map(([id, n]) => {
         const rate = o.gasRateML[id] ?? 0;
         const totalML = n * 24465;
-        return `<span class="chip">${pretty(id)} <b>${rate > 0.005 ? rate.toFixed(2) + ' mL/s' : 'đã dừng'}</b> · tổng ${totalML.toFixed(1)} mL</span>`;
+        return `<span class="chip">${pretty(id)} <b>${rate > 0.005 ? rate.toFixed(2) + ' mL/s' : 'đã dừng'}</b> · tổng ${fmtGasML(totalML)}</span>`;
       })
       .join('');
     const head = Object.entries(o.headspace)
