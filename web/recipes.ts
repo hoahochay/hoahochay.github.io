@@ -348,7 +348,7 @@ export const RECIPES: Recipe[] = [
       wait(5, { text: 'Ở nhiệt độ phòng, cả hai ống gần như không có hiện tượng gì.' }),
       { kind: 'predict', text: 'Đun nóng ống (2). Ống nào sẽ chuyển màu hồng nhanh hơn?' },
       heat(TUBE2, true, 'Đun nóng ống (2) bằng đèn cồn.'),
-      wait(40, { text: 'Ống (2) nóng dần, có bọt khí nhỏ thoát ra trên bề mặt ⟦magnesium|Mg⟧.' }),
+      wait(40, { text: 'Ống (2) nóng dần, có bọt khí rất nhỏ thoát ra trên bề mặt ⟦magnesium|Mg⟧.' }),
       heat(TUBE2, false, 'Ngừng đun.'),
       wait(60, { speed: 3, text: 'Dung dịch ở ống (2) chuyển màu hồng rõ; ống (1) vẫn gần như không màu.' }),
       say('Ở nhiệt độ cao hơn, ⟦magnesium|Mg⟧ phản ứng với nước nhanh hơn nhiều, tạo ⟦magnesium hydroxide|Mg(OH)₂⟧ làm ⟦phenolphthalein⟧ hóa hồng.'),
@@ -356,7 +356,7 @@ export const RECIPES: Recipe[] = [
     result: {
       phenomena: [
         'Ống (1), không đun: gần như không thay đổi, chỉ sau nhiều phút mới hồng rất nhạt',
-        'Ống (2), đun nóng: có bọt khí, dung dịch chuyển màu hồng sau khoảng một phút',
+        'Ống (2), đun nóng: có bọt khí rất nhỏ, dung dịch chuyển màu hồng sau khoảng một phút',
       ],
       equations: ['Mg + 2H₂O → Mg(OH)₂ + H₂↑'],
       explain: '⟦Magnesium|Mg⟧ phản ứng với nước tạo ⟦magnesium hydroxide|Mg(OH)₂⟧, có tính base nên làm ⟦phenolphthalein⟧ hóa hồng, và khí ⟦hydrogen|H₂⟧. Ở nhiệt độ phòng phản ứng xảy ra rất chậm. Kể cả khi đun nóng, chỉ khoảng một phần trăm miligam ⟦magnesium|Mg⟧ phản ứng, nên mẩu ⟦magnesium|Mg⟧ gần như không nhỏ đi và lượng khí ⟦hydrogen|H₂⟧ rất ít; nhưng chừng đó ⟦hydroxide ion|OH⁻⟧ đã đủ làm ⟦phenolphthalein⟧ hóa hồng. Khi tăng nhiệt độ, các hạt chuyển động nhanh hơn, động năng lớn hơn, nên số va chạm hiệu quả tăng và tốc độ phản ứng tăng. Thực nghiệm cho thấy cứ tăng 10 °C thì tốc độ của nhiều phản ứng tăng từ 2 đến 4 lần (hệ số nhiệt độ Van\'t Hoff).',
