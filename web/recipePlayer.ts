@@ -162,8 +162,8 @@ export class RecipePlayer {
       // Đưa địa chỉ về danh sách: dán lại đúng link này sẽ chạy lại (trình duyệt bỏ qua link trùng địa chỉ hiện tại)
       this.onChange(null);
       if (isRecipe(r)) {
+        // Phần kết luận chỉ hiển thị, không đọc
         this.ui.finish(r);
-        this.voice.speak(r.result.explain);
       } else this.ui.finishShared(r);
     } catch (e) {
       if (!(e instanceof Abort)) throw e;
